@@ -28,7 +28,8 @@ import {
   Send,
   Bell,
   Edit,
-  Pencil
+  Pencil,
+  Plug
 } from "lucide-react";
 import * as Icons from "lucide-react";
 import { NavLink, useLocation, Link } from "react-router-dom";
@@ -479,6 +480,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             : null,
           admin: [
             { title: "Audit Log", url: "/audit-log", icon: ScrollText },
+            { title: "Integrations", url: "/integrations", icon: Plug },
             ...(hasPermission('view_fax_campaigns') && isFeatureEnabled('fax_campaigns')
               ? [{ title: "Fax Campaigns", url: "/fax-campaigns", icon: Send }]
               : []),
