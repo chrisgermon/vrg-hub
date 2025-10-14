@@ -43,8 +43,7 @@ const SystemLogin = () => {
       }
 
       await signInWithPassword(email, password);
-      // Super admin redirects to platform admin
-      navigate('/admin/platform');
+      // Redirect will occur once role is resolved via auth listener
     } catch (err: any) {
       setError(err.message || 'Invalid credentials');
       // Failed login attempts are already logged in useAuth hook
