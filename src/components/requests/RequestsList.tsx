@@ -35,7 +35,11 @@ export function RequestsList() {
     try {
       const { data, error } = await supabase
         .from('hardware_requests')
-        .select('*')
+        .select(`
+          *,
+          brands:brand_id(display_name),
+          locations:location_id(name)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -113,6 +117,8 @@ export function RequestsList() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
+                  <TableHead>Brand</TableHead>
+                  <TableHead>Location</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Priority</TableHead>
                   <TableHead>Amount</TableHead>
@@ -124,6 +130,8 @@ export function RequestsList() {
                 {requests.map((request) => (
                   <TableRow key={request.id}>
                     <TableCell className="font-medium">{request.title}</TableCell>
+                    <TableCell>{(request as any).brands?.display_name || '-'}</TableCell>
+                    <TableCell>{(request as any).locations?.name || '-'}</TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
                     <TableCell>{getPriorityBadge(request.priority)}</TableCell>
                     <TableCell>

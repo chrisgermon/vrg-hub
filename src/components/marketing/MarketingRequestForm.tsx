@@ -16,6 +16,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, Calendar } from 'lucide-react';
+import { BrandLocationSelect } from '@/components/ui/brand-location-select';
 
 interface MarketingRequestFormProps {
   onSuccess?: () => void;
@@ -30,6 +31,8 @@ export function MarketingRequestForm({ onSuccess }: MarketingRequestFormProps) {
     target_audience: '',
     deadline: '',
     priority: 'medium',
+    brandId: '',
+    locationId: '',
   });
   
   const { user } = useAuth();
@@ -61,6 +64,8 @@ export function MarketingRequestForm({ onSuccess }: MarketingRequestFormProps) {
           target_audience: formData.target_audience,
           deadline: formData.deadline || null,
           priority: formData.priority,
+          brand_id: formData.brandId || null,
+          location_id: formData.locationId || null,
           status: 'submitted',
         })
         .select()
@@ -111,6 +116,14 @@ export function MarketingRequestForm({ onSuccess }: MarketingRequestFormProps) {
               required
             />
           </div>
+
+          <BrandLocationSelect
+            selectedBrandId={formData.brandId}
+            selectedLocationId={formData.locationId}
+            onBrandChange={(brandId) => handleChange('brandId', brandId)}
+            onLocationChange={(locationId) => handleChange('locationId', locationId)}
+            required
+          />
 
           <div className="space-y-2">
             <Label htmlFor="request_type">Request Type *</Label>

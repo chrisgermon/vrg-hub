@@ -2,11 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { DynamicFormRenderer } from '@/components/form-builder/DynamicFormRenderer';
-import { FormTemplate } from '@/types/form-builder';
+import { BrandLocationSelect } from '@/components/ui/brand-location-select';
 
 interface TemplatedDepartmentRequestFormProps {
   department: string;
@@ -17,42 +20,19 @@ export function TemplatedDepartmentRequestForm({
   department,
   departmentLabel,
 }: TemplatedDepartmentRequestFormProps) {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [template, setTemplate] = useState<FormTemplate | null>(null);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [brandId, setBrandId] = useState('');
+  const [locationId, setLocationId] = useState('');
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadTemplate();
-  }, [department]);
-
-  const loadTemplate = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('form_templates')
-        .select('*')
-        .eq('department', department)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (error) throw error;
-      
-      setTemplate(data as any);
-    } catch (error) {
-      console.error('Error loading template:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load request form',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async (formData: Record<string, any>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!user) {
       toast({
         title: 'Error',
@@ -65,19 +45,17 @@ export function TemplatedDepartmentRequestForm({
     setSubmitting(true);
 
     try {
-      // Extract title from form data or use department name
-      const title = formData.title || `${departmentLabel} Request`;
-      const description = formData.description || JSON.stringify(formData);
-
       const { data: request, error } = await supabase
         .from('hardware_requests')
         .insert({
           title,
           description,
-          business_justification: `${departmentLabel} request via form template`,
+          business_justification: `${departmentLabel} request`,
           user_id: user.id,
+          brand_id: brandId || null,
+          location_id: locationId || null,
           status: 'submitted',
-          priority: formData.priority || 'medium',
+          priority: 'medium',
           currency: 'USD',
         })
         .select()
@@ -113,36 +91,65 @@ export function TemplatedDepartmentRequestForm({
     );
   }
 
-  if (!template) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>No Template Available</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            No form template is currently configured for {departmentLabel} requests.
-            Please contact an administrator to set up a form template.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{template.name || `${departmentLabel} Request`}</CardTitle>
-        {template.description && (
-          <p className="text-sm text-muted-foreground mt-2">{template.description}</p>
-        )}
+        <CardTitle>New {departmentLabel} Request</CardTitle>
       </CardHeader>
       <CardContent>
-        <DynamicFormRenderer
-          template={template}
-          onSubmit={handleSubmit}
-          isSubmitting={submitting}
-        />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="title">Request Title *</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Brief description of your request"
+              required
+            />
+          </div>
+
+          <BrandLocationSelect
+            selectedBrandId={brandId}
+            selectedLocationId={locationId}
+            onBrandChange={setBrandId}
+            onLocationChange={setLocationId}
+            required
+          />
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description *</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Provide detailed information about your request"
+              rows={6}
+              required
+            />
+          </div>
+
+          <div className="flex gap-4 justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate('/requests')}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                'Submit Request'
+              )}
+            </Button>
+          </div>
+        </form>
       </CardContent>
     </Card>
   );

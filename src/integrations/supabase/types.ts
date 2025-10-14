@@ -128,6 +128,42 @@ export type Database = {
         }
         Relationships: []
       }
+      brands: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clinics: {
         Row: {
           created_at: string
@@ -167,6 +203,7 @@ export type Database = {
       department_assignments: {
         Row: {
           assignee_ids: string[]
+          brand_id: string | null
           created_at: string | null
           department: string
           id: string
@@ -174,6 +211,7 @@ export type Database = {
         }
         Insert: {
           assignee_ids?: string[]
+          brand_id?: string | null
           created_at?: string | null
           department: string
           id?: string
@@ -181,12 +219,21 @@ export type Database = {
         }
         Update: {
           assignee_ids?: string[]
+          brand_id?: string | null
           created_at?: string | null
           department?: string
           id?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "department_assignments_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dicom_servers: {
         Row: {
@@ -339,6 +386,7 @@ export type Database = {
           admin_approval_notes: string | null
           admin_approved_at: string | null
           admin_id: string | null
+          brand_id: string | null
           business_justification: string
           clinic_name: string | null
           created_at: string | null
@@ -349,6 +397,7 @@ export type Database = {
           description: string | null
           expected_delivery_date: string | null
           id: string
+          location_id: string | null
           manager_approval_notes: string | null
           manager_approved_at: string | null
           manager_id: string | null
@@ -363,6 +412,7 @@ export type Database = {
           admin_approval_notes?: string | null
           admin_approved_at?: string | null
           admin_id?: string | null
+          brand_id?: string | null
           business_justification: string
           clinic_name?: string | null
           created_at?: string | null
@@ -373,6 +423,7 @@ export type Database = {
           description?: string | null
           expected_delivery_date?: string | null
           id?: string
+          location_id?: string | null
           manager_approval_notes?: string | null
           manager_approved_at?: string | null
           manager_id?: string | null
@@ -387,6 +438,7 @@ export type Database = {
           admin_approval_notes?: string | null
           admin_approved_at?: string | null
           admin_id?: string | null
+          brand_id?: string | null
           business_justification?: string
           clinic_name?: string | null
           created_at?: string | null
@@ -397,6 +449,7 @@ export type Database = {
           description?: string | null
           expected_delivery_date?: string | null
           id?: string
+          location_id?: string | null
           manager_approval_notes?: string | null
           manager_approved_at?: string | null
           manager_id?: string | null
@@ -407,7 +460,78 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "hardware_requests_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hardware_requests_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations: {
+        Row: {
+          address: string | null
+          brand_id: string
+          city: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          sort_order: number | null
+          state: string | null
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          brand_id: string
+          city?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          sort_order?: number | null
+          state?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          brand_id?: string
+          city?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          sort_order?: number | null
+          state?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locations_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       marketing_requests: {
         Row: {
@@ -415,11 +539,13 @@ export type Database = {
           approved_by: string | null
           assigned_to: string | null
           attachments: Json | null
+          brand_id: string | null
           completed_at: string | null
           created_at: string
           deadline: string | null
           description: string | null
           id: string
+          location_id: string | null
           metadata: Json | null
           priority: string
           request_type: string
@@ -434,11 +560,13 @@ export type Database = {
           approved_by?: string | null
           assigned_to?: string | null
           attachments?: Json | null
+          brand_id?: string | null
           completed_at?: string | null
           created_at?: string
           deadline?: string | null
           description?: string | null
           id?: string
+          location_id?: string | null
           metadata?: Json | null
           priority?: string
           request_type: string
@@ -453,11 +581,13 @@ export type Database = {
           approved_by?: string | null
           assigned_to?: string | null
           attachments?: Json | null
+          brand_id?: string | null
           completed_at?: string | null
           created_at?: string
           deadline?: string | null
           description?: string | null
           id?: string
+          location_id?: string | null
           metadata?: Json | null
           priority?: string
           request_type?: string
@@ -467,7 +597,22 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "marketing_requests_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_requests_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       menu_configurations: {
         Row: {
@@ -612,38 +757,59 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          brand_id: string | null
           created_at: string | null
           department: string | null
           email: string | null
           full_name: string | null
           id: string
           location: string | null
+          location_id: string | null
           phone: string | null
           updated_at: string | null
         }
         Insert: {
           avatar_url?: string | null
+          brand_id?: string | null
           created_at?: string | null
           department?: string | null
           email?: string | null
           full_name?: string | null
           id: string
           location?: string | null
+          location_id?: string | null
           phone?: string | null
           updated_at?: string | null
         }
         Update: {
           avatar_url?: string | null
+          brand_id?: string | null
           created_at?: string | null
           department?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
           location?: string | null
+          location_id?: string | null
           phone?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       request_attachments: {
         Row: {

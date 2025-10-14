@@ -7,7 +7,8 @@ import { ApprovalWorkflowManager } from '@/components/workflows/ApprovalWorkflow
 import { CompanySettings } from '@/components/CompanySettings';
 import { MenuEditor } from '@/components/settings/MenuEditor';
 import { CannedResponsesManager } from '@/components/settings/CannedResponsesManager';
-import { CompanyLocationsManager } from '@/components/settings/CompanyLocationsManager';
+import { BrandsManager } from '@/components/settings/BrandsManager';
+import { LocationsManager } from '@/components/settings/LocationsManager';
 import { NotificationSettingsManager } from '@/components/settings/NotificationSettingsManager';
 import { UsersSection } from '@/components/settings/UsersSection';
 import { PrintBrandsManager } from '@/components/settings/PrintBrandsManager';
@@ -41,6 +42,8 @@ export default function Settings() {
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
           {isAdmin && <TabsTrigger value="branding">Branding</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="brands">Brands</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="locations">Locations</TabsTrigger>}
           {isAdmin && <TabsTrigger value="features">Features</TabsTrigger>}
           {isAdmin && <TabsTrigger value="company">Company</TabsTrigger>}
           {isAdmin && <TabsTrigger value="users">Users & Roles</TabsTrigger>}
@@ -79,6 +82,18 @@ export default function Settings() {
         )}
 
         {isAdmin && (
+          <TabsContent value="brands" className="space-y-6">
+            <BrandsManager />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="locations" className="space-y-6">
+            <LocationsManager />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
           <TabsContent value="features" className="space-y-6">
             <CompanyFeaturesManager />
           </TabsContent>
@@ -86,7 +101,6 @@ export default function Settings() {
 
         {isAdmin && (
           <TabsContent value="company" className="space-y-6">
-            <CompanyLocationsManager />
             <CompanyDomainsManager />
             <PrintBrandsManager />
             <CannedResponsesManager />
