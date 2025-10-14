@@ -21,7 +21,7 @@ const SystemLogin = () => {
       // Wait until role is resolved
       if (!userRole) return;
       if (userRole === 'super_admin') {
-        navigate('/admin/platform');
+        navigate('/home');
       } else {
         // Non-super admins trying to use system login should be redirected to regular auth
         navigate('/auth');

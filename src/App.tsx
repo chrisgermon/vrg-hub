@@ -53,7 +53,6 @@ const ArticleEditor = lazy(() => import("./components/news/ArticleEditor"));
 const ArticleView = lazy(() => import("./pages/ArticleView"));
 const HelpTicket = lazy(() => import("./pages/HelpTicket"));
 const Notifications = lazy(() => import("./pages/Notifications"));
-const PlatformAdmin = lazy(() => import("./pages/PlatformAdmin"));
 const CompanyAdmin = lazy(() => import("./pages/CompanyAdmin"));
 const CompanyDirectory = lazy(() => import("./pages/CompanyDirectory"));
 const KnowledgeBase = lazy(() => import("./pages/KnowledgeBase"));
@@ -113,7 +112,6 @@ const protectedLayoutRoutes: Array<{
   { path: "/fax-campaigns", element: <NotifyreFaxLogs /> },
   { path: "/contact-support", element: <ContactSupport /> },
   { path: "/admin", element: <Admin />, requiredRole: ["super_admin"] },
-  { path: "/admin/platform", element: <PlatformAdmin />, requiredRole: ["super_admin"] },
   { path: "/admin/company", element: <CompanyAdmin />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/admin/files", element: <FileManager />, requiredRole: ["super_admin"] },
   { path: "/audit-log", element: <AuditLog />, requiredRole: ["super_admin"] },

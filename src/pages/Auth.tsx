@@ -70,11 +70,7 @@ export default function Auth() {
   // Redirect authenticated users based on role
   useEffect(() => {
     if (user && !authLoading) {
-      if (userRole === 'super_admin') {
-        navigate('/admin/platform');
-      } else {
-        navigate('/home');
-      }
+      navigate('/home');
     }
   }, [user, userRole, authLoading, navigate]);
 
