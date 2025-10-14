@@ -53,6 +53,69 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          record_id: string | null
+          table_name: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          table_name?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          table_name?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      beta_feedback: {
+        Row: {
+          created_at: string | null
+          feedback_type: string | null
+          id: string
+          message: string
+          page_url: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          feedback_type?: string | null
+          id?: string
+          message: string
+          page_url?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          feedback_type?: string | null
+          id?: string
+          message?: string
+          page_url?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -85,6 +148,45 @@ export type Database = {
           id?: string
           location?: string | null
           phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      system_statuses: {
+        Row: {
+          created_at: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          is_critical: boolean | null
+          message: string | null
+          sort_order: number | null
+          status: string
+          system_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_critical?: boolean | null
+          message?: string | null
+          sort_order?: number | null
+          status: string
+          system_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_critical?: boolean | null
+          message?: string | null
+          sort_order?: number | null
+          status?: string
+          system_name?: string
           updated_at?: string | null
         }
         Relationships: []

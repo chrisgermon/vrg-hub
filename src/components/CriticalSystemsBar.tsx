@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCompanyContext } from "@/contexts/CompanyContext";
 import { CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
 import {
   Tooltip,
@@ -19,25 +18,19 @@ interface SystemStatus {
 }
 
 export function CriticalSystemsBar() {
-  const { selectedCompany } = useCompanyContext();
-
   const { data: criticalSystems = [] } = useQuery({
-    queryKey: ['critical-system-statuses', selectedCompany?.id],
+    queryKey: ['critical-system-statuses'],
     queryFn: async () => {
-      if (!selectedCompany?.id) return [];
-      
       const { data, error } = await supabase
         .from('system_statuses')
         .select('*')
         .eq('is_active', true)
         .eq('is_critical', true)
-        .eq('company_id', selectedCompany.id)
         .order('sort_order');
       
       if (error) throw error;
       return data as SystemStatus[];
     },
-    enabled: !!selectedCompany?.id,
     refetchInterval: 60000, // Refresh every minute
   });
 
