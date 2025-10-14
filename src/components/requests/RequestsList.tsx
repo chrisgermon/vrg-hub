@@ -21,7 +21,12 @@ interface Request {
   currency: string;
 }
 
-export function RequestsList() {
+interface RequestsListProps {
+  onRequestSelect?: (requestId: string) => void;
+  selectedRequestId?: string | null;
+}
+
+export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsListProps) {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -128,7 +133,11 @@ export function RequestsList() {
               </TableHeader>
               <TableBody>
                 {requests.map((request) => (
-                  <TableRow key={request.id}>
+                  <TableRow 
+                    key={request.id}
+                    className={`cursor-pointer transition-colors ${selectedRequestId === request.id ? 'bg-muted' : 'hover:bg-muted/50'}`}
+                    onClick={() => onRequestSelect ? onRequestSelect(request.id) : navigate(`/requests/${request.id}`)}
+                  >
                     <TableCell className="font-medium">{request.title}</TableCell>
                     <TableCell>{(request as any).brands?.display_name || '-'}</TableCell>
                     <TableCell>{(request as any).locations?.name || '-'}</TableCell>
@@ -143,7 +152,7 @@ export function RequestsList() {
                     <TableCell>
                       {format(new Date(request.created_at), 'MMM d, yyyy')}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
                         size="sm"

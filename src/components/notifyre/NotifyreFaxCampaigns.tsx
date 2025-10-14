@@ -129,107 +129,109 @@ export const NotifyreFaxCampaigns = () => {
 
   if (selectedCampaign) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <Button variant="outline" onClick={() => setSelectedCampaign(null)}>
-              ← Back to Campaigns
-            </Button>
-            <h2 className="text-2xl font-bold mt-4">{selectedCampaign.campaign_name}</h2>
-            <p className="text-muted-foreground">
-              {format(new Date(selectedCampaign.sent_at), 'PPpp')}
-            </p>
+      <div className="flex gap-0 -m-3 md:-m-6">
+        <div className="flex-1 min-w-0 p-3 md:p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <Button variant="outline" onClick={() => setSelectedCampaign(null)}>
+                ← Back to Campaigns
+              </Button>
+              <h2 className="text-2xl font-bold mt-4">{selectedCampaign.campaign_name}</h2>
+              <p className="text-muted-foreground">
+                {format(new Date(selectedCampaign.sent_at), 'PPpp')}
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Total Recipients</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{selectedCampaign.total_recipients}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Delivered</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{selectedCampaign.delivered_count}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Failed</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{selectedCampaign.failed_count}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{selectedCampaign.pending_count}</div>
-            </CardContent>
-          </Card>
-        </div>
+          <div className="grid gap-4 md:grid-cols-4 mb-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Total Recipients</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{selectedCampaign.total_recipients}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Delivered</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{selectedCampaign.delivered_count}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Failed</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{selectedCampaign.failed_count}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Pending</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-yellow-600">{selectedCampaign.pending_count}</div>
+              </CardContent>
+            </Card>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Fax Delivery Log</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loadingLogs ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin" />
-              </div>
-            ) : faxLogs.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No fax logs found for this campaign
-              </div>
-            ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Recipient</TableHead>
-                      <TableHead>Number</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Pages</TableHead>
-                      <TableHead>Cost</TableHead>
-                      <TableHead>Sent</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {faxLogs.map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell>{log.recipient_name || '-'}</TableCell>
-                        <TableCell className="font-mono text-sm">{log.recipient_number}</TableCell>
-                        <TableCell>{getStatusBadge(log.status)}</TableCell>
-                        <TableCell>{log.pages_sent || '-'}</TableCell>
-                        <TableCell>
-                          {log.cost_cents ? `$${(log.cost_cents / 100).toFixed(2)}` : '-'}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {log.sent_at ? format(new Date(log.sent_at), 'Pp') : '-'}
-                        </TableCell>
+          <Card>
+            <CardHeader>
+              <CardTitle>Fax Delivery Log</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingLogs ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                </div>
+              ) : faxLogs.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No fax logs found for this campaign
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Recipient</TableHead>
+                        <TableHead>Number</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Pages</TableHead>
+                        <TableHead>Cost</TableHead>
+                        <TableHead>Sent</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {faxLogs.map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell>{log.recipient_name || '-'}</TableCell>
+                          <TableCell className="font-mono text-sm">{log.recipient_number}</TableCell>
+                          <TableCell>{getStatusBadge(log.status)}</TableCell>
+                          <TableCell>{log.pages_sent || '-'}</TableCell>
+                          <TableCell>
+                            {log.cost_cents ? `$${(log.cost_cents / 100).toFixed(2)}` : '-'}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {log.sent_at ? format(new Date(log.sent_at), 'Pp') : '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 -m-3 md:-m-6 p-3 md:p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Fax Campaigns</h1>

@@ -65,7 +65,7 @@ export function Layout({ children }: LayoutProps) {
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-auto min-h-16 border-b bg-card shadow-sm flex flex-col md:flex-row items-start md:items-center px-3 md:px-6 py-3 md:py-0 gap-2 md:gap-4">
             <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
-              <SidebarTrigger className="md:hidden" />
+              <SidebarTrigger />
               <img 
                 src={logoUrl} 
                 alt="Company Logo" 
