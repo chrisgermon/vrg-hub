@@ -283,6 +283,57 @@ export type Database = {
         }
         Relationships: []
       }
+      hardware_catalog: {
+        Row: {
+          category: string | null
+          created_at: string
+          currency: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          manufacturer: string | null
+          model_number: string | null
+          name: string
+          price: number | null
+          specifications: Json | null
+          stock_quantity: number | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          manufacturer?: string | null
+          model_number?: string | null
+          name: string
+          price?: number | null
+          specifications?: Json | null
+          stock_quantity?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          manufacturer?: string | null
+          model_number?: string | null
+          name?: string
+          price?: number | null
+          specifications?: Json | null
+          stock_quantity?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hardware_requests: {
         Row: {
           admin_approval_notes: string | null
@@ -354,6 +405,66 @@ export type Database = {
           title?: string
           total_amount?: number | null
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      marketing_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          assigned_to: string | null
+          attachments: Json | null
+          completed_at: string | null
+          created_at: string
+          deadline: string | null
+          description: string | null
+          id: string
+          metadata: Json | null
+          priority: string
+          request_type: string
+          status: string
+          target_audience: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_to?: string | null
+          attachments?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          priority?: string
+          request_type: string
+          status?: string
+          target_audience?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_to?: string | null
+          attachments?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          priority?: string
+          request_type?: string
+          status?: string
+          target_audience?: string | null
+          title?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
