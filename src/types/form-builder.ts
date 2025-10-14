@@ -46,7 +46,6 @@ export interface FormField {
 
 export interface FormTemplate {
   id: string;
-  company_id: string;
   name: string;
   description?: string;
   form_type: string;

@@ -88,9 +88,6 @@ export function DynamicFormRenderer({ template, onSubmit, isSubmitting }: Dynami
     }, {} as Record<string, any>),
   });
 
-  // Get company_id from template for location and other company-specific fields
-  const companyId = template.company_id;
-
   const sortedFields = [...template.fields].sort((a, b) => a.order - b.order);
 
   const renderField = (field: FormFieldType) => {

@@ -152,6 +152,54 @@ export type Database = {
         }
         Relationships: []
       }
+      form_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          department: string | null
+          description: string | null
+          fields: Json
+          form_type: string
+          id: string
+          is_active: boolean
+          name: string
+          settings: Json | null
+          sub_department: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          description?: string | null
+          fields?: Json
+          form_type: string
+          id?: string
+          is_active?: boolean
+          name: string
+          settings?: Json | null
+          sub_department?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          description?: string | null
+          fields?: Json
+          form_type?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          settings?: Json | null
+          sub_department?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       hardware_requests: {
         Row: {
           admin_approval_notes: string | null
