@@ -1,3 +1,6 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+
 type FeatureKey = 
   | 'hardware_requests'
   | 'toner_requests'
@@ -8,31 +11,38 @@ type FeatureKey =
   | 'modality_management'
   | 'print_ordering'
   | 'front_chat'
-  | 'fax_campaigns';
+  | 'fax_campaigns'
+  | 'knowledge_base'
+  | 'approvals';
 
 export function useCompanyFeatures() {
-  // Single-tenant default: enable all features
-  const defaultFeatures: Record<FeatureKey, boolean> = {
-    hardware_requests: true,
-    toner_requests: true,
-    user_accounts: true,
-    marketing_requests: true,
-    department_requests: true,
-    monthly_newsletter: true,
-    modality_management: true,
-    print_ordering: true,
-    front_chat: true,
-    fax_campaigns: true,
-  };
+  const { data: featureFlags, isLoading } = useQuery({
+    queryKey: ['feature-flags'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('feature_flags')
+        .select('*');
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const isFeatureEnabled = (featureKey: FeatureKey): boolean => {
-    return defaultFeatures[featureKey] ?? true;
+    if (!featureFlags) return true; // Default to enabled while loading
+    const flag = featureFlags.find(f => f.feature_key === featureKey);
+    return flag ? flag.is_enabled : true;
   };
+
+  const features = featureFlags?.reduce((acc, flag) => {
+    acc[flag.feature_key as FeatureKey] = flag.is_enabled;
+    return acc;
+  }, {} as Record<FeatureKey, boolean>) || {} as Record<FeatureKey, boolean>;
 
   return {
     isFeatureEnabled,
-    features: defaultFeatures,
-    loading: false,
+    features,
+    loading: isLoading,
     refreshFeatures: async () => {},
   };
 }

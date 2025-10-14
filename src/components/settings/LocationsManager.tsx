@@ -31,6 +31,17 @@ import {
 import { Plus, Edit, Trash2, Loader2, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
+const AUSTRALIAN_STATES = [
+  { value: 'NSW', label: 'New South Wales' },
+  { value: 'VIC', label: 'Victoria' },
+  { value: 'QLD', label: 'Queensland' },
+  { value: 'WA', label: 'Western Australia' },
+  { value: 'SA', label: 'South Australia' },
+  { value: 'TAS', label: 'Tasmania' },
+  { value: 'ACT', label: 'Australian Capital Territory' },
+  { value: 'NT', label: 'Northern Territory' },
+];
+
 interface Brand {
   id: string;
   display_name: string;
@@ -254,23 +265,34 @@ export function LocationsManager() {
                       defaultValue={editingLocation?.city}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="state">State</Label>
-                    <Input
-                      id="state"
-                      name="state"
-                      defaultValue={editingLocation?.state}
-                      placeholder="e.g., CA"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state">State/Territory *</Label>
+                  <Select
+                    name="state"
+                    defaultValue={editingLocation?.state}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select state" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AUSTRALIAN_STATES.map((state) => (
+                        <SelectItem key={state.value} value={state.value}>
+                          {state.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                </div>
                   <div className="space-y-2">
-                    <Label htmlFor="zip_code">ZIP Code</Label>
+                    <Label htmlFor="zip_code">Postcode</Label>
                     <Input
                       id="zip_code"
                       name="zip_code"
                       defaultValue={editingLocation?.zip_code}
+                      placeholder="e.g., 2000"
+                      pattern="[0-9]{4}"
                     />
                   </div>
                   <div className="space-y-2">
@@ -279,10 +301,9 @@ export function LocationsManager() {
                       id="phone"
                       name="phone"
                       defaultValue={editingLocation?.phone}
-                      placeholder="(555) 123-4567"
+                      placeholder="e.g., (02) 1234 5678"
                     />
                   </div>
-                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
