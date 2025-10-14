@@ -25,7 +25,7 @@ export default function NewHardwareRequest() {
         </div>
       </div>
 
-      <RequestForm onSuccess={handleSuccess} />
+      <RequestForm />
     </div>
   );
 }

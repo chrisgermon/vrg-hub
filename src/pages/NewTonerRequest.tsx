@@ -28,7 +28,7 @@ export default function NewTonerRequest() {
         </div>
       </div>
 
-      <TonerRequestForm onSuccess={handleSuccess} />
+      <TonerRequestForm />
     </div>
   );
 }

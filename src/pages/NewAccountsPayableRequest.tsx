@@ -20,10 +20,7 @@ export default function NewAccountsPayableRequest() {
         </div>
       </div>
 
-      <TemplatedDepartmentRequestForm
-        department="accounts_payable"
-        departmentLabel="Accounts Payable"
-      />
+      <TemplatedDepartmentRequestForm />
     </div>
   );
 }

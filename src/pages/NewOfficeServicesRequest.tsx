@@ -20,10 +20,7 @@ export default function NewOfficeServicesRequest() {
         </div>
       </div>
 
-      <TemplatedDepartmentRequestForm
-        department="office_services"
-        departmentLabel="Office Services"
-      />
+      <TemplatedDepartmentRequestForm />
     </div>
   );
 }

@@ -20,10 +20,7 @@ export default function NewITServiceDeskRequest() {
         </div>
       </div>
 
-      <TemplatedDepartmentRequestForm
-        department="it_service_desk"
-        departmentLabel="IT Service Desk"
-      />
+      <TemplatedDepartmentRequestForm />
     </div>
   );
 }

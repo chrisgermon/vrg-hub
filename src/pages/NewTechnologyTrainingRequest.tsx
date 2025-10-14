@@ -20,10 +20,7 @@ export default function NewTechnologyTrainingRequest() {
         </div>
       </div>
 
-      <TemplatedDepartmentRequestForm
-        department="technology_training"
-        departmentLabel="Technology Training"
-      />
+      <TemplatedDepartmentRequestForm />
     </div>
   );
 }
