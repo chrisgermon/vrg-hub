@@ -76,7 +76,6 @@ export function MenuEditor() {
           role: selectedRole,
           item_key: item.key,
           item_type: item.type,
-          parent_key: item.parentKey,
           is_visible: true,
           sort_order: index,
         }));
