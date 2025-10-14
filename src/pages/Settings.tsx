@@ -6,10 +6,10 @@ import { SystemBannerManager } from '@/components/banners/SystemBannerManager';
 import { ApprovalWorkflowManager } from '@/components/workflows/ApprovalWorkflowManager';
 import { CompanySettings } from '@/components/CompanySettings';
 import { MenuEditor } from '@/components/settings/MenuEditor';
-import { RolesManager } from '@/components/settings/RolesManager';
 import { CannedResponsesManager } from '@/components/settings/CannedResponsesManager';
 import { CompanyLocationsManager } from '@/components/settings/CompanyLocationsManager';
 import { NotificationSettingsManager } from '@/components/settings/NotificationSettingsManager';
+import { UsersSection } from '@/components/settings/UsersSection';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function Settings() {
@@ -77,7 +77,7 @@ export default function Settings() {
 
         {isAdmin && (
           <TabsContent value="users" className="space-y-6">
-            <RolesManager />
+            <UsersSection />
           </TabsContent>
         )}
 
