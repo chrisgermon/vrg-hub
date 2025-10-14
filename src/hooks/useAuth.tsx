@@ -29,6 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<any | null>(null);
+  const [company, setCompany] = useState<any | null>(null);
   const { toast } = useToast();
 
   const fetchUserRole = async (userId: string) => {
@@ -65,6 +67,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+      if (error) {
+        console.error('Error fetching profile:', error);
+        setProfile(null);
+      } else {
+        setProfile(data ?? null);
+      }
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+      setProfile(null);
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -72,14 +93,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Fetch user role when session changes
-        if (session?.user) {
-          setTimeout(() => {
-            fetchUserRole(session.user.id);
-          }, 0);
-        } else {
-          setUserRole(null);
-        }
+      // Fetch user role and profile when session changes
+      if (session?.user) {
+        setTimeout(() => {
+          fetchUserRole(session.user.id);
+          fetchProfile(session.user.id);
+        }, 0);
+      } else {
+        setUserRole(null);
+        setProfile(null);
+      }
       }
     );
 
@@ -90,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (session?.user) {
         fetchUserRole(session.user.id);
+        fetchProfile(session.user.id);
       } else {
         setLoading(false);
       }
@@ -123,6 +147,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
+    setProfile(null);
+    setCompany(null);
+    setUserRole(null);
+    setSession(null);
+    setUser(null);
     if (error) {
       toast({
         title: 'Error signing out',
@@ -134,17 +163,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        session,
-        userRole,
-        loading,
-        signInWithPassword,
-        signInWithAzure,
-          signOut,
-          profile: null,
-          company: null,
-        }}
+    value={{
+      user,
+      session,
+      userRole,
+      loading,
+      profile,
+      company,
+      signInWithPassword,
+      signInWithAzure,
+      signOut,
+    }}
       >
       {children}
     </AuthContext.Provider>

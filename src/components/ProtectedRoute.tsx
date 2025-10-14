@@ -26,7 +26,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     return <Navigate to="/auth" replace />;
   }
 
-  if (!profile) {
+  if (!profile && userRole !== 'super_admin') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
