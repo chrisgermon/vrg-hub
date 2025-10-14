@@ -11,6 +11,7 @@ import { ThemeApplier } from "./components/ThemeApplier";
 // Eager imports for high-traffic pages
 import Auth from "./pages/Auth";
 import SystemLogin from "./pages/SystemLogin";
+import CreateSystemAdmin from "./pages/CreateSystemAdmin";
 import Home from "./pages/Home";
 import Requests from "./pages/Requests";
 import Settings from "./pages/Settings";
@@ -143,6 +144,7 @@ function App() {
                 <Route path="/" element={<Navigate to="/home" replace />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/system-login" element={<SystemLogin />} />
+                <Route path="/create-system-admin" element={<CreateSystemAdmin />} />
                 {protectedLayoutRoutes.map(({ path, element, requiredRole }) => (
                   <Route
                     key={path}
