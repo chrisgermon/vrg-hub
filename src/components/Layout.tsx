@@ -1,4 +1,4 @@
-import React, { ReactNode, Suspense } from "react";
+import React, { ReactNode, Suspense, useEffect, useState } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { BetaFeedbackDialog } from "./BetaFeedbackDialog";
 import { NewsletterBanner } from "./newsletter/NewsletterBanner";
 import { SystemStatusIndicator } from "./SystemStatusIndicator";
 import { CompanySelector } from "./CompanySelector";
+import { supabase } from "@/integrations/supabase/client";
 
 
 import { CriticalSystemsBar } from "./CriticalSystemsBar";
@@ -28,6 +29,23 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const { userRole, user, signOut } = useAuth();
   const { effectiveRole, isImpersonating } = useRoleImpersonation();
+  const [logoUrl, setLogoUrl] = useState<string>(crowdITLogo);
+
+  useEffect(() => {
+    const loadCompanyLogo = async () => {
+      const { data: config } = await supabase
+        .from('app_config')
+        .select('logo_url')
+        .limit(1)
+        .maybeSingle();
+      
+      if (config?.logo_url) {
+        setLogoUrl(config.logo_url);
+      }
+    };
+    
+    loadCompanyLogo();
+  }, []);
 
   const handleSignOut = async () => {
     try {
@@ -49,8 +67,8 @@ export function Layout({ children }: LayoutProps) {
             <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
               <SidebarTrigger className="md:hidden" />
               <img 
-                src={crowdITLogo} 
-                alt="Vision Radiology" 
+                src={logoUrl} 
+                alt="Company Logo" 
                 className="h-10 md:h-12 object-contain" 
               />
               <NotificationsDropdown />

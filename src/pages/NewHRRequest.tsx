@@ -20,7 +20,10 @@ export default function NewHRRequest() {
         </div>
       </div>
 
-      <TemplatedDepartmentRequestForm />
+      <TemplatedDepartmentRequestForm 
+        department="hr"
+        departmentLabel="HR"
+      />
     </div>
   );
 }

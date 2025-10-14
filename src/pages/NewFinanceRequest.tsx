@@ -20,7 +20,10 @@ export default function NewFinanceRequest() {
         </div>
       </div>
 
-      <TemplatedDepartmentRequestForm />
+      <TemplatedDepartmentRequestForm 
+        department="finance"
+        departmentLabel="Finance"
+      />
     </div>
   );
 }

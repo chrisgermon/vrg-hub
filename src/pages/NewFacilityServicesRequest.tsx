@@ -20,7 +20,10 @@ export default function NewFacilityServicesRequest() {
         </div>
       </div>
 
-      <TemplatedDepartmentRequestForm />
+      <TemplatedDepartmentRequestForm 
+        department="facility_services"
+        departmentLabel="Facility Services"
+      />
     </div>
   );
 }
