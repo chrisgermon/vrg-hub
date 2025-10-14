@@ -11,16 +11,28 @@ type FeatureKey =
   | 'fax_campaigns';
 
 export function useCompanyFeatures() {
-  // Stub implementation for single-tenant mode
-  // All features are disabled
+  // Single-tenant default: enable all features
+  const defaultFeatures: Record<FeatureKey, boolean> = {
+    hardware_requests: true,
+    toner_requests: true,
+    user_accounts: true,
+    marketing_requests: true,
+    department_requests: true,
+    monthly_newsletter: true,
+    modality_management: true,
+    print_ordering: true,
+    front_chat: true,
+    fax_campaigns: true,
+  };
+
   const isFeatureEnabled = (featureKey: FeatureKey): boolean => {
-    return false;
+    return defaultFeatures[featureKey] ?? true;
   };
 
   return {
     isFeatureEnabled,
-    features: {},
+    features: defaultFeatures,
     loading: false,
-    refreshFeatures: () => Promise.resolve(),
+    refreshFeatures: async () => {},
   };
 }
