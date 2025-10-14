@@ -1223,6 +1223,164 @@ export type Database = {
         }
         Relationships: []
       }
+      notifyre_fax_campaigns: {
+        Row: {
+          campaign_id: string
+          campaign_name: string | null
+          contact_group_id: string | null
+          contact_group_name: string | null
+          created_at: string
+          delivered_count: number | null
+          document_path: string | null
+          failed_count: number | null
+          id: string
+          metadata: Json | null
+          pending_count: number | null
+          sent_at: string | null
+          total_recipients: number | null
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          campaign_name?: string | null
+          contact_group_id?: string | null
+          contact_group_name?: string | null
+          created_at?: string
+          delivered_count?: number | null
+          document_path?: string | null
+          failed_count?: number | null
+          id?: string
+          metadata?: Json | null
+          pending_count?: number | null
+          sent_at?: string | null
+          total_recipients?: number | null
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          campaign_name?: string | null
+          contact_group_id?: string | null
+          contact_group_name?: string | null
+          created_at?: string
+          delivered_count?: number | null
+          document_path?: string | null
+          failed_count?: number | null
+          id?: string
+          metadata?: Json | null
+          pending_count?: number | null
+          sent_at?: string | null
+          total_recipients?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notifyre_fax_logs: {
+        Row: {
+          campaign_id: string | null
+          cost_cents: number | null
+          created_at: string
+          delivered_at: string | null
+          document_id: string | null
+          document_path: string | null
+          document_url: string | null
+          duration_seconds: number | null
+          error_message: string | null
+          failed_at: string | null
+          id: string
+          notifyre_fax_id: string | null
+          pages_sent: number | null
+          recipient_name: string | null
+          recipient_number: string
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          cost_cents?: number | null
+          created_at?: string
+          delivered_at?: string | null
+          document_id?: string | null
+          document_path?: string | null
+          document_url?: string | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          notifyre_fax_id?: string | null
+          pages_sent?: number | null
+          recipient_name?: string | null
+          recipient_number: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string | null
+          cost_cents?: number | null
+          created_at?: string
+          delivered_at?: string | null
+          document_id?: string | null
+          document_path?: string | null
+          document_url?: string | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          notifyre_fax_id?: string | null
+          pages_sent?: number | null
+          recipient_name?: string | null
+          recipient_number?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifyre_fax_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "notifyre_fax_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifyre_sync_history: {
+        Row: {
+          campaigns_synced: number
+          created_at: string
+          error_message: string | null
+          faxes_synced: number
+          from_date: string
+          id: string
+          status: string
+          synced_by: string | null
+          to_date: string
+        }
+        Insert: {
+          campaigns_synced?: number
+          created_at?: string
+          error_message?: string | null
+          faxes_synced?: number
+          from_date: string
+          id?: string
+          status?: string
+          synced_by?: string | null
+          to_date: string
+        }
+        Update: {
+          campaigns_synced?: number
+          created_at?: string
+          error_message?: string | null
+          faxes_synced?: number
+          from_date?: string
+          id?: string
+          status?: string
+          synced_by?: string | null
+          to_date?: string
+        }
+        Relationships: []
+      }
       print_brands: {
         Row: {
           contact_email: string | null

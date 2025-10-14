@@ -42,7 +42,6 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
   );
 
-  let company_id: string | undefined;
   let from_date: string | undefined;
   let to_date: string | undefined;
   let user_id: string | undefined;
@@ -62,26 +61,10 @@ Deno.serve(async (req) => {
 
     user_id = user.id;
 
-    // Get user's company
-    const { data: profile } = await supabaseClient
-      .from('profiles')
-      .select('company_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!profile?.company_id) {
-      throw new Error('No company found for user');
-    }
-
     const requestBody = await req.json();
-    company_id = requestBody.company_id;
     from_date = requestBody.from_date;
     to_date = requestBody.to_date;
     const force_full_sync = requestBody.force_full_sync || false;
-    
-    if (!company_id || company_id !== profile.company_id) {
-      throw new Error('Invalid company');
-    }
 
     const notifyreApiKey = Deno.env.get('NOTIFYRE_API_KEY');
     if (!notifyreApiKey) {
@@ -109,7 +92,6 @@ Deno.serve(async (req) => {
       const { data: lastSync } = await supabaseClient
         .from('notifyre_sync_history')
         .select('to_date, created_at')
-        .eq('company_id', company_id)
         .eq('status', 'success')
         .order('created_at', { ascending: false })
         .limit(1)
@@ -268,7 +250,6 @@ Deno.serve(async (req) => {
       const { data: campaign, error: campaignError } = await supabaseClient
         .from('notifyre_fax_campaigns')
         .upsert({
-          company_id: company_id,
           campaign_id: String(campaignKey),
           campaign_name: campaignName,
           contact_group_id: contactGroupId,
@@ -279,7 +260,7 @@ Deno.serve(async (req) => {
           pending_count: stats.pending,
           sent_at: campaignFaxes[0]?.sentAt || campaignFaxes[0]?.createdAt || (campaignFaxes[0]?.createdDateUtc ? new Date(campaignFaxes[0].createdDateUtc * 1000).toISOString() : new Date().toISOString()),
         }, {
-          onConflict: 'company_id,campaign_id'
+          onConflict: 'campaign_id'
         })
         .select()
         .single();
@@ -293,7 +274,6 @@ Deno.serve(async (req) => {
       const toIso = (sec: number | null | undefined) => (typeof sec === 'number' ? new Date(sec * 1000).toISOString() : null);
       const faxLogs = campaignFaxes.map((fax: any) => ({
         campaign_id: campaign.id,
-        company_id: company_id,
         notifyre_fax_id: fax.recipientID || fax.id || fax.faxId,
         recipient_number: fax.to || fax.recipient || 'Unknown',
         recipient_name: fax.recipientName || fax.toName || null,
@@ -361,7 +341,7 @@ Deno.serve(async (req) => {
       console.log('Upload data length:', uploadData.length);
 
       // Upload to Supabase Storage
-      const fileName = `${company_id}/${campaignKey}/campaign-document.pdf`;
+      const fileName = `campaigns/${campaignKey}/campaign-document.pdf`;
       const { error: uploadError } = await supabaseClient.storage
         .from('fax-documents')
         .upload(fileName, uploadData, {
@@ -390,7 +370,6 @@ Deno.serve(async (req) => {
     await supabaseClient
       .from('notifyre_sync_history')
       .insert({
-        company_id: company_id,
         synced_by: user_id,
         from_date: fromDateObj.toISOString(),
         to_date: toDateObj.toISOString(),
@@ -418,11 +397,10 @@ Deno.serve(async (req) => {
     
     // Try to log failed sync if we have the necessary data
     try {
-      if (company_id && from_date && to_date) {
+      if (from_date && to_date) {
         await supabaseClient
           .from('notifyre_sync_history')
           .insert({
-            company_id: company_id,
             synced_by: user_id,
             from_date: from_date,
             to_date: to_date,
