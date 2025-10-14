@@ -6,3 +6,11 @@ export const getSubdomain = () => {
 export const extractSubdomain = (hostname: string) => {
   return null;
 };
+
+export const getCompanyBySubdomain = async (subdomain: string) => {
+  return null;
+};
+
+export const buildSubdomainUrl = (subdomain: string) => {
+  return window.location.origin;
+};

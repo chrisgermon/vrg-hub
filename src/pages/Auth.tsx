@@ -23,12 +23,12 @@ export default function Auth() {
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [checkingDomain, setCheckingDomain] = useState(false);
   
-  const currentSubdomain = extractSubdomain();
+  const currentSubdomain = extractSubdomain(window.location.hostname);
 
   // Load company data based on subdomain
   useEffect(() => {
     const loadCompanyData = async () => {
-      const subdomain = extractSubdomain();
+      const subdomain = extractSubdomain(window.location.hostname);
       if (subdomain) {
         const company = await getCompanyBySubdomain(subdomain);
         setCompanyData(company);
@@ -119,7 +119,7 @@ export default function Auth() {
 
       // If not on correct subdomain, redirect there first
       if (companySubdomain && currentSubdomain !== companySubdomain) {
-        const redirectUrl = buildSubdomainUrl(companySubdomain, '/auth');
+        const redirectUrl = buildSubdomainUrl(companySubdomain);
         window.location.href = redirectUrl;
         return;
       }
