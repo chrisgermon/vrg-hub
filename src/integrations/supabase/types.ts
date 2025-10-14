@@ -91,28 +91,103 @@ export type Database = {
       }
       beta_feedback: {
         Row: {
+          browser_info: string | null
           created_at: string | null
           feedback_type: string | null
           id: string
           message: string
           page_url: string | null
+          subject: string | null
+          user_email: string | null
           user_id: string | null
+          user_name: string | null
         }
         Insert: {
+          browser_info?: string | null
           created_at?: string | null
           feedback_type?: string | null
           id?: string
           message: string
           page_url?: string | null
+          subject?: string | null
+          user_email?: string | null
           user_id?: string | null
+          user_name?: string | null
         }
         Update: {
+          browser_info?: string | null
           created_at?: string | null
           feedback_type?: string | null
           id?: string
           message?: string
           page_url?: string | null
+          subject?: string | null
+          user_email?: string | null
           user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      department_assignments: {
+        Row: {
+          assignee_ids: string[]
+          created_at: string | null
+          department: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          assignee_ids?: string[]
+          created_at?: string | null
+          department: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          assignee_ids?: string[]
+          created_at?: string | null
+          department?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      menu_configurations: {
+        Row: {
+          created_at: string | null
+          custom_icon: string | null
+          custom_label: string | null
+          id: string
+          is_visible: boolean | null
+          item_key: string
+          item_type: string
+          role: Database["public"]["Enums"]["app_role"]
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_icon?: string | null
+          custom_label?: string | null
+          id?: string
+          is_visible?: boolean | null
+          item_key: string
+          item_type?: string
+          role: Database["public"]["Enums"]["app_role"]
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_icon?: string | null
+          custom_label?: string | null
+          id?: string
+          is_visible?: boolean | null
+          item_key?: string
+          item_type?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          sort_order?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -149,6 +224,33 @@ export type Database = {
           location?: string | null
           phone?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      saved_searches: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          query: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          query: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          query?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }

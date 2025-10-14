@@ -57,7 +57,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Button } from "@/components/ui/button";
-import { useCompanyContext } from "@/contexts/CompanyContext";
+
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,8 +84,8 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
     }
   };
   const location = useLocation();
-  const { company: userCompany, user } = useAuth();
-  const { selectedCompany, isSuperAdminViewingOtherCompany } = useCompanyContext();
+  const { user } = useAuth();
+  const userCompany: any = null;
   const { effectiveRole: impersonatedRole } = useRoleImpersonation();
   
   // Use impersonated role if active, otherwise use the prop role
@@ -105,7 +105,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
       if (!userRole) return;
 
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('menu_configurations')
           .select('item_key, custom_label, custom_icon')
           .eq('role', userRole);
@@ -161,7 +161,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
       }
 
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('department_assignments')
           .select('department')
           .contains('assignee_ids', [user.id]);
@@ -222,7 +222,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
 
     try {
       // Get all existing configs for this item across all roles
-      const { data: existingConfigs, error: fetchError } = await supabase
+      const { data: existingConfigs, error: fetchError } = await (supabase as any)
         .from('menu_configurations')
         .select('id, role')
         .eq('item_key', editingItem.key);
@@ -238,13 +238,13 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
 
         if (existingConfig) {
           // Update existing
-          return supabase
+          return (supabase as any)
             .from('menu_configurations')
             .update({ custom_label: label, custom_icon: icon })
             .eq('id', existingConfig.id);
         } else {
           // Insert new
-          return supabase
+          return (supabase as any)
             .from('menu_configurations')
             .insert({
               role: role,

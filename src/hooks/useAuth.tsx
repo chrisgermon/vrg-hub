@@ -10,6 +10,8 @@ interface AuthContextType {
   session: Session | null;
   userRole: UserRole | null;
   loading: boolean;
+  profile: any | null;
+  company: any | null;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signInWithAzure: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -136,9 +138,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         signInWithPassword,
         signInWithAzure,
-        signOut,
-      }}
-    >
+          signOut,
+          profile: null,
+          company: null,
+        }}
+      >
       {children}
     </AuthContext.Provider>
   );

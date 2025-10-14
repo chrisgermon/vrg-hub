@@ -74,13 +74,21 @@ export function CompanyLogoUpload({ companyId, currentLogoUrl, onLogoUpdated }: 
         .from('company-assets')
         .getPublicUrl(filePath);
 
-      // Update company record
-      const { error: updateError } = await supabase
-        .from('companies')
-        .update({ logo_url: publicUrl })
-        .eq('id', companyId);
+      // Update app config (single-tenant)
+      const { data: config } = await (supabase as any)
+        .from('app_config')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
 
-      if (updateError) throw updateError;
+      if (config?.id) {
+        const { error: updateError } = await (supabase as any)
+          .from('app_config')
+          .update({ logo_url: publicUrl })
+          .eq('id', config.id);
+        if (updateError) throw updateError;
+      }
+
 
       setPreviewUrl(publicUrl);
       onLogoUpdated?.(publicUrl);
@@ -115,13 +123,21 @@ export function CompanyLogoUpload({ companyId, currentLogoUrl, onLogoUpdated }: 
           .remove([`company-logos/${existingPath}`]);
       }
 
-      // Update company record
-      const { error: updateError } = await supabase
-        .from('companies')
-        .update({ logo_url: null })
-        .eq('id', companyId);
+    // Update app config (single-tenant)
+    const { data: config } = await (supabase as any)
+      .from('app_config')
+      .select('id')
+      .limit(1)
+      .maybeSingle();
 
+    if (config?.id) {
+      const { error: updateError } = await (supabase as any)
+        .from('app_config')
+        .update({ logo_url: null })
+        .eq('id', config.id);
       if (updateError) throw updateError;
+    }
+
 
       setPreviewUrl(null);
       onLogoUpdated?.(null);

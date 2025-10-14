@@ -74,13 +74,21 @@ export function CompanyBackgroundUpload({ companyId, currentBackgroundUrl, onBac
         .from('company-assets')
         .getPublicUrl(filePath);
 
-      // Update company record
-      const { error: updateError } = await supabase
-        .from('companies')
-        .update({ background_image_url: publicUrl })
-        .eq('id', companyId);
+      // Update app config (single-tenant)
+      const { data: config } = await (supabase as any)
+        .from('app_config')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
 
-      if (updateError) throw updateError;
+      if (config?.id) {
+        const { error: updateError } = await (supabase as any)
+          .from('app_config')
+          .update({ background_image_url: publicUrl })
+          .eq('id', config.id);
+        if (updateError) throw updateError;
+      }
+
 
       setPreviewUrl(publicUrl);
       onBackgroundUpdated?.(publicUrl);
@@ -115,13 +123,21 @@ export function CompanyBackgroundUpload({ companyId, currentBackgroundUrl, onBac
           .remove([existingPath]);
       }
 
-      // Update company record
-      const { error: updateError } = await supabase
-        .from('companies')
-        .update({ background_image_url: null })
-        .eq('id', companyId);
+    // Update app config (single-tenant)
+    const { data: config } = await (supabase as any)
+      .from('app_config')
+      .select('id')
+      .limit(1)
+      .maybeSingle();
 
+    if (config?.id) {
+      const { error: updateError } = await (supabase as any)
+        .from('app_config')
+        .update({ background_image_url: null })
+        .eq('id', config.id);
       if (updateError) throw updateError;
+    }
+
 
       setPreviewUrl(null);
       onBackgroundUpdated?.(null);

@@ -26,7 +26,7 @@ type FeedbackFormData = z.infer<typeof feedbackSchema>;
 export function BetaFeedbackDialog() {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
 
   const {
     register,
@@ -55,18 +55,18 @@ export function BetaFeedbackDialog() {
       const pageUrl = window.location.href;
 
       // Save to database
-      const { data: feedback, error: dbError } = await supabase
-        .from('beta_feedback')
-        .insert({
-          user_id: user.id,
-          user_email: user.email || profile?.email || 'unknown',
-          user_name: profile?.name || 'Unknown User',
-          feedback_type: data.feedback_type,
-          subject: data.subject,
-          message: data.message,
-          page_url: pageUrl,
-          browser_info: browserInfo,
-        })
+        const { data: feedback, error: dbError } = await (supabase as any)
+          .from('beta_feedback')
+          .insert({
+            user_id: user.id,
+            user_email: user.email || 'unknown',
+            user_name: user.user_metadata?.full_name || user.email || 'Unknown User',
+            feedback_type: data.feedback_type,
+            subject: data.subject,
+            message: data.message,
+            page_url: pageUrl,
+            browser_info: browserInfo,
+          })
         .select()
         .single();
 
@@ -76,8 +76,8 @@ export function BetaFeedbackDialog() {
       const { error: emailError } = await supabase.functions.invoke('send-beta-feedback', {
         body: {
           feedback_id: feedback.id,
-          user_email: user.email || profile?.email,
-          user_name: profile?.name || 'Unknown User',
+          user_email: user.email,
+          user_name: user.user_metadata?.full_name || user.email || 'Unknown User',
           feedback_type: data.feedback_type,
           subject: data.subject,
           message: data.message,

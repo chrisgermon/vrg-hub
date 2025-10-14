@@ -37,7 +37,7 @@ export function GlobalSearch() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [savedSearchName, setSavedSearchName] = useState("");
   const navigate = useNavigate();
-  const { company, user } = useAuth();
+  const { user } = useAuth();
   const { hasPermission } = usePermissions();
   const { isFeatureEnabled } = useCompanyFeatures();
   const queryClient = useQueryClient();
@@ -46,7 +46,7 @@ export function GlobalSearch() {
   const { data: savedSearches } = useQuery({
     queryKey: ["saved-searches", user?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("saved_searches")
         .select("*")
         .eq("user_id", user?.id)
@@ -62,7 +62,7 @@ export function GlobalSearch() {
   // Save search mutation
   const saveSearchMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("saved_searches").insert([{
+      const { error } = await (supabase as any).from("saved_searches").insert([{
         user_id: user?.id,
         name: savedSearchName,
         query: search,
@@ -102,7 +102,7 @@ export function GlobalSearch() {
   };
 
   const performSearch = useCallback(async (query: string) => {
-    if (!query || query.length < 2 || !company?.id) {
+    if (!query || query.length < 2) {
       setResults([]);
       return;
     }
@@ -111,83 +111,19 @@ export function GlobalSearch() {
     const searchResults: SearchResult[] = [];
 
     try {
-      // Search hardware requests
-      if (isFeatureEnabled('hardware_requests') && hasPermission('view_own_requests')) {
-        const { data: requests } = await supabase
-          .from('hardware_requests')
-          .select('id, title, description, status')
-          .eq('company_id', company.id)
-          .ilike('title', `%${query}%`)
-          .limit(5);
-
-        if (requests) {
-          searchResults.push(...requests.map((r: any) => ({
-            id: r.id,
-            type: 'request' as const,
-            title: r.title,
-            description: `${r.status} • ${r.description?.substring(0, 60) || ''}`,
-            url: `/requests`,
-            icon: ShoppingCart
-          })));
-        }
-      }
-
-      // Search news articles
-      const { data: articles } = await supabase
-        .from('news_articles')
-        .select('id, title, content')
-        .eq('company_id', company.id)
-        .eq('status', 'published')
-        .ilike('title', `%${query}%`)
-        .limit(5);
-
-      if (articles) {
-        searchResults.push(...articles.map((a: any) => ({
-          id: a.id,
-          type: 'news' as const,
-          title: a.title,
-          description: a.content?.substring(0, 80) || '',
-          url: `/news/view/${a.id}`,
-          icon: Newspaper
-        })));
-      }
-
-      // Search knowledge base
-      if (hasPermission('view_knowledge_base')) {
-        const { data: kbPages } = await (supabase as any)
-          .from('knowledge_base_pages')
-          .select('id, title, content')
-          .eq('company_id', company.id)
-          .eq('status', 'published')
-          .ilike('title', `%${query}%`)
-          .limit(5);
-
-        if (kbPages) {
-          searchResults.push(...kbPages.map((kb: any) => ({
-            id: kb.id,
-            type: 'knowledge-base' as const,
-            title: kb.title,
-            description: kb.content?.substring(0, 80) || '',
-            url: `/knowledge-base?page=${kb.id}`,
-            icon: BookOpen
-          })));
-        }
-      }
-
-      // Search users
+      // Minimal search: users only
       if (hasPermission('view_dashboard')) {
-        const { data: users } = await supabase
+        const { data: users } = await (supabase as any)
           .from('profiles')
-          .select('user_id, name, email')
-          .eq('company_id', company.id)
-          .ilike('name', `%${query}%`)
+          .select('id, full_name, email')
+          .ilike('full_name', `%${query}%`)
           .limit(5);
 
         if (users) {
           searchResults.push(...users.map((u: any) => ({
-            id: u.user_id,
+            id: u.id,
             type: 'user' as const,
-            title: u.name || 'Unknown',
+            title: u.full_name || 'Unknown',
             description: u.email || '',
             url: `/directory`,
             icon: Users
