@@ -26,45 +26,9 @@ export default function Home() {
   const { isFeatureEnabled } = useCompanyFeatures();
   const { hasPermission } = usePermissions();
 
-  // Fetch unread notifications count
-  const { data: unreadNotifications } = useQuery({
-    queryKey: ["unread-notifications-count", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return 0;
-      
-      const { count, error } = await supabase
-        .from("notifications")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .is("read_at", null);
-
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!user?.id,
-  });
-
-  // Fetch recent request count
-  const { data: recentRequestsCount } = useQuery({
-    queryKey: ["recent-requests-count", company?.id, user?.id],
-    queryFn: async () => {
-      if (!company?.id || !user?.id) return 0;
-      
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const { count, error } = await supabase
-        .from("hardware_requests")
-        .select("*", { count: "exact", head: true })
-        .eq("company_id", company.id)
-        .eq("user_id", user.id)
-        .gte("created_at", thirtyDaysAgo.toISOString());
-
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!company?.id && !!user?.id,
-  });
+  // Stub: no notifications or requests in single-tenant mode
+  const unreadNotifications = 0;
+  const recentRequestsCount = 0;
 
   type FeatureKey = 
     | 'hardware_requests'
