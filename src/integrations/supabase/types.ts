@@ -254,6 +254,42 @@ export type Database = {
         }
         Relationships: []
       }
+      system_banners: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          message: string
+          start_date: string | null
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          message: string
+          start_date?: string | null
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string
+          start_date?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_statuses: {
         Row: {
           created_at: string | null
