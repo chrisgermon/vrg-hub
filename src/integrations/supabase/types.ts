@@ -1477,6 +1477,149 @@ export type Database = {
           },
         ]
       }
+      reminder_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
+      reminder_notifications: {
+        Row: {
+          days_before: number | null
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          notification_type: string
+          recipient: string | null
+          reminder_id: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          days_before?: number | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          notification_type: string
+          recipient?: string | null
+          reminder_id: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          days_before?: number | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          notification_type?: string
+          recipient?: string | null
+          reminder_id?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminder_notifications_reminder_id_fkey"
+            columns: ["reminder_id"]
+            isOneToOne: false
+            referencedRelation: "reminders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reminders: {
+        Row: {
+          advance_notice_days: number[] | null
+          completed_at: string | null
+          created_at: string | null
+          description: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          is_recurring: boolean | null
+          metadata: Json | null
+          notification_channels: Json
+          phone_number: string | null
+          recurrence_interval: number | null
+          recurrence_pattern: string | null
+          reminder_date: string
+          reminder_type: string
+          status: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          advance_notice_days?: number[] | null
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_recurring?: boolean | null
+          metadata?: Json | null
+          notification_channels?: Json
+          phone_number?: string | null
+          recurrence_interval?: number | null
+          recurrence_pattern?: string | null
+          reminder_date: string
+          reminder_type: string
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          advance_notice_days?: number[] | null
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_recurring?: boolean | null
+          metadata?: Json | null
+          notification_channels?: Json
+          phone_number?: string | null
+          recurrence_interval?: number | null
+          recurrence_pattern?: string | null
+          reminder_date?: string
+          reminder_type?: string
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       request_attachments: {
         Row: {
           attachment_type: string

@@ -66,6 +66,8 @@ const SeedFormTemplates = lazy(() => import("./pages/SeedFormTemplates"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Install = lazy(() => import("./pages/Install"));
 const Integrations = lazy(() => import("./pages/Integrations"));
+const Reminders = lazy(() => import("./pages/Reminders"));
+const NewReminder = lazy(() => import("./pages/NewReminder"));
 
 const protectedLayoutRoutes: Array<{
   path: string;
@@ -123,6 +125,8 @@ const protectedLayoutRoutes: Array<{
   { path: "/form-templates", element: <FormTemplates />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/form-templates/seed", element: <SeedFormTemplates />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/integrations", element: <Integrations />, requiredRole: ["super_admin"] },
+  { path: "/reminders", element: <Reminders /> },
+  { path: "/reminders/new", element: <NewReminder /> },
   { path: "/dashboard", element: <Dashboard /> },
     { path: "/install", element: <Install /> },
   ];
