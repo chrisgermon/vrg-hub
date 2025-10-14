@@ -128,6 +128,42 @@ export type Database = {
         }
         Relationships: []
       }
+      clinics: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          gateway: string | null
+          id: string
+          ip_range: string | null
+          location_name: string
+          notes: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          gateway?: string | null
+          id?: string
+          ip_range?: string | null
+          location_name: string
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          gateway?: string | null
+          id?: string
+          ip_range?: string | null
+          location_name?: string
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       department_assignments: {
         Row: {
           assignee_ids: string[]
@@ -151,6 +187,53 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      dicom_servers: {
+        Row: {
+          ae_title: string | null
+          clinic_id: string
+          created_at: string
+          function: string | null
+          id: string
+          ip_address: string
+          name: string
+          notes: string | null
+          port: number | null
+          updated_at: string
+        }
+        Insert: {
+          ae_title?: string | null
+          clinic_id: string
+          created_at?: string
+          function?: string | null
+          id?: string
+          ip_address: string
+          name: string
+          notes?: string | null
+          port?: number | null
+          updated_at?: string
+        }
+        Update: {
+          ae_title?: string | null
+          clinic_id?: string
+          created_at?: string
+          function?: string | null
+          id?: string
+          ip_address?: string
+          name?: string
+          notes?: string | null
+          port?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dicom_servers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       form_templates: {
         Row: {
@@ -313,6 +396,62 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      modalities: {
+        Row: {
+          ae_title: string | null
+          clinic_id: string
+          created_at: string
+          id: string
+          ip_address: string
+          modality_type: string | null
+          name: string
+          notes: string | null
+          port: number | null
+          updated_at: string
+          worklist_ae_title: string | null
+          worklist_ip_address: string | null
+          worklist_port: number | null
+        }
+        Insert: {
+          ae_title?: string | null
+          clinic_id: string
+          created_at?: string
+          id?: string
+          ip_address: string
+          modality_type?: string | null
+          name: string
+          notes?: string | null
+          port?: number | null
+          updated_at?: string
+          worklist_ae_title?: string | null
+          worklist_ip_address?: string | null
+          worklist_port?: number | null
+        }
+        Update: {
+          ae_title?: string | null
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          ip_address?: string
+          modality_type?: string | null
+          name?: string
+          notes?: string | null
+          port?: number | null
+          updated_at?: string
+          worklist_ae_title?: string | null
+          worklist_ip_address?: string | null
+          worklist_port?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modalities_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       news_articles: {
         Row: {
