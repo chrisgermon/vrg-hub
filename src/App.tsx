@@ -4,11 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { CompanyProvider } from "@/contexts/CompanyContext";
 import { InlineEditProvider } from "@/contexts/InlineEditContext";
 import { ProtectedLayoutRoute } from "@/components/ProtectedLayoutRoute";
 import { ThemeApplier } from "./components/ThemeApplier";
-import { SubdomainGuard } from "./components/SubdomainGuard";
 
 // Eager imports for high-traffic pages
 import Auth from "./pages/Auth";
@@ -44,8 +42,6 @@ const AuditLog = lazy(() => import("./pages/AuditLog"));
 const Help = lazy(() => import("./pages/Help"));
 const Catalog = lazy(() => import("./pages/Catalog"));
 const UserRoles = lazy(() => import("./pages/UserRoles"));
-const Companies = lazy(() => import("./pages/Companies"));
-const CompanyDetail = lazy(() => import("./pages/CompanyDetail"));
 const ContactSupport = lazy(() => import("./pages/ContactSupport"));
 const FileManager = lazy(() => import("./pages/FileManager"));
 const PrintOrderingForms = lazy(() => import("./pages/PrintOrderingForms"));
@@ -119,8 +115,6 @@ const protectedLayoutRoutes: Array<{
   { path: "/admin", element: <Admin />, requiredRole: ["super_admin"] },
   { path: "/admin/platform", element: <PlatformAdmin />, requiredRole: ["super_admin"] },
   { path: "/admin/company", element: <CompanyAdmin />, requiredRole: ["super_admin", "tenant_admin"] },
-  { path: "/admin/companies", element: <Companies />, requiredRole: ["super_admin"] },
-  { path: "/admin/companies/:companyId", element: <CompanyDetail />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/admin/files", element: <FileManager />, requiredRole: ["super_admin"] },
   { path: "/audit-log", element: <AuditLog />, requiredRole: ["super_admin"] },
   { path: "/users", element: <Admin />, requiredRole: ["tenant_admin", "super_admin"] },
@@ -140,38 +134,35 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <CompanyProvider>
-          <InlineEditProvider>
-            <ThemeApplier />
-            <SubdomainGuard />
-            <TooltipProvider>
-              <Toaster />
-              <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/home" replace />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/system-login" element={<SystemLogin />} />
-          {protectedLayoutRoutes.map(({ path, element, requiredRole }) => (
-            <Route
-              key={path}
-              path={path}
-              element={
-                <ProtectedLayoutRoute requiredRole={requiredRole}>
-                  {element}
-                </ProtectedLayoutRoute>
-              }
-            />
-          ))}
-          <Route path="/shared/:token" element={<SharedClinic />} />
-          <Route path="/confirm-order/:token" element={<ConfirmOrder />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <InlineEditProvider>
+          <ThemeApplier />
+          <TooltipProvider>
+            <Toaster />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Navigate to="/home" replace />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/system-login" element={<SystemLogin />} />
+                {protectedLayoutRoutes.map(({ path, element, requiredRole }) => (
+                  <Route
+                    key={path}
+                    path={path}
+                    element={
+                      <ProtectedLayoutRoute requiredRole={requiredRole}>
+                        {element}
+                      </ProtectedLayoutRoute>
+                    }
+                  />
+                ))}
+                <Route path="/shared/:token" element={<SharedClinic />} />
+                <Route path="/confirm-order/:token" element={<ConfirmOrder />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
             </BrowserRouter>
           </TooltipProvider>
         </InlineEditProvider>
-      </CompanyProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 
