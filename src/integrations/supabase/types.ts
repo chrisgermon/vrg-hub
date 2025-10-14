@@ -1711,6 +1711,93 @@ export type Database = {
         }
         Relationships: []
       }
+      toner_requests: {
+        Row: {
+          assigned_to: string | null
+          brand_id: string | null
+          colors_required: string[] | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          eta_delivery: string | null
+          id: string
+          location_id: string | null
+          predicted_toner_models: string | null
+          printer_model: string | null
+          priority: string
+          quantity: number
+          site: string | null
+          status: string
+          title: string
+          toner_type: string | null
+          tracking_link: string | null
+          updated_at: string
+          urgency: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          brand_id?: string | null
+          colors_required?: string[] | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          eta_delivery?: string | null
+          id?: string
+          location_id?: string | null
+          predicted_toner_models?: string | null
+          printer_model?: string | null
+          priority?: string
+          quantity?: number
+          site?: string | null
+          status?: string
+          title: string
+          toner_type?: string | null
+          tracking_link?: string | null
+          updated_at?: string
+          urgency?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          brand_id?: string | null
+          colors_required?: string[] | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          eta_delivery?: string | null
+          id?: string
+          location_id?: string | null
+          predicted_toner_models?: string | null
+          printer_model?: string | null
+          priority?: string
+          quantity?: number
+          site?: string | null
+          status?: string
+          title?: string
+          toner_type?: string | null
+          tracking_link?: string | null
+          updated_at?: string
+          urgency?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toner_requests_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toner_requests_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
