@@ -1,0 +1,104 @@
+import React, { ReactNode, Suspense } from "react";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "./AppSidebar";
+import { Button } from "@/components/ui/button";
+import { LogOut, User } from "lucide-react";
+import crowdITLogo from "@/assets/crowdit-logo.png";
+import { useAuth } from "@/hooks/useAuth";
+import { BetaFeedbackDialog } from "./BetaFeedbackDialog";
+import { NewsletterBanner } from "./newsletter/NewsletterBanner";
+import { SystemStatusIndicator } from "./SystemStatusIndicator";
+import { CompanySelector } from "./CompanySelector";
+import { useCompanyContext } from "@/contexts/CompanyContext";
+
+import { CriticalSystemsBar } from "./CriticalSystemsBar";
+import { Footer } from "./Footer";
+import { FrontChatWidget } from "./FrontChatWidget";
+import { NotificationsDropdown } from "./NotificationsDropdown";
+import { RoleImpersonationSelector } from "./RoleImpersonationSelector";
+import { useRoleImpersonation } from "@/hooks/useRoleImpersonation";
+import { RouteLoading } from "./RouteLoading";
+import { GlobalSearch } from "./GlobalSearch";
+import { SystemBanners } from "./banners/SystemBanners";
+
+interface LayoutProps {
+  children: ReactNode;
+}
+
+export function Layout({ children }: LayoutProps) {
+  const { profile, userRole, user, signOut, company: userCompany } = useAuth();
+  const { selectedCompany } = useCompanyContext();
+  const { effectiveRole, isImpersonating } = useRoleImpersonation();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  return (
+    <>
+      {/* <FrontChatWidget /> */}
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-background">
+          <AppSidebar userRole={userRole as any} />
+        
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-auto min-h-16 border-b bg-card shadow-sm flex flex-col md:flex-row items-start md:items-center px-3 md:px-6 py-3 md:py-0 gap-2 md:gap-4">
+            <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
+              <SidebarTrigger className="md:hidden" />
+              <img 
+                src={selectedCompany?.logo_url || crowdITLogo} 
+                alt={selectedCompany?.name || "CrowdIT"} 
+                className="h-10 md:h-12 object-contain" 
+              />
+              <NotificationsDropdown />
+            </div>
+            
+            <div className="ml-auto flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
+              {/* Don't show company selector or role impersonation for super admin */}
+              {userRole !== 'super_admin' && (
+                <>
+                  <div className="hidden lg:flex items-center gap-2 md:gap-3">
+                    <CriticalSystemsBar />
+                    <SystemStatusIndicator />
+                  </div>
+                </>
+              )}
+              <BetaFeedbackDialog />
+              <div className="hidden sm:block text-right">
+                <p className="text-xs md:text-sm font-medium truncate max-w-[150px] md:max-w-none">
+                  {profile?.name || user?.email}
+                </p>
+                {(effectiveRole || userRole) && !['requester', 'marketing'].includes(effectiveRole || userRole || '') && (
+                  <p className="text-[10px] md:text-xs text-muted-foreground capitalize">
+                    {isImpersonating && <span className="text-yellow-600 dark:text-yellow-400">Viewing as: </span>}
+                    {(effectiveRole || userRole || '').replace('_', ' ')}
+                  </p>
+                )}
+              </div>
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <User className="w-4 h-4" />
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleSignOut} className="flex-shrink-0">
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
+          </header>
+          
+          <main className="flex-1 p-3 md:p-6 pb-32 md:pb-40">
+            <NewsletterBanner />
+            <SystemBanners />
+            <Suspense fallback={<RouteLoading />}>
+              {children}
+            </Suspense>
+          </main>
+          <Footer />
+          </div>
+        </div>
+      </SidebarProvider>
+    </>
+  );
+}
