@@ -18,10 +18,12 @@ const SystemLogin = () => {
 
   useEffect(() => {
     if (user && !authLoading) {
+      // Check if user has super_admin role
       if (userRole === 'super_admin') {
         navigate('/admin/platform');
       } else {
-        navigate('/home');
+        // Non-super admins trying to use system login should be redirected to regular auth
+        navigate('/auth');
       }
     }
   }, [user, userRole, authLoading, navigate]);

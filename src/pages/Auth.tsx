@@ -84,6 +84,12 @@ export default function Auth() {
       return;
     }
 
+    // System admin should use /system-login instead
+    if (email.toLowerCase() === 'crowdit@system.local') {
+      setError('System administrators should use the system login page.');
+      return;
+    }
+
     const emailDomain = email.split('@')[1];
     if (!emailDomain) {
       setError('Please enter a valid email address');
