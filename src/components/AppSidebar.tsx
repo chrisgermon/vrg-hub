@@ -291,7 +291,6 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
     const commonItems = [
       { title: "Home", url: "/home", icon: Home },
       { title: "Dashboard", url: "/dashboard", icon: BarChart3 },
-      { title: "Messages", url: "/messages", icon: MessageCircle },
       { title: "Requests", url: "/requests", icon: ShoppingCart },
       { title: "Knowledge Base", url: "/knowledge-base", icon: BookOpen },
     ].filter(item => isMenuItemVisible(getMenuItemKey(item.title, item.url)));

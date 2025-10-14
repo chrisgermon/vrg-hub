@@ -65,7 +65,6 @@ const ContentEditor = lazy(() => import("./pages/ContentEditor"));
 const FormTemplates = lazy(() => import("./pages/FormTemplates"));
 const SeedFormTemplates = lazy(() => import("./pages/SeedFormTemplates"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Messages = lazy(() => import("./pages/Messages"));
 const Install = lazy(() => import("./pages/Install"));
 
 const protectedLayoutRoutes: Array<{
@@ -125,7 +124,6 @@ const protectedLayoutRoutes: Array<{
   { path: "/form-templates", element: <FormTemplates />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/form-templates/seed", element: <SeedFormTemplates />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/dashboard", element: <Dashboard /> },
-    { path: "/messages", element: <Messages /> },
     { path: "/install", element: <Install /> },
   ];
 

@@ -1,11 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DepartmentRequestForm } from '@/components/requests/DepartmentRequestForm';
-
-const SUB_DEPARTMENTS = [
-  'Request MLO to see referrer',
-  'Referrer complaint',
-];
+import { DynamicDepartmentRequestForm } from '@/components/requests/DynamicDepartmentRequestForm';
 
 export default function NewMarketingServiceRequest() {
   const handleBack = () => {
@@ -25,10 +20,10 @@ export default function NewMarketingServiceRequest() {
         </div>
       </div>
 
-      <DepartmentRequestForm
-        department="marketing_service"
-        departmentLabel="Marketing Service"
-        subDepartments={SUB_DEPARTMENTS}
+      <DynamicDepartmentRequestForm
+        department="Marketing"
+        departmentLabel="Marketing Services"
+        subDepartment="Services"
       />
     </div>
   );

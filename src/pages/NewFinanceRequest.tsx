@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { TemplatedDepartmentRequestForm } from '@/components/requests/TemplatedDepartmentRequestForm';
+import { DynamicDepartmentRequestForm } from '@/components/requests/DynamicDepartmentRequestForm';
 
 export default function NewFinanceRequest() {
   const handleBack = () => {
@@ -20,8 +20,8 @@ export default function NewFinanceRequest() {
         </div>
       </div>
 
-      <TemplatedDepartmentRequestForm 
-        department="finance"
+      <DynamicDepartmentRequestForm 
+        department="Finance"
         departmentLabel="Finance"
       />
     </div>
