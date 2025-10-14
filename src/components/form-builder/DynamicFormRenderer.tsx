@@ -174,10 +174,10 @@ export function DynamicFormRenderer({ template, onSubmit, isSubmitting }: Dynami
                     );
                   case 'location':
                     return (
-                      <LocationSelect
-                        companyId={companyId}
+                      <Input
+                        placeholder="Enter location"
                         value={formField.value}
-                        onValueChange={formField.onChange}
+                        onChange={(e) => formField.onChange(e.target.value)}
                       />
                     );
                   case 'catalog_item':

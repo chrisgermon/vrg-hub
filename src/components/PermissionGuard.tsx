@@ -76,9 +76,9 @@ export function PermissionGuard({
   // Check permissions
   if (permission) {
     const permissions = Array.isArray(permission) ? permission : [permission];
-    const hasAccess = permissions.length === 1 
-      ? hasPermission(permissions[0])
-      : hasAnyPermission(permissions, requireAll);
+    const hasAccess = requireAll 
+      ? permissions.every(p => hasPermission(p))
+      : permissions.some(p => hasPermission(p));
 
     if (!hasAccess) {
       if (hideOnDenied) return null;

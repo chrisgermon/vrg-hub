@@ -49,18 +49,12 @@ export function UserProfileEditor({ open, onOpenChange }: UserProfileEditorProps
       const { error } = await supabase
         .from("profiles")
         .update({
-          name: formData.name,
+          full_name: formData.name,
           department: formData.department || null,
-          position: formData.position || null,
           phone: formData.phone || null,
-          mobile: formData.mobile || null,
-          office_location: formData.office_location || null,
-          bio: formData.bio || null,
-          profile_image_url: formData.profile_image_url || null,
-          is_visible_in_directory: formData.is_visible_in_directory,
           updated_at: new Date().toISOString(),
         })
-        .eq("user_id", user!.id);
+        .eq("id", user!.id);
 
       if (error) throw error;
 
