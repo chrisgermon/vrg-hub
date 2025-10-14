@@ -261,6 +261,7 @@ export type Database = {
           id: string
           is_active: boolean
           message: string
+          show_on_pages: string[] | null
           start_date: string | null
           title: string
           type: string
@@ -272,6 +273,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           message: string
+          show_on_pages?: string[] | null
           start_date?: string | null
           title: string
           type?: string
@@ -283,6 +285,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           message?: string
+          show_on_pages?: string[] | null
           start_date?: string | null
           title?: string
           type?: string
