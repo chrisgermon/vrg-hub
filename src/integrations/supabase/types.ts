@@ -152,6 +152,81 @@ export type Database = {
         }
         Relationships: []
       }
+      hardware_requests: {
+        Row: {
+          admin_approval_notes: string | null
+          admin_approved_at: string | null
+          admin_id: string | null
+          business_justification: string
+          clinic_name: string | null
+          created_at: string | null
+          currency: string | null
+          decline_reason: string | null
+          declined_at: string | null
+          declined_by: string | null
+          description: string | null
+          expected_delivery_date: string | null
+          id: string
+          manager_approval_notes: string | null
+          manager_approved_at: string | null
+          manager_id: string | null
+          priority: string
+          status: string
+          title: string
+          total_amount: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_approval_notes?: string | null
+          admin_approved_at?: string | null
+          admin_id?: string | null
+          business_justification: string
+          clinic_name?: string | null
+          created_at?: string | null
+          currency?: string | null
+          decline_reason?: string | null
+          declined_at?: string | null
+          declined_by?: string | null
+          description?: string | null
+          expected_delivery_date?: string | null
+          id?: string
+          manager_approval_notes?: string | null
+          manager_approved_at?: string | null
+          manager_id?: string | null
+          priority?: string
+          status?: string
+          title: string
+          total_amount?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_approval_notes?: string | null
+          admin_approved_at?: string | null
+          admin_id?: string | null
+          business_justification?: string
+          clinic_name?: string | null
+          created_at?: string | null
+          currency?: string | null
+          decline_reason?: string | null
+          declined_at?: string | null
+          declined_by?: string | null
+          description?: string | null
+          expected_delivery_date?: string | null
+          id?: string
+          manager_approval_notes?: string | null
+          manager_approved_at?: string | null
+          manager_id?: string | null
+          priority?: string
+          status?: string
+          title?: string
+          total_amount?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       menu_configurations: {
         Row: {
           created_at: string | null
@@ -191,6 +266,51 @@ export type Database = {
         }
         Relationships: []
       }
+      news_articles: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string | null
+          excerpt: string | null
+          featured_image_url: string | null
+          id: string
+          is_published: boolean | null
+          published_at: string | null
+          slug: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string | null
+          excerpt?: string | null
+          featured_image_url?: string | null
+          id?: string
+          is_published?: boolean | null
+          published_at?: string | null
+          slug?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string | null
+          excerpt?: string | null
+          featured_image_url?: string | null
+          id?: string
+          is_published?: boolean | null
+          published_at?: string | null
+          slug?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -226,6 +346,135 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      request_attachments: {
+        Row: {
+          attachment_type: string
+          content_type: string | null
+          created_at: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          request_id: string
+          uploaded_by: string
+        }
+        Insert: {
+          attachment_type: string
+          content_type?: string | null
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          request_id: string
+          uploaded_by: string
+        }
+        Update: {
+          attachment_type?: string
+          content_type?: string | null
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          request_id?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_attachments_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "hardware_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      request_items: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          model_number: string | null
+          name: string
+          quantity: number
+          request_id: string
+          specifications: Json | null
+          total_price: number | null
+          unit_price: number | null
+          vendor: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          model_number?: string | null
+          name: string
+          quantity?: number
+          request_id: string
+          specifications?: Json | null
+          total_price?: number | null
+          unit_price?: number | null
+          vendor?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          model_number?: string | null
+          name?: string
+          quantity?: number
+          request_id?: string
+          specifications?: Json | null
+          total_price?: number | null
+          unit_price?: number | null
+          vendor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "hardware_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      request_status_history: {
+        Row: {
+          changed_by: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          request_id: string
+          status: string
+        }
+        Insert: {
+          changed_by: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          request_id: string
+          status: string
+        }
+        Update: {
+          changed_by?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          request_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_status_history_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "hardware_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       saved_searches: {
         Row: {
