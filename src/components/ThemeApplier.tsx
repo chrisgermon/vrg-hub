@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 export const ThemeApplier = () => {
   const { user } = useAuth();
@@ -7,7 +8,7 @@ export const ThemeApplier = () => {
   useEffect(() => {
     const applyTheme = async () => {
       // For single-tenant app, get theme from app_config
-      const { data: config } = await (supabase as any)
+      const { data: config } = await supabase
         .from('app_config')
         .select('*')
         .limit(1)

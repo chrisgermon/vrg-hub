@@ -197,58 +197,13 @@ export function UserPermissionsManager({ userId, companyId, userName }: UserPerm
   };
 
   const saveChanges = async () => {
-    try {
-      setSaving(true);
-      
-      // Process all pending changes
-      for (const [permissionKey, granted] of pendingChanges.entries()) {
-        const existingPerm = permissions.get(permissionKey);
-
-        if (existingPerm) {
-          // Update existing permission
-          const { error } = await supabase
-            .from('user_permissions')
-            .update({ 
-              granted, 
-              granted_by: user?.id || undefined 
-            })
-            .eq('id', existingPerm.id);
-
-          if (error) throw error;
-        } else if (granted) {
-          // Insert new permission (only if granting)
-          const { error } = await supabase
-            .from('user_permissions')
-            .insert([{
-              user_id: userId,
-              company_id: companyId,
-              permission: permissionKey as any,
-              granted,
-              granted_by: user?.id || undefined,
-            }]);
-
-          if (error) throw error;
-        }
-      }
-
-      await fetchPermissions();
-      setPendingChanges(new Map());
-      setHasUnsavedChanges(false);
-      
-      toast({
-        title: 'Success',
-        description: `${pendingChanges.size} permission${pendingChanges.size > 1 ? 's' : ''} updated successfully`,
-      });
-    } catch (error: any) {
-      console.error('Error updating permissions:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update permissions',
-        variant: 'destructive',
-      });
-    } finally {
-      setSaving(false);
-    }
+    // Disabled for single-tenant mode - use role-based permissions instead
+    toast({
+      title: 'Info',
+      description: 'User permission overrides are disabled in single-tenant mode. Use role-based permissions instead.',
+    });
+    setPendingChanges(new Map());
+    setHasUnsavedChanges(false);
   };
 
   const cancelChanges = () => {
@@ -257,38 +212,11 @@ export function UserPermissionsManager({ userId, companyId, userName }: UserPerm
   };
 
   const clearAllOverrides = async () => {
-    if (!confirm('Are you sure you want to clear all permission overrides? This will reset all permissions to role defaults.')) {
-      return;
-    }
-    
-    try {
-      setSaving(true);
-      const { error } = await supabase
-        .from('user_permissions')
-        .delete()
-        .eq('user_id', userId)
-        .eq('company_id', companyId);
-
-      if (error) throw error;
-
-      await fetchPermissions();
-      setPendingChanges(new Map());
-      setHasUnsavedChanges(false);
-      
-      toast({
-        title: 'Success',
-        description: 'All permission overrides cleared',
-      });
-    } catch (error: any) {
-      console.error('Error clearing permissions:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to clear permission overrides',
-        variant: 'destructive',
-      });
-    } finally {
-      setSaving(false);
-    }
+    // Disabled for single-tenant mode
+    toast({
+      title: 'Info',
+      description: 'User permission overrides are disabled in single-tenant mode. Use role-based permissions instead.',
+    });
   };
 
   if (loading) {
