@@ -1,24 +1,23 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useEffect, useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useEffect } from 'react';
 import { SystemStatusManager } from '@/components/settings/SystemStatusManager';
-// import { HaloIntegrationSettings } from '@/components/settings/HaloIntegrationSettings'; // Temporarily disabled
 import { SystemBannerManager } from '@/components/banners/SystemBannerManager';
 import { ApprovalWorkflowManager } from '@/components/workflows/ApprovalWorkflowManager';
+import { CompanySettings } from '@/components/CompanySettings';
+import { MenuEditor } from '@/components/settings/MenuEditor';
+import { RolesManager } from '@/components/settings/RolesManager';
+import { CannedResponsesManager } from '@/components/settings/CannedResponsesManager';
+import { CompanyLocationsManager } from '@/components/settings/CompanyLocationsManager';
+import { NotificationSettingsManager } from '@/components/settings/NotificationSettingsManager';
 import { useAuth } from '@/hooks/useAuth';
-import { useCompanyContext } from '@/contexts/CompanyContext';
 
 export default function Settings() {
-  const { userRole, company: userCompany, loading } = useAuth();
-  const { selectedCompany } = useCompanyContext();
-  const companyId = selectedCompany?.id || userCompany?.id;
+  const { userRole } = useAuth();
   
   const isSuperAdmin = userRole === 'super_admin';
-
-  // System-wide features only available for super admins on their platform admin page
-  const showSystemStatus = false; // Disabled in regular settings
+  const isTenantAdmin = userRole === 'tenant_admin';
+  const isAdmin = isSuperAdmin || isTenantAdmin;
 
   useEffect(() => {
     // Force light theme
@@ -29,34 +28,23 @@ export default function Settings() {
   }, []);
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
+    <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground mt-2">Manage your application preferences</p>
+        <p className="text-muted-foreground mt-2">Manage your application preferences and configuration</p>
       </div>
 
-      {loading ? (
-        <Card>
-          <CardContent className="py-8">
-            <p className="text-center text-muted-foreground">Loading...</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {showSystemStatus && (
-            <SystemStatusManager />
-          )}
+      <Tabs defaultValue="general" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="general">General</TabsTrigger>
+          {isAdmin && <TabsTrigger value="company">Company</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="users">Users & Roles</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="notifications">Notifications</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="menu">Menu</TabsTrigger>}
+          {isSuperAdmin && <TabsTrigger value="system">System</TabsTrigger>}
+        </TabsList>
 
-          {/* HaloPSA Integration - Temporarily disabled */}
-          {/* <HaloIntegrationSettings /> */}
-          
-          {isSuperAdmin && companyId && (
-            <>
-              <SystemBannerManager />
-              <ApprovalWorkflowManager />
-            </>
-          )}
-
+        <TabsContent value="general" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>About</CardTitle>
@@ -77,8 +65,42 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
-        </div>
-      )}
+        </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="company" className="space-y-6">
+            <CompanySettings />
+            <CompanyLocationsManager />
+            <CannedResponsesManager />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="users" className="space-y-6">
+            <RolesManager />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="notifications" className="space-y-6">
+            <NotificationSettingsManager />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="menu" className="space-y-6">
+            <MenuEditor />
+          </TabsContent>
+        )}
+
+        {isSuperAdmin && (
+          <TabsContent value="system" className="space-y-6">
+            <SystemStatusManager />
+            <SystemBannerManager />
+            <ApprovalWorkflowManager />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }

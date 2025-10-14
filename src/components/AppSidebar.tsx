@@ -430,18 +430,6 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               ]),
               paths: ["/requests", "/toner", "/catalog"]
             },
-            {
-              title: "Administration",
-              icon: Building2,
-              items: userCompany?.id ? [
-                { title: "Company Settings", url: `/admin/companies/${userCompany.id}`, icon: Building2 },
-                { title: "Permission Manager", url: "/permissions", icon: Shield },
-                { title: "Notification Manager", url: "/notifications/advanced", icon: Bell },
-                { title: "Content Editor", url: "/content-editor", icon: Edit },
-                { title: "Form Templates", url: "/form-templates", icon: Pencil },
-              ] : [],
-              paths: userCompany?.id ? [`/admin/companies/${userCompany.id}`, '/permissions', '/notifications/advanced', '/content-editor', '/form-templates'] : []
-            },
           ].filter(cat => cat.items.length > 0),
           companyDocuments: hasPermission('view_sharepoint_documents') 
             ? { title: "Company Documents", url: "/documentation", icon: FolderOpen }
@@ -467,6 +455,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
         return {
           common: commonItems,
           approvals: { title: "Pending Approvals", url: "/approvals", icon: Clock },
+          news: newsMenuItem,
           categories: [
             {
               title: "Equipment",
@@ -475,28 +464,6 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 { title: "Hardware Catalog", url: "/catalog", icon: Package },
               ]),
               paths: ["/approvals", "/requests", "/toner", "/catalog"]
-            },
-            {
-              title: "Marketing",
-              icon: Megaphone,
-              items: filterByFeatures([
-                { title: "Print Ordering Forms", url: "/marketing/print-orders", icon: Printer },
-              ]),
-              paths: ["/marketing"]
-            },
-            {
-              title: "System Admin",
-              icon: Building2,
-              items: [
-                { title: "Overview", url: "/admin", icon: BarChart3 },
-                { title: "Companies", url: "/admin/companies", icon: Building2 },
-                { title: "Permission Manager", url: "/permissions", icon: Shield },
-                { title: "Notification Manager", url: "/notifications/advanced", icon: Bell },
-                { title: "Content Editor", url: "/content-editor", icon: Edit },
-                { title: "Form Templates", url: "/form-templates", icon: Pencil },
-                { title: "File Manager", url: "/admin/files", icon: FolderOpen },
-              ],
-              paths: ["/admin", "/permissions", "/notifications/advanced", "/content-editor", "/form-templates"]
             },
           ].filter(cat => cat.items.length > 0),
           companyDocuments: hasPermission('view_sharepoint_documents') 
