@@ -1,8 +1,24 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { NewsletterSubmissionForm } from "@/components/newsletter/NewsletterSubmissionForm";
+import { useNavigate } from "react-router-dom";
 
 export default function NewsletterSubmit() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  if (!user) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Newsletter Submission</h1>
+          <p className="text-muted-foreground">
+            Please sign in to submit newsletter content
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -12,19 +28,12 @@ export default function NewsletterSubmit() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Newsletter Submission</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Newsletter submission is not available in single-tenant mode.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+      <NewsletterSubmissionForm
+        cycleId=""
+        department=""
+        onSuccess={() => navigate("/newsletter")}
+        onCancel={() => navigate("/newsletter")}
+      />
     </div>
   );
 }

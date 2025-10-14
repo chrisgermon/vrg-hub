@@ -993,6 +993,206 @@ export type Database = {
         }
         Relationships: []
       }
+      newsletter_assignments: {
+        Row: {
+          assigned_at: string
+          contributor_id: string
+          created_at: string
+          cycle_id: string
+          department: string
+          id: string
+          status: string
+          submitted_at: string | null
+          topic: string | null
+          updated_at: string
+          word_count: number | null
+        }
+        Insert: {
+          assigned_at?: string
+          contributor_id: string
+          created_at?: string
+          cycle_id: string
+          department: string
+          id?: string
+          status?: string
+          submitted_at?: string | null
+          topic?: string | null
+          updated_at?: string
+          word_count?: number | null
+        }
+        Update: {
+          assigned_at?: string
+          contributor_id?: string
+          created_at?: string
+          cycle_id?: string
+          department?: string
+          id?: string
+          status?: string
+          submitted_at?: string | null
+          topic?: string | null
+          updated_at?: string
+          word_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_assignments_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "newsletter_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsletter_cycles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          due_date: string
+          id: string
+          month: number
+          name: string
+          notes: string | null
+          status: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          id?: string
+          month: number
+          name: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          month?: number
+          name?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      newsletter_submissions: {
+        Row: {
+          assignment_id: string
+          attachments: Json | null
+          content: string
+          contributor_id: string
+          created_at: string
+          cycle_id: string
+          department: string
+          id: string
+          images: Json | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          attachments?: Json | null
+          content: string
+          contributor_id: string
+          created_at?: string
+          cycle_id: string
+          department: string
+          id?: string
+          images?: Json | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          attachments?: Json | null
+          content?: string
+          contributor_id?: string
+          created_at?: string
+          cycle_id?: string
+          department?: string
+          id?: string
+          images?: Json | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "newsletter_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsletter_submissions_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "newsletter_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsletter_templates: {
+        Row: {
+          body_template: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          subject_template: string | null
+          updated_at: string
+        }
+        Insert: {
+          body_template: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          subject_template?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body_template?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          subject_template?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_settings: {
         Row: {
           created_at: string
