@@ -78,14 +78,8 @@ export function SystemEmailLogs() {
   const fetchEmailLogs = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('email_logs')
-        .select('*')
-        .order('sent_at', { ascending: false })
-        .limit(500); // Last 500 emails
-
-      if (error) throw error;
-      setEmails(data || []);
+      // Email logs not implemented in single-tenant mode
+      setEmails([]);
     } catch (error: any) {
       console.error('Error fetching email logs:', error);
       toast.error('Failed to load email logs');

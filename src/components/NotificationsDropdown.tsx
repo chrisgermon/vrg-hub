@@ -29,7 +29,7 @@ interface Notification {
 }
 
 export function NotificationsDropdown() {
-  const { user, company } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -39,15 +39,8 @@ export function NotificationsDropdown() {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('id, type, title, message, reference_url, reference_id, is_read, created_at, read_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (error) throw error;
-      return (data || []) as unknown as Notification[];
+      // Notifications don't exist in single-tenant mode yet
+      return [];
     },
     enabled: !!user?.id,
     refetchInterval: 30000, // Refresh every 30 seconds
@@ -57,12 +50,8 @@ export function NotificationsDropdown() {
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true, read_at: new Date().toISOString() })
-        .eq('id', notificationId);
-      
-      if (error) throw error;
+      // Disabled for single-tenant mode
+      return Promise.resolve();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
@@ -76,13 +65,8 @@ export function NotificationsDropdown() {
     mutationFn: async () => {
       if (!user?.id) return;
       
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true, read_at: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .eq('is_read', false);
-      
-      if (error) throw error;
+      // Disabled for single-tenant mode
+      return Promise.resolve();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });

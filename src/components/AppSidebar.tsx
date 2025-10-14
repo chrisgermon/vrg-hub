@@ -1061,7 +1061,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
         {/* Footer buttons - Always visible at bottom */}
         <div className="sticky bottom-0 p-3 border-t bg-background space-y-2 overflow-hidden">
           {/* Foxo Link - Only visible for Vision Radiology */}
-          {(selectedCompany?.name === "Vision Radiology" || userCompany?.name === "Vision Radiology") && (
+          {userCompany?.name === "Vision Radiology" && (
             <Button
               asChild
               variant="outline"

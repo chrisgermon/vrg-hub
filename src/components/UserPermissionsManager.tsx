@@ -159,19 +159,9 @@ export function UserPermissionsManager({ userId, companyId, userName }: UserPerm
   const fetchPermissions = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('user_permissions')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('company_id', companyId);
+      // User permissions disabled for single-tenant mode
+      setPermissions(new Map());
 
-      if (error) throw error;
-
-      const permMap = new Map<string, UserPermission>();
-      data?.forEach((perm) => {
-        permMap.set(perm.permission, perm);
-      });
-      setPermissions(permMap);
     } catch (error: any) {
       console.error('Error fetching permissions:', error);
       toast({

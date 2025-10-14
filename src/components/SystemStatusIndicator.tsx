@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCompanyContext } from "@/contexts/CompanyContext";
+
 import { useAuth } from "@/hooks/useAuth";
 import {
   DropdownMenu,
@@ -25,7 +25,7 @@ interface SystemStatus {
 }
 
 export function SystemStatusIndicator() {
-  const { selectedCompany } = useCompanyContext();
+  
   const { userRole } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -33,21 +33,17 @@ export function SystemStatusIndicator() {
   const isSuperAdmin = userRole === 'super_admin';
 
   const { data: systems = [] } = useQuery({
-    queryKey: ['system-statuses', selectedCompany?.id],
+    queryKey: ['system-statuses'],
     queryFn: async () => {
-      if (!selectedCompany?.id) return [];
-      
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('system_statuses')
         .select('*')
         .eq('is_active', true)
-        .eq('company_id', selectedCompany.id)
         .order('sort_order');
       
       if (error) throw error;
       return data as SystemStatus[];
     },
-    enabled: !!selectedCompany?.id,
     refetchInterval: 60000, // Refresh every minute
   });
 

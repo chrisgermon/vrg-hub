@@ -138,7 +138,7 @@ export function GlobalSearch() {
     } finally {
       setLoading(false);
     }
-  }, [company?.id]);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {

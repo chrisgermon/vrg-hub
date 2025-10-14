@@ -19,45 +19,13 @@ export function SuperAdminStats() {
 
   const fetchStats = async () => {
     try {
-      // Fetch active tenants
-      const { data: companies, error: companiesError } = await supabase
-        .from('companies')
-        .select('id', { count: 'exact' })
-        .eq('active', true);
-
-      if (companiesError) throw companiesError;
-
-      // Fetch global orders (all hardware requests)
-      const { data: orders, error: ordersError } = await supabase
-        .from('hardware_requests')
-        .select('id, created_at, approved, admin_approved_at', { count: 'exact' })
-        .not('status', 'eq', 'draft');
-
-      if (ordersError) throw ordersError;
-
-      // Calculate average processing time for approved requests
-      let avgDays = 0;
-      if (orders && orders.length > 0) {
-        const approvedOrders = orders.filter(
-          (order: any) => order.admin_approved_at && order.created_at
-        );
-        
-        if (approvedOrders.length > 0) {
-          const totalMs = approvedOrders.reduce((sum: number, order: any) => {
-            const created = new Date(order.created_at).getTime();
-            const approved = new Date(order.admin_approved_at).getTime();
-            return sum + (approved - created);
-          }, 0);
-          
-          avgDays = totalMs / approvedOrders.length / (1000 * 60 * 60 * 24);
-        }
-      }
-
+      // Single-tenant: show static stats for Vision Radiology
       setStats({
-        activeTenants: companies?.length || 0,
-        globalOrders: orders?.length || 0,
-        avgProcessingDays: Math.round(avgDays * 10) / 10,
+        activeTenants: 1,
+        globalOrders: 0,
+        avgProcessingDays: 0,
       });
+
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {

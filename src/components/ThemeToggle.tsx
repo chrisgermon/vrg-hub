@@ -6,12 +6,12 @@ import { useAuth } from "@/hooks/useAuth";
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const { profile } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
-    // Initialize theme from localStorage or profile
+    // Initialize theme from localStorage 
     const savedTheme = localStorage.getItem('theme');
-    const initialTheme = savedTheme || profile?.theme_preference || 'light';
+    const initialTheme = savedTheme || 'light';
     
     if (initialTheme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -20,7 +20,7 @@ export function ThemeToggle() {
       document.documentElement.classList.remove('dark');
       setTheme('light');
     }
-  }, [profile?.theme_preference]);
+  }, []);
 
   const toggleTheme = async () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -35,13 +35,7 @@ export function ThemeToggle() {
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
 
-    // Update user preference in database
-    if (profile?.user_id) {
-      await supabase
-        .from('profiles')
-        .update({ theme_preference: newTheme })
-        .eq('user_id', profile.user_id);
-    }
+    // Update user preference in database (disabled for single-tenant)
   };
 
   return (

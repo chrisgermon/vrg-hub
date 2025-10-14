@@ -9,7 +9,7 @@ import { BetaFeedbackDialog } from "./BetaFeedbackDialog";
 import { NewsletterBanner } from "./newsletter/NewsletterBanner";
 import { SystemStatusIndicator } from "./SystemStatusIndicator";
 import { CompanySelector } from "./CompanySelector";
-import { useCompanyContext } from "@/contexts/CompanyContext";
+
 
 import { CriticalSystemsBar } from "./CriticalSystemsBar";
 import { Footer } from "./Footer";
@@ -26,8 +26,7 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { profile, userRole, user, signOut, company: userCompany } = useAuth();
-  const { selectedCompany } = useCompanyContext();
+  const { userRole, user, signOut } = useAuth();
   const { effectiveRole, isImpersonating } = useRoleImpersonation();
 
   const handleSignOut = async () => {
@@ -50,8 +49,8 @@ export function Layout({ children }: LayoutProps) {
             <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
               <SidebarTrigger className="md:hidden" />
               <img 
-                src={selectedCompany?.logo_url || crowdITLogo} 
-                alt={selectedCompany?.name || "CrowdIT"} 
+                src={crowdITLogo} 
+                alt="Vision Radiology" 
                 className="h-10 md:h-12 object-contain" 
               />
               <NotificationsDropdown />
@@ -70,7 +69,7 @@ export function Layout({ children }: LayoutProps) {
               <BetaFeedbackDialog />
               <div className="hidden sm:block text-right">
                 <p className="text-xs md:text-sm font-medium truncate max-w-[150px] md:max-w-none">
-                  {profile?.name || user?.email}
+                  {user?.user_metadata?.full_name || user?.email}
                 </p>
                 {(effectiveRole || userRole) && !['requester', 'marketing'].includes(effectiveRole || userRole || '') && (
                   <p className="text-[10px] md:text-xs text-muted-foreground capitalize">

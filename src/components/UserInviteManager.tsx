@@ -88,40 +88,11 @@ export function UserInviteManager() {
     setLoading(true);
     try {
       // Fetch invites
-      let inviteQuery = supabase
-        .from("user_invites")
-        .select(`
-          *,
-          companies (
-            name
-          )
-        `)
-        .order("created_at", { ascending: false });
+      // User invites disabled for single-tenant mode
+      setInvites([]);
 
-      if (!isSuperAdmin && tenantCompanyId) {
-        inviteQuery = inviteQuery.eq("company_id", tenantCompanyId);
-      }
-
-      const { data: invitesData, error: invitesError } = await inviteQuery;
-
-      if (invitesError) throw invitesError;
-      setInvites(invitesData || []);
-
-      // Fetch companies
-      let companiesQuery = supabase
-        .from("companies")
-        .select("id, name")
-        .eq("active", true)
-        .order("name");
-
-      if (!isSuperAdmin && tenantCompanyId) {
-        companiesQuery = companiesQuery.eq("id", tenantCompanyId);
-      }
-
-      const { data: companiesData, error: companiesError } = await companiesQuery;
-
-      if (companiesError) throw companiesError;
-      setCompanies(companiesData || []);
+      // Use static company list for single-tenant
+      setCompanies([{ id: '1', name: 'Vision Radiology' }]);
     } catch (error: any) {
       console.error("Error fetching data:", error);
       toast.error("Failed to load invites");
@@ -147,33 +118,8 @@ export function UserInviteManager() {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + values.days_valid);
 
-      const { data: inviteData, error } = await supabase
-        .from("user_invites")
-        .insert({
-          email: values.email,
-          company_id: values.company_id,
-          role: values.role,
-          invited_by: user.id,
-          expires_at: expiresAt.toISOString(),
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Send the invitation email
-      const emailResult = await supabase.functions.invoke('send-user-invite-email', {
-        body: {
-          inviteId: inviteData.id
-        }
-      });
-
-      if (emailResult.error) {
-        console.error('Failed to send invite email:', emailResult.error);
-        toast.error('Invite created but email failed to send');
-      } else {
-        toast.success('Invite sent successfully! User will receive an email.');
-      }
+      // User invite functionality disabled for single-tenant
+      toast.success('User invite functionality not available in single-tenant mode');
 
       form.reset();
       setDialogOpen(false);
@@ -186,15 +132,8 @@ export function UserInviteManager() {
 
   const revokeInvite = async (inviteId: string) => {
     try {
-      const { error } = await supabase
-        .from("user_invites")
-        .update({ status: "revoked" })
-        .eq("id", inviteId);
-
-      if (error) throw error;
-
-      toast.success("Invite revoked");
-      fetchData();
+      // Revoke functionality disabled for single-tenant
+      toast.success("Invite functionality not available");
     } catch (error: any) {
       console.error("Error revoking invite:", error);
       toast.error("Failed to revoke invite");
