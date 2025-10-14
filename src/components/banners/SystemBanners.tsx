@@ -22,13 +22,10 @@ export function SystemBanners() {
   const { company } = useAuth();
 
   useEffect(() => {
-    if (!company?.id) return;
-
     const fetchBanners = async () => {
       const { data } = await supabase
         .from('system_banners')
         .select('id, title, message, type, show_on_pages')
-        .eq('company_id', company.id)
         .eq('is_active', true);
 
       if (data) {
@@ -46,8 +43,7 @@ export function SystemBanners() {
         {
           event: '*',
           schema: 'public',
-          table: 'system_banners',
-          filter: `company_id=eq.${company.id}`
+          table: 'system_banners'
         },
         () => fetchBanners()
       )
@@ -56,7 +52,7 @@ export function SystemBanners() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [company?.id, dismissedBanners]);
+  }, [dismissedBanners]);
 
   const dismissBanner = (bannerId: string) => {
     const updated = [...dismissedBanners, bannerId];

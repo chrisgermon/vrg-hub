@@ -39,28 +39,23 @@ export function SystemBannerManager() {
   });
 
   const { data: banners, isLoading } = useQuery({
-    queryKey: ['system-banners', company?.id],
+    queryKey: ['system-banners'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('system_banners')
         .select('*')
-        .eq('company_id', company!.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data;
-    },
-    enabled: !!company?.id
+    }
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: BannerFormData) => {
       const { error } = await supabase
         .from('system_banners')
-        .insert({
-          ...data,
-          company_id: company!.id
-        });
+        .insert(data);
 
       if (error) throw error;
     },

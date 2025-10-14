@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bell, Clock, Users, TrendingUp, Link } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useCompanyContext } from "@/contexts/CompanyContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -23,8 +22,7 @@ interface WidgetRendererProps {
 }
 
 export function WidgetRenderer({ widget, isEditor = false }: WidgetRendererProps) {
-  const { user, company } = useAuth();
-  const { selectedCompany } = useCompanyContext();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   switch (widget.type) {
@@ -124,72 +122,19 @@ export function WidgetRenderer({ widget, isEditor = false }: WidgetRendererProps
       return <NewsFeedModule title={widget.config.title || "Latest News"} maxItems={widget.config.maxItems || 5} />;
 
     case "notifications": {
-      const { data: notifications, isLoading: notificationsLoading } = useQuery({
-        queryKey: ["unread-notifications", user?.id],
-        queryFn: async () => {
-          if (!user?.id) return [];
-          
-          const { data, error } = await supabase
-            .from('notifications')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('is_read', false)
-            .order('created_at', { ascending: false })
-            .limit(widget.config.maxItems || 5);
-
-          if (error) throw error;
-          return data || [];
-        },
-        enabled: Boolean(user?.id) && !isEditor,
-      });
-
       return (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bell className="h-5 w-5" />
               {widget.config.title || "Notifications"}
-              {!isEditor && notifications && notifications.length > 0 && (
-                <span className="ml-auto bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-full">
-                  {notifications.length}
-                </span>
-              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {notificationsLoading ? (
-              <div className="text-center py-6 text-sm text-muted-foreground">Loading...</div>
-            ) : !notifications || notifications.length === 0 ? (
-              <div className="text-center py-6 text-sm text-muted-foreground">
-                <Bell className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                <p>No unread notifications</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className="p-3 bg-muted/30 rounded-lg border hover:bg-muted/50 transition-all cursor-pointer"
-                    onClick={() => {
-                      if (notification.reference_url) {
-                        navigate(notification.reference_url);
-                      }
-                    }}
-                  >
-                    <div className="flex items-start gap-2">
-                      <Bell className="h-4 w-4 mt-0.5 text-primary" />
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{notification.title}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{notification.message}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formatAUDate(notification.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="text-center py-6 text-sm text-muted-foreground">
+              <Bell className="h-8 w-8 mx-auto mb-2 opacity-20" />
+              <p>Notifications not available in single-tenant mode</p>
+            </div>
           </CardContent>
         </Card>
       );
@@ -248,7 +193,7 @@ export function WidgetRenderer({ widget, isEditor = false }: WidgetRendererProps
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
-              <p className="font-medium">{company?.name || "Your Company"}</p>
+              <p className="font-medium">Your Company</p>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Users className="h-4 w-4" />
                 <span>Your team workspace</span>
@@ -303,70 +248,16 @@ export function WidgetRenderer({ widget, isEditor = false }: WidgetRendererProps
       return <SuperAdminStats />;
 
     case "recent-requests": {
-      // Fetch recent requests
-      const { data: recentRequests, isLoading } = useQuery({
-        queryKey: ["recent-requests", user?.id, selectedCompany?.id],
-        queryFn: async () => {
-          if (!user?.id) return [];
-          
-          let query = supabase
-            .from('hardware_requests')
-            .select('id, title, description, status, total_amount, currency, created_at');
-          
-          query = query.eq('user_id', user.id);
-          
-          const { data, error } = await query
-            .order('created_at', { ascending: false })
-            .limit(widget.config.maxItems || 5);
-
-          if (error) throw error;
-          return data || [];
-        },
-        enabled: Boolean(user?.id) && !isEditor,
-      });
-
       return (
         <Card>
           <CardHeader>
             <CardTitle>{widget.config.title || "My Recent Requests"}</CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading...</div>
-            ) : (recentRequests || []).length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No requests yet</p>
-                <Button onClick={() => navigate('/requests/new')} variant="outline" size="sm" className="mt-4">
-                  Create Your First Request
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {(recentRequests || []).map((request) => (
-                  <div 
-                    key={request.id} 
-                    className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border hover:bg-muted/50 transition-all cursor-pointer"
-                    onClick={() => navigate(`/requests`)}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="font-semibold">{request.title}</span>
-                        <RequestStatusBadge status={request.status} size="sm" />
-                      </div>
-                      <p className="text-sm text-muted-foreground">{request.description || 'No description'}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatAUDate(request.created_at)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-lg">
-                        {request.total_amount ? `$${Number(request.total_amount).toLocaleString()}` : '-'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="text-center py-8 text-muted-foreground">
+              <Clock className="h-8 w-8 mx-auto mb-2 opacity-20" />
+              <p>Recent requests not available in single-tenant mode</p>
+            </div>
           </CardContent>
         </Card>
       );
