@@ -10,6 +10,9 @@ import { CannedResponsesManager } from '@/components/settings/CannedResponsesMan
 import { CompanyLocationsManager } from '@/components/settings/CompanyLocationsManager';
 import { NotificationSettingsManager } from '@/components/settings/NotificationSettingsManager';
 import { UsersSection } from '@/components/settings/UsersSection';
+import { PrintBrandsManager } from '@/components/settings/PrintBrandsManager';
+import { CompanyDomainsManager } from '@/components/settings/CompanyDomainsManager';
+import { CompanyFeaturesManager } from '@/components/settings/CompanyFeaturesManager';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function Settings() {
@@ -37,6 +40,8 @@ export default function Settings() {
       <Tabs defaultValue="general" className="space-y-6">
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
+          {isAdmin && <TabsTrigger value="branding">Branding</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="features">Features</TabsTrigger>}
           {isAdmin && <TabsTrigger value="company">Company</TabsTrigger>}
           {isAdmin && <TabsTrigger value="users">Users & Roles</TabsTrigger>}
           {isAdmin && <TabsTrigger value="notifications">Notifications</TabsTrigger>}
@@ -68,9 +73,22 @@ export default function Settings() {
         </TabsContent>
 
         {isAdmin && (
-          <TabsContent value="company" className="space-y-6">
+          <TabsContent value="branding" className="space-y-6">
             <CompanySettings />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="features" className="space-y-6">
+            <CompanyFeaturesManager />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="company" className="space-y-6">
             <CompanyLocationsManager />
+            <CompanyDomainsManager />
+            <PrintBrandsManager />
             <CannedResponsesManager />
           </TabsContent>
         )}
