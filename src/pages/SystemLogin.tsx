@@ -18,7 +18,8 @@ const SystemLogin = () => {
 
   useEffect(() => {
     if (user && !authLoading) {
-      // Check if user has super_admin role
+      // Wait until role is resolved
+      if (!userRole) return;
       if (userRole === 'super_admin') {
         navigate('/admin/platform');
       } else {

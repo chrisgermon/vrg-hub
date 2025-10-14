@@ -36,19 +36,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId)
-        .order('role', { ascending: false }) // Get highest role first
-        .limit(1)
-        .maybeSingle();
+        .eq('user_id', userId);
 
       if (error) {
-        console.error('Error fetching user role:', error);
-        setUserRole('requester'); // Default to requester
-      } else {
-        setUserRole((data?.role as UserRole) || 'requester');
+        console.error('Error fetching user roles:', error);
+        setUserRole('requester');
+        return;
       }
+
+      const roles = (data?.map(r => r.role) || []) as UserRole[];
+      // Determine highest role via explicit priority
+      const priority: Record<UserRole, number> = {
+        super_admin: 100,
+        tenant_admin: 90,
+        marketing_manager: 60,
+        manager: 50,
+        marketing: 40,
+        requester: 10,
+      };
+
+      const highest = roles.sort((a, b) => (priority[b] ?? 0) - (priority[a] ?? 0))[0] || 'requester';
+      setUserRole(highest);
     } catch (err) {
-      console.error('Error fetching user role:', err);
+      console.error('Error fetching user roles:', err);
       setUserRole('requester');
     } finally {
       setLoading(false);
