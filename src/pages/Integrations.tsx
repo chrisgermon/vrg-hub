@@ -7,12 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle2, XCircle, Eye, EyeOff, RefreshCw, MessageSquare } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, RefreshCw, MessageSquare } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Integrations() {
-  const [notifyreApiKey, setNotifyreApiKey] = useState("");
-  const [showApiKey, setShowApiKey] = useState(false);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [notifyreStatus, setNotifyreStatus] = useState<"connected" | "disconnected" | "testing">("disconnected");
@@ -64,15 +62,6 @@ export default function Integrations() {
   };
 
   const testNotifyreConnection = async () => {
-    if (!notifyreApiKey.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter an API key",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setTesting(true);
     setNotifyreStatus("testing");
 
@@ -109,26 +98,6 @@ export default function Integrations() {
     } finally {
       setTesting(false);
     }
-  };
-
-  const updateNotifyreApiKey = async () => {
-    if (!notifyreApiKey.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter an API key",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    toast({
-      title: "API Key Update",
-      description: "To update the NOTIFYRE_API_KEY secret, please use the Lovable backend secrets manager.",
-    });
-
-    setLoading(false);
   };
 
   const sendTestSms = async () => {
@@ -256,43 +225,33 @@ export default function Integrations() {
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="notifyre-api-key">API Key</Label>
+          <div className="space-y-4">
+            <div>
+              <Label>API Key Configuration</Label>
+              <p className="text-sm text-muted-foreground mt-1">
+                API key is stored securely in backend secrets
+              </p>
+            </div>
             <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  id="notifyre-api-key"
-                  type={showApiKey ? "text" : "password"}
-                  value={notifyreApiKey}
-                  onChange={(e) => setNotifyreApiKey(e.target.value)}
-                  placeholder="Enter your Notifyre API key"
-                  className="pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                >
-                  {showApiKey ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  toast({
+                    title: "Update API Key",
+                    description: "Please use the Lovable backend secrets manager to update NOTIFYRE_API_KEY.",
+                  });
+                }}
+              >
+                Update API Key
+              </Button>
               <Button
                 onClick={testNotifyreConnection}
-                disabled={testing || !notifyreApiKey.trim()}
+                disabled={testing}
               >
                 {testing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Test Connection
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Note: The actual API key is stored securely in backend secrets (NOTIFYRE_API_KEY)
-            </p>
           </div>
 
           <div className="pt-4 border-t">

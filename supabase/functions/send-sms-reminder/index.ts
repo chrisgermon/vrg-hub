@@ -17,13 +17,21 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let requestBody: SMSReminderRequest | null = null;
+
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { reminderId, phoneNumber, message }: SMSReminderRequest = await req.json();
+    requestBody = await req.json();
+    
+    if (!requestBody) {
+      throw new Error('Invalid request body');
+    }
+
+    const { reminderId, phoneNumber, message } = requestBody;
 
     console.log('Sending SMS reminder:', { reminderId, phoneNumber });
 
@@ -35,24 +43,27 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Send SMS via Notifyre API
-    const notifyreResponse = await fetch('https://api.notifyre.com/v1/sms/send', {
+    const response = await fetch('https://api.notifyre.com/send', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${notifyreApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        type: 'sms',
         to: phoneNumber,
         message: message,
-        from: 'Reminders', // Can be configured
       }),
     });
 
-    const notifyreData = await notifyreResponse.json();
-
-    if (!notifyreResponse.ok) {
-      throw new Error(`Notifyre API error: ${JSON.stringify(notifyreData)}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Notifyre API error: ${response.status} - ${JSON.stringify(errorData)}`);
     }
+
+    const smsResult = await response.json();
+
+    console.log('SMS sent successfully:', smsResult);
 
     // Log the notification
     const { error: logError } = await supabase
@@ -62,17 +73,15 @@ const handler = async (req: Request): Promise<Response> => {
         notification_type: 'sms',
         status: 'sent',
         recipient: phoneNumber,
-        metadata: { notifyre_response: notifyreData },
+        metadata: { notifyre_response: smsResult },
       });
 
     if (logError) {
       console.error('Error logging notification:', logError);
     }
 
-    console.log('SMS sent successfully:', notifyreData);
-
     return new Response(
-      JSON.stringify({ success: true, data: notifyreData }),
+      JSON.stringify({ success: true, data: smsResult }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -82,26 +91,26 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error('Error in send-sms-reminder:', error);
 
-    // Log failed notification
-    try {
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      );
+    // Log failed notification if we have the request body
+    if (requestBody) {
+      try {
+        const supabase = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        );
 
-      const { reminderId, phoneNumber } = await req.json();
-
-      await supabase
-        .from('reminder_notifications')
-        .insert({
-          reminder_id: reminderId,
-          notification_type: 'sms',
-          status: 'failed',
-          recipient: phoneNumber,
-          error_message: error.message,
-        });
-    } catch (logError) {
-      console.error('Error logging failed notification:', logError);
+        await supabase
+          .from('reminder_notifications')
+          .insert({
+            reminder_id: requestBody.reminderId,
+            notification_type: 'sms',
+            status: 'failed',
+            recipient: requestBody.phoneNumber,
+            error_message: error.message,
+          });
+      } catch (logError) {
+        console.error('Error logging failed notification:', logError);
+      }
     }
 
     return new Response(
