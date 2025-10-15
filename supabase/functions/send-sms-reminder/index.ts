@@ -52,7 +52,8 @@ const handler = async (req: Request): Promise<Response> => {
     const response = await fetch(smsUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${notifyreApiKey}`,
+        'x-api-token': notifyreApiKey,
+        'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
@@ -70,16 +71,19 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('SMS sent successfully:', smsResult);
 
-    // Log the notification
+    // Log the notification (avoid invalid UUIDs)
+    const isUuid = typeof reminderId === 'string' && /^[0-9a-fA-F-]{36}$/.test(reminderId);
+    const insertPayload: any = {
+      notification_type: 'sms',
+      status: 'sent',
+      recipient: phoneNumber,
+      metadata: { notifyre_response: smsResult, source: 'send-sms-reminder' },
+    };
+    if (isUuid) insertPayload.reminder_id = reminderId;
+
     const { error: logError } = await supabase
       .from('reminder_notifications')
-      .insert({
-        reminder_id: reminderId,
-        notification_type: 'sms',
-        status: 'sent',
-        recipient: phoneNumber,
-        metadata: { notifyre_response: smsResult },
-      });
+      .insert(insertPayload);
 
     if (logError) {
       console.error('Error logging notification:', logError);
@@ -104,15 +108,19 @@ const handler = async (req: Request): Promise<Response> => {
           Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
 
+        const isUuid = typeof requestBody.reminderId === 'string' && /^[0-9a-fA-F-]{36}$/.test(requestBody.reminderId);
+        const failurePayload: any = {
+          notification_type: 'sms',
+          status: 'failed',
+          recipient: requestBody.phoneNumber,
+          error_message: error.message,
+          metadata: { source: 'send-sms-reminder' },
+        };
+        if (isUuid) failurePayload.reminder_id = requestBody.reminderId;
+
         await supabase
           .from('reminder_notifications')
-          .insert({
-            reminder_id: requestBody.reminderId,
-            notification_type: 'sms',
-            status: 'failed',
-            recipient: requestBody.phoneNumber,
-            error_message: error.message,
-          });
+          .insert(failurePayload);
       } catch (logError) {
         console.error('Error logging failed notification:', logError);
       }
