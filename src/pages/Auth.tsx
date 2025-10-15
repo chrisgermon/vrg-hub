@@ -13,15 +13,15 @@ import { extractSubdomain, getCompanyBySubdomain, buildSubdomainUrl } from '@/li
 import { supabase } from '@/integrations/supabase/client';
 
 export default function Auth() {
-  const { signInWithAzure, user, userRole, loading: authLoading } = useAuth();
+  const { signInWithPassword, signUp, user, userRole, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [companyData, setCompanyData] = useState<any>(null);
   const [loadingCompany, setLoadingCompany] = useState(true);
   const [email, setEmail] = useState('');
-  const [showEmailInput, setShowEmailInput] = useState(false);
-  const [checkingDomain, setCheckingDomain] = useState(false);
+  const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
   
   const currentSubdomain = extractSubdomain(window.location.hostname);
 
@@ -74,9 +74,11 @@ export default function Auth() {
     }
   }, [user, userRole, authLoading, navigate]);
 
-  const checkEmailAndRedirect = async () => {
-    if (!email) {
-      setError('Please enter your email address');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      setError('Please enter both email and password');
       return;
     }
 
@@ -86,78 +88,21 @@ export default function Auth() {
       return;
     }
 
-    const emailDomain = email.split('@')[1];
-    if (!emailDomain) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
-    setCheckingDomain(true);
+    setLoading(true);
     setError(null);
 
     try {
-      // Check which company this domain belongs to (via Edge Function to bypass RLS)
-      const { data: lookupData, error: lookupError } = await supabase.functions.invoke('lookup-domain', {
-        body: { domain: emailDomain }
-      });
-
-      console.log('[Auth] Domain lookup (EF) for:', emailDomain, 'Result:', { lookupData, lookupError });
-
-      if (lookupError || !lookupData?.company) {
-        console.error('[Auth] Domain lookup failed:', lookupError);
-        setError('Your email domain is not registered. Please contact your administrator.');
-        setCheckingDomain(false);
-        return;
+      if (isSignUp) {
+        await signUp(email, password);
+        setError('Check your email for a confirmation link to complete registration.');
+        setLoading(false);
+      } else {
+        await signInWithPassword(email, password);
       }
-
-      const company = (lookupData.company as any);
-      const companySubdomain = company.subdomain;
-
-      // If we're already on the correct subdomain, proceed with login
-      if (currentSubdomain === companySubdomain) {
-        await handleAzureLogin();
-        return;
-      }
-
-      // If not on correct subdomain, redirect there first
-      if (companySubdomain && currentSubdomain !== companySubdomain) {
-        const redirectUrl = buildSubdomainUrl(companySubdomain);
-        window.location.href = redirectUrl;
-        return;
-      }
-
-      // Fallback - just proceed with login
-      await handleAzureLogin();
     } catch (err: any) {
-      console.error('Error checking domain:', err);
-      setError('Failed to verify email domain. Please try again.');
-      setCheckingDomain(false);
-    }
-  };
-
-  const handleAzureLogin = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      console.log('Attempting Azure AD login...');
-      console.log('Current origin:', window.location.origin);
-      
-      await signInWithAzure();
-    } catch (err: any) {
-      console.error('Azure AD login error:', err);
-      setError(err.message || 'An error occurred during login');
+      console.error('Auth error:', err);
+      setError(err.message || 'An error occurred during authentication');
       setLoading(false);
-    }
-  };
-
-  const handleContinue = () => {
-    // If on root domain, show email input first
-    if (!currentSubdomain) {
-      setShowEmailInput(true);
-    } else {
-      // If already on a subdomain, just login
-      handleAzureLogin();
     }
   };
 
@@ -198,97 +143,74 @@ export default function Auth() {
           <CardHeader className="text-center px-4 md:px-6">
             <CardTitle className="flex items-center justify-center gap-2 text-xl md:text-2xl">
               <Building2 className="w-5 h-5 md:w-6 md:h-6" />
-              Sign In
+              {isSignUp ? 'Create Account' : 'Sign In'}
             </CardTitle>
             <CardDescription className="text-sm">
-              Sign in with your organisation's Azure AD account to access your company portal
+              {isSignUp ? 'Create a new account to access your company portal' : 'Sign in to access your company portal'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 md:space-y-4 px-4 md:px-6">
             {error && (
-              <Alert variant="destructive">
+              <Alert variant={error.includes('Check your email') ? 'default' : 'destructive'}>
                 <AlertDescription className="text-sm">{error}</AlertDescription>
               </Alert>
             )}
-            
-            <div className="bg-muted/50 p-3 md:p-4 rounded-lg text-sm border border-border/30">
-              <h4 className="font-medium mb-2 text-sm">Access Requirements:</h4>
-              <ul className="text-muted-foreground space-y-1 text-xs">
-                <li>• Your email domain must be registered with your organisation</li>
-                <li>• Only users from authorised domains can access the system</li>
-                <li>• Contact your admin if you cannot access your organisation</li>
-              </ul>
-            </div>
 
-            {showEmailInput && !currentSubdomain ? (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Work Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@company.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && checkEmailAndRedirect()}
-                    disabled={checkingDomain}
-                  />
-                </div>
-                <Button 
-                  onClick={checkEmailAndRedirect}
-                  disabled={checkingDomain || !email}
-                  className="w-full shadow-glow hover:scale-105 transition-all"
-                  size="lg"
-                >
-                  {checkingDomain ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Checking domain...
-                    </>
-                  ) : (
-                    'Continue'
-                  )}
-                </Button>
-                <Button 
-                  variant="ghost"
-                  onClick={() => {
-                    setShowEmailInput(false);
-                    setEmail('');
-                    setError(null);
-                  }}
-                  className="w-full"
-                >
-                  Back
-                </Button>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  required
+                />
               </div>
-            ) : (
+              
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
+
               <Button 
-                onClick={handleContinue}
-                disabled={loading}
+                type="submit"
+                disabled={loading || !email || !password}
                 className="w-full shadow-glow hover:scale-105 transition-all"
                 size="lg"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Connecting...
+                    {isSignUp ? 'Creating account...' : 'Signing in...'}
                   </>
                 ) : (
-                  <>
-                    <svg className="w-4 h-4 mr-2" viewBox="0 0 23 23" fill="currentColor">
-                      <path d="M0 0h11v11H0z" fill="#f25022"/>
-                      <path d="M12 0h11v11H12z" fill="#00a4ef"/>
-                      <path d="M0 12h11v11H0z" fill="#ffb900"/>
-                      <path d="M12 12h11v11H12z" fill="#7fba00"/>
-                    </svg>
-                    Continue with Microsoft
-                  </>
+                  isSignUp ? 'Create Account' : 'Sign In'
                 )}
               </Button>
-            )}
+            </form>
 
-            <div className="text-center text-xs text-muted-foreground mt-4">
-              By signing in, you agree to your organisation's terms of service
+            <div className="text-center">
+              <Button 
+                variant="link"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setError(null);
+                }}
+                className="text-sm"
+              >
+                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+              </Button>
             </div>
             
             <div className="text-center text-xs text-muted-foreground mt-2 pt-2 border-t border-border/30">

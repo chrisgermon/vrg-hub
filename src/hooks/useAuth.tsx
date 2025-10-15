@@ -13,6 +13,7 @@ interface AuthContextType {
   profile: any | null;
   company: any | null;
   signInWithPassword: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
   signInWithAzure: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -131,18 +132,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
-  const signInWithAzure = async () => {
+  const signUp = async (email: string, password: string) => {
     const redirectUrl = `${window.location.origin}/`;
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'azure',
+    
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
       options: {
-        scopes: 'email openid profile',
-        redirectTo: redirectUrl,
-      },
+        emailRedirectTo: redirectUrl
+      }
     });
 
     if (error) throw error;
+  };
+
+  const signInWithAzure = async () => {
+    throw new Error('Azure login is not available. Please use email/password authentication.');
   };
 
   const signOut = async () => {
@@ -171,6 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       company,
       signInWithPassword,
+      signUp,
       signInWithAzure,
       signOut,
     }}
