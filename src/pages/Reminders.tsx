@@ -8,6 +8,7 @@ import { Plus, Bell, Calendar, Clock, Mail, Phone, Smartphone } from "lucide-rea
 import { useNavigate } from "react-router-dom";
 import { formatAUDate, formatAUDateLong } from "@/lib/dateUtils";
 import { toast } from "sonner";
+import { SmsLogsViewer } from "@/components/reminders/SmsLogsViewer";
 
 export default function Reminders() {
   const navigate = useNavigate();
@@ -215,6 +216,9 @@ export default function Reminders() {
           Completed
         </Button>
       </div>
+
+      {/* SMS & Email Logs */}
+      <SmsLogsViewer />
 
       {/* All Reminders List */}
       <Card>
