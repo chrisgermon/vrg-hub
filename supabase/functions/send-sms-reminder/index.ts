@@ -46,8 +46,8 @@ const handler = async (req: Request): Promise<Response> => {
     const smsUrl = 'https://api.notifyre.com/sms/send';
     const fromNumber = Deno.env.get('NOTIFYRE_SMS_FROM') || undefined;
     const payload: any = {
-      body: message,
-      recipients: [phoneNumber],
+      command: message,
+      recipients: [{ mobileNumber: phoneNumber }],
     };
     if (fromNumber) payload.from = fromNumber;
 
