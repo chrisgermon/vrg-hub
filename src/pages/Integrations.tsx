@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle2, XCircle, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Eye, EyeOff, RefreshCw, MessageSquare } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Integrations() {
@@ -16,6 +17,9 @@ export default function Integrations() {
   const [testing, setTesting] = useState(false);
   const [notifyreStatus, setNotifyreStatus] = useState<"connected" | "disconnected" | "testing">("disconnected");
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [testPhone, setTestPhone] = useState("");
+  const [testMessage, setTestMessage] = useState("");
+  const [sendingSms, setSendingSms] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -125,6 +129,57 @@ export default function Integrations() {
     });
 
     setLoading(false);
+  };
+
+  const sendTestSms = async () => {
+    if (!testPhone.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a phone number",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!testMessage.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a message",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingSms(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('send-sms-reminder', {
+        body: {
+          phoneNumber: testPhone,
+          message: testMessage,
+          reminderId: 'test-sms'
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Test SMS sent successfully",
+      });
+      
+      setTestPhone("");
+      setTestMessage("");
+    } catch (error: any) {
+      console.error('Error sending test SMS:', error);
+      toast({
+        title: "Failed to Send SMS",
+        description: error.message || "Failed to send test SMS via Notifyre",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingSms(false);
+    }
   };
 
   const getStatusBadge = () => {
@@ -241,6 +296,43 @@ export default function Integrations() {
           </div>
 
           <div className="pt-4 border-t">
+            <h4 className="font-semibold mb-3 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Test SMS
+            </h4>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="test-phone">Phone Number</Label>
+                <Input
+                  id="test-phone"
+                  type="tel"
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                  placeholder="+1234567890"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="test-message">Message</Label>
+                <Textarea
+                  id="test-message"
+                  value={testMessage}
+                  onChange={(e) => setTestMessage(e.target.value)}
+                  placeholder="Enter your test message"
+                  rows={3}
+                />
+              </div>
+              <Button
+                onClick={sendTestSms}
+                disabled={sendingSms || !testPhone.trim() || !testMessage.trim()}
+                className="w-full"
+              >
+                {sendingSms && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Send Test SMS
+              </Button>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t">
             <h4 className="font-semibold mb-2">Integration Details</h4>
             <div className="space-y-2 text-sm text-muted-foreground">
               <div className="flex justify-between">
@@ -257,7 +349,7 @@ export default function Integrations() {
               </div>
               <div className="flex justify-between">
                 <span>Features:</span>
-                <span className="font-medium text-foreground">Fax Campaigns, Logs</span>
+                <span className="font-medium text-foreground">Fax Campaigns, SMS, Logs</span>
               </div>
             </div>
           </div>
