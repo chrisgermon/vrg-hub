@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { BrandLogoUpload } from './BrandLogoUpload';
 import {
   Dialog,
   DialogContent,
@@ -72,13 +73,18 @@ export function BrandsManager() {
     const formData = new FormData(e.currentTarget);
 
     try {
-      const brandData = {
+      const brandData: any = {
         name: (formData.get('name') as string).toLowerCase().replace(/\s+/g, '_'),
         display_name: formData.get('display_name') as string,
         description: formData.get('description') as string,
         sort_order: parseInt(formData.get('sort_order') as string) || 0,
         is_active: formData.get('is_active') === 'on',
       };
+
+      // Only include logo_url if editing an existing brand
+      if (editingBrand) {
+        brandData.logo_url = editingBrand.logo_url;
+      }
 
       if (editingBrand) {
         const { error } = await supabase
@@ -209,6 +215,19 @@ export function BrandsManager() {
                     rows={3}
                   />
                 </div>
+                {editingBrand && (
+                  <div className="space-y-2">
+                    <Label>Brand Logo</Label>
+                    <BrandLogoUpload
+                      brandId={editingBrand.id}
+                      currentLogoUrl={editingBrand.logo_url}
+                      onLogoUpdated={(logoUrl) => {
+                        setEditingBrand({ ...editingBrand, logo_url: logoUrl });
+                        loadBrands();
+                      }}
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="sort_order">Sort Order</Label>
                   <Input

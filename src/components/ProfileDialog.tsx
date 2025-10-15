@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BrandLocationSelect } from "@/components/ui/brand-location-select";
 import { Loader2 } from "lucide-react";
 
 interface ProfileDialogProps {
@@ -32,6 +33,8 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
     department: "",
     location: "",
     avatar_url: "",
+    brand_id: "",
+    location_id: "",
   });
 
   useEffect(() => {
@@ -43,6 +46,8 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
         department: profile.department || "",
         location: profile.location || "",
         avatar_url: profile.avatar_url || "",
+        brand_id: profile.brand_id || "",
+        location_id: profile.location_id || "",
       });
     }
   }, [profile, user]);
@@ -61,6 +66,8 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
           department: formData.department,
           location: formData.location,
           avatar_url: formData.avatar_url,
+          brand_id: formData.brand_id || null,
+          location_id: formData.location_id || null,
         })
         .eq("id", user.id);
 
@@ -182,6 +189,16 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                 setFormData({ ...formData, avatar_url: e.target.value })
               }
               placeholder="Enter avatar image URL"
+            />
+          </div>
+
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-medium mb-4">Primary Brand & Location</h3>
+            <BrandLocationSelect
+              selectedBrandId={formData.brand_id}
+              selectedLocationId={formData.location_id}
+              onBrandChange={(brandId) => setFormData({ ...formData, brand_id: brandId })}
+              onLocationChange={(locationId) => setFormData({ ...formData, location_id: locationId })}
             />
           </div>
 

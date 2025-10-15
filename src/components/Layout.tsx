@@ -22,6 +22,7 @@ import { RouteLoading } from "./RouteLoading";
 import { GlobalSearch } from "./GlobalSearch";
 import { SystemBanners } from "./banners/SystemBanners";
 import { ProfileDialog } from "./ProfileDialog";
+import { FirstTimeSetupDialog } from "./FirstTimeSetupDialog";
 
 interface LayoutProps {
   children: ReactNode;
@@ -60,6 +61,7 @@ export function Layout({ children }: LayoutProps) {
   return (
     <>
       {/* <FrontChatWidget /> */}
+      <FirstTimeSetupDialog />
       <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background">
           <AppSidebar userRole={userRole as any} />
