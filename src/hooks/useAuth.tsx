@@ -132,26 +132,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithAzure = async () => {
-    try {
-      // Use the custom Office 365 OAuth flow
-      const { data, error } = await supabase.functions.invoke('office365-oauth-initiate', {
-        body: { 
-          redirectUri: window.location.origin 
-        }
-      });
+    const redirectUrl = `${window.location.origin}/`;
 
-      if (error) throw error;
-      
-      if (data?.authUrl) {
-        // Redirect to Microsoft login
-        window.location.href = data.authUrl;
-      } else {
-        throw new Error('No authorization URL received');
-      }
-    } catch (error: any) {
-      console.error('Azure login error:', error);
-      throw error;
-    }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'azure',
+      options: {
+        scopes: 'email openid profile',
+        redirectTo: redirectUrl,
+      },
+    });
+
+    if (error) throw error;
   };
 
   const signOut = async () => {
