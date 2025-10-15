@@ -42,12 +42,12 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Notifyre API key not configured');
     }
 
-    // Send SMS via Notifyre API (correct SMS endpoint)
+    // Send SMS via Notifyre API
     const smsUrl = 'https://api.notifyre.com/sms/send';
     const fromNumber = Deno.env.get('NOTIFYRE_SMS_FROM') || undefined;
     const payload: any = {
-      command: message,
-      recipients: [{ mobileNumber: phoneNumber }],
+      body: message,
+      recipients: [phoneNumber]
     };
     if (fromNumber) payload.from = fromNumber;
 
