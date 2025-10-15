@@ -145,26 +145,18 @@ serve(async (req) => {
       throw new Error('Failed to generate login link');
     }
 
-    // Extract the token from the magic link URL
-    const magicLinkUrl = new URL(magicLinkData.properties.action_link);
-    const token = magicLinkUrl.searchParams.get('token');
-    const type = magicLinkUrl.searchParams.get('type');
-
-    if (!token) {
-      throw new Error('No token in magic link');
+    // Redirect user to Supabase verification link directly so session is established
+    const actionLink = magicLinkData.properties.action_link;
+    if (!actionLink) {
+      throw new Error('No action_link returned for magic link');
     }
 
-    // Redirect to the auth callback with the token
-    const redirectUrl = new URL(`${url.origin}/auth/callback`);
-    redirectUrl.searchParams.set('token_hash', token);
-    redirectUrl.searchParams.set('type', type || 'magiclink');
-
-    console.log('Redirecting to:', redirectUrl.toString());
+    console.log('Redirecting to Supabase verify link:', actionLink);
 
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': redirectUrl.toString()
+        'Location': actionLink
       }
     });
 

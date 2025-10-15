@@ -1,1 +1,7 @@
 project_id = "qnavtvxemndvrutnavvm"
+
+[functions.azure-login-initiate]
+verify_jwt = false
+
+[functions.azure-login-callback]
+verify_jwt = false
