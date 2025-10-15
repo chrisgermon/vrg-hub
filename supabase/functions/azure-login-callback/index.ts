@@ -79,13 +79,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check if domain is registered and verified
+    // Check if domain is registered
     const { data: domainData, error: domainError } = await supabaseAdmin
       .from('company_domains')
-      .select('domain, is_verified, is_active')
+      .select('domain, is_active')
       .eq('domain', emailDomain)
       .eq('is_active', true)
-      .eq('is_verified', true)
       .maybeSingle();
 
     if (domainError) {
