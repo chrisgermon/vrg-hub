@@ -13,7 +13,7 @@ import { extractSubdomain, getCompanyBySubdomain, buildSubdomainUrl } from '@/li
 import { supabase } from '@/integrations/supabase/client';
 
 export default function Auth() {
-  const { signInWithPassword, signUp, user, userRole, loading: authLoading } = useAuth();
+  const { signInWithPassword, signInWithAzure, signUp, user, userRole, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +22,7 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [useAzure, setUseAzure] = useState(true); // Default to Azure login
   
   const currentSubdomain = extractSubdomain(window.location.hostname);
 
@@ -73,6 +74,18 @@ export default function Auth() {
       navigate('/home');
     }
   }, [user, userRole, authLoading, navigate]);
+
+  const handleAzureLogin = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      await signInWithAzure();
+    } catch (err: any) {
+      console.error('Azure login error:', err);
+      setError(err.message || 'Failed to initiate Azure login');
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,10 +156,12 @@ export default function Auth() {
           <CardHeader className="text-center px-4 md:px-6">
             <CardTitle className="flex items-center justify-center gap-2 text-xl md:text-2xl">
               <Building2 className="w-5 h-5 md:w-6 md:h-6" />
-              {isSignUp ? 'Create Account' : 'Sign In'}
+              {useAzure ? 'Sign In' : (isSignUp ? 'Create Account' : 'Sign In')}
             </CardTitle>
             <CardDescription className="text-sm">
-              {isSignUp ? 'Create a new account to access your company portal' : 'Sign in to access your company portal'}
+              {useAzure 
+                ? 'Sign in with your organization\'s Azure AD account' 
+                : (isSignUp ? 'Create a new account' : 'Sign in with email and password')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 md:space-y-4 px-4 md:px-6">
@@ -156,62 +171,127 @@ export default function Auth() {
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  required
-                />
-              </div>
+            {useAzure ? (
+              <>
+                <div className="bg-muted/50 p-3 md:p-4 rounded-lg text-sm border border-border/30">
+                  <h4 className="font-medium mb-2 text-sm">Access Requirements:</h4>
+                  <ul className="text-muted-foreground space-y-1 text-xs">
+                    <li>• Your email domain must be registered with your organization</li>
+                    <li>• Only users from authorized domains can access the system</li>
+                    <li>• Contact your admin if you cannot access your organization</li>
+                  </ul>
+                </div>
 
-              <Button 
-                type="submit"
-                disabled={loading || !email || !password}
-                className="w-full shadow-glow hover:scale-105 transition-all"
-                size="lg"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {isSignUp ? 'Creating account...' : 'Signing in...'}
-                  </>
-                ) : (
-                  isSignUp ? 'Create Account' : 'Sign In'
-                )}
-              </Button>
-            </form>
+                <Button 
+                  onClick={handleAzureLogin}
+                  disabled={loading}
+                  className="w-full shadow-glow hover:scale-105 transition-all"
+                  size="lg"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-2" viewBox="0 0 23 23" fill="currentColor">
+                        <path d="M0 0h11v11H0z" fill="#f25022"/>
+                        <path d="M12 0h11v11H12z" fill="#00a4ef"/>
+                        <path d="M0 12h11v11H0z" fill="#ffb900"/>
+                        <path d="M12 12h11v11H12z" fill="#7fba00"/>
+                      </svg>
+                      Continue with Microsoft
+                    </>
+                  )}
+                </Button>
 
-            <div className="text-center">
-              <Button 
-                variant="link"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setError(null);
-                }}
-                className="text-sm"
-              >
-                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-              </Button>
-            </div>
+                <div className="text-center">
+                  <Button 
+                    variant="link"
+                    onClick={() => {
+                      setUseAzure(false);
+                      setError(null);
+                    }}
+                    className="text-sm"
+                  >
+                    Use email/password instead
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="you@company.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={loading}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={loading}
+                      required
+                    />
+                  </div>
+
+                  <Button 
+                    type="submit"
+                    disabled={loading || !email || !password}
+                    className="w-full shadow-glow hover:scale-105 transition-all"
+                    size="lg"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {isSignUp ? 'Creating account...' : 'Signing in...'}
+                      </>
+                    ) : (
+                      isSignUp ? 'Create Account' : 'Sign In'
+                    )}
+                  </Button>
+                </form>
+
+                <div className="text-center space-y-2">
+                  <Button 
+                    variant="link"
+                    onClick={() => {
+                      setIsSignUp(!isSignUp);
+                      setError(null);
+                    }}
+                    className="text-sm"
+                  >
+                    {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                  </Button>
+                  
+                  <div>
+                    <Button 
+                      variant="link"
+                      onClick={() => {
+                        setUseAzure(true);
+                        setError(null);
+                      }}
+                      className="text-sm"
+                    >
+                      Use Azure AD instead
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
             
             <div className="text-center text-xs text-muted-foreground mt-2 pt-2 border-t border-border/30">
               System administrators should use <a href="/system-login" className="text-primary hover:underline font-medium">system login</a>

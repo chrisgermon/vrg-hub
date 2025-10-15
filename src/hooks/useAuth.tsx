@@ -147,7 +147,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithAzure = async () => {
-    throw new Error('Azure login is not available. Please use email/password authentication.');
+    try {
+      // Call edge function to get Azure auth URL
+      const { data, error } = await supabase.functions.invoke('azure-login-initiate');
+      
+      if (error) throw error;
+      
+      if (data?.authUrl) {
+        // Redirect to Microsoft login
+        window.location.href = data.authUrl;
+      } else {
+        throw new Error('No authorization URL received');
+      }
+    } catch (error: any) {
+      console.error('Azure login error:', error);
+      throw error;
+    }
   };
 
   const signOut = async () => {
