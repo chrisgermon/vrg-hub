@@ -25,7 +25,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get all active reminders
     const { data: reminders, error: remindersError } = await supabase
       .from('reminders')
-      .select('*, profiles!reminders_user_id_fkey(email, phone, full_name)')
+      .select('*')
       .eq('is_active', true)
       .eq('status', 'active')
       .gte('reminder_date', today.toISOString());
@@ -68,7 +68,17 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       const channels = reminder.notification_channels as { email?: boolean; sms?: boolean; in_app?: boolean };
-      const userProfile = reminder.profiles as any;
+      
+      // Fetch user profile if needed
+      let userProfile: any = null;
+      if (reminder.user_id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email, phone, full_name')
+          .eq('id', reminder.user_id)
+          .maybeSingle();
+        userProfile = profile;
+      }
 
       // Prepare message
       const daysMessage = daysUntil === 0 
