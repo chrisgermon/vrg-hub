@@ -75,19 +75,37 @@ interface Modality {
   worklist_port?: number;
   modality_type?: string;
   notes?: string;
+  brand_id?: string;
+  location_id?: string;
+}
+
+interface Brand {
+  id: string;
+  name: string;
+  display_name: string;
+}
+
+interface Location {
+  id: string;
+  name: string;
+  brand_id: string;
 }
 
 export function ModalityDetails() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [servers, setServers] = useState<DicomServer[]>([]);
   const [modalities, setModalities] = useState<Modality[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [selectedClinic, setSelectedClinic] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
   const [importData, setImportData] = useState('');
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showClinicDialog, setShowClinicDialog] = useState(false);
+  const [showModalityDialog, setShowModalityDialog] = useState(false);
   const [editingClinic, setEditingClinic] = useState<Clinic | null>(null);
+  const [editingModality, setEditingModality] = useState<Modality | null>(null);
   
   const { toast } = useToast();
   const { userRole } = useAuth();
@@ -96,6 +114,7 @@ export function ModalityDetails() {
 
   useEffect(() => {
     loadClinics();
+    loadBrandsAndLocations();
   }, []);
 
   useEffect(() => {
@@ -103,6 +122,23 @@ export function ModalityDetails() {
       loadClinicData(selectedClinic);
     }
   }, [selectedClinic]);
+
+  const loadBrandsAndLocations = async () => {
+    try {
+      const [brandsRes, locationsRes] = await Promise.all([
+        supabase.from('brands').select('id, name, display_name').eq('is_active', true),
+        supabase.from('locations').select('id, name, brand_id').eq('is_active', true),
+      ]);
+
+      if (brandsRes.error) throw brandsRes.error;
+      if (locationsRes.error) throw locationsRes.error;
+
+      setBrands(brandsRes.data || []);
+      setLocations(locationsRes.data || []);
+    } catch (error) {
+      console.error('Error loading brands and locations:', error);
+    }
+  };
 
   const loadClinics = async () => {
     try {
@@ -314,6 +350,99 @@ export function ModalityDetails() {
       toast({
         title: 'Error',
         description: 'Failed to delete clinic',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSaveModality = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+
+    if (!selectedClinic) {
+      toast({
+        title: 'Error',
+        description: 'Please select a clinic first',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    try {
+      const modalityData = {
+        clinic_id: selectedClinic,
+        name: formData.get('name') as string,
+        ip_address: formData.get('ip_address') as string,
+        ae_title: formData.get('ae_title') as string || null,
+        port: formData.get('port') ? parseInt(formData.get('port') as string) : null,
+        worklist_ip_address: formData.get('worklist_ip_address') as string || null,
+        worklist_ae_title: formData.get('worklist_ae_title') as string || null,
+        worklist_port: formData.get('worklist_port') ? parseInt(formData.get('worklist_port') as string) : null,
+        modality_type: formData.get('modality_type') as string || null,
+        notes: formData.get('notes') as string || null,
+        brand_id: formData.get('brand_id') as string || null,
+        location_id: formData.get('location_id') as string || null,
+      };
+
+      if (editingModality) {
+        const { error } = await supabase
+          .from('modalities')
+          .update(modalityData)
+          .eq('id', editingModality.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('modalities')
+          .insert(modalityData);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: 'Success',
+        description: `Modality ${editingModality ? 'updated' : 'created'} successfully`,
+      });
+
+      setShowModalityDialog(false);
+      setEditingModality(null);
+      loadClinicData(selectedClinic);
+    } catch (error) {
+      console.error('Error saving modality:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save modality',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteModality = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this modality?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('modalities')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Modality deleted successfully',
+      });
+
+      if (selectedClinic) {
+        loadClinicData(selectedClinic);
+      }
+    } catch (error) {
+      console.error('Error deleting modality:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete modality',
         variant: 'destructive',
       });
     }
@@ -545,8 +674,160 @@ export function ModalityDetails() {
 
               <TabsContent value="modalities">
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Modalities</CardTitle>
+                    {isAdmin && (
+                      <Dialog open={showModalityDialog} onOpenChange={setShowModalityDialog}>
+                        <DialogTrigger asChild>
+                          <Button onClick={() => setEditingModality(null)} size="sm">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Modality
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>{editingModality ? 'Edit' : 'Add'} Modality</DialogTitle>
+                          </DialogHeader>
+                          <form onSubmit={handleSaveModality} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="col-span-2">
+                                <Label htmlFor="name">Name *</Label>
+                                <Input
+                                  id="name"
+                                  name="name"
+                                  defaultValue={editingModality?.name}
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="brand_id">Brand</Label>
+                                <Select name="brand_id" defaultValue={editingModality?.brand_id || undefined}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select brand" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {brands.map((brand) => (
+                                      <SelectItem key={brand.id} value={brand.id}>
+                                        {brand.display_name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label htmlFor="location_id">Location</Label>
+                                <Select name="location_id" defaultValue={editingModality?.location_id || undefined}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select location" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {locations.map((location) => (
+                                      <SelectItem key={location.id} value={location.id}>
+                                        {location.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label htmlFor="modality_type">Type</Label>
+                                <Select name="modality_type" defaultValue={editingModality?.modality_type || undefined}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="CT">CT</SelectItem>
+                                    <SelectItem value="MR">MR</SelectItem>
+                                    <SelectItem value="XA">XA</SelectItem>
+                                    <SelectItem value="US">US</SelectItem>
+                                    <SelectItem value="CR">CR</SelectItem>
+                                    <SelectItem value="DX">DX</SelectItem>
+                                    <SelectItem value="MG">MG</SelectItem>
+                                    <SelectItem value="NM">NM</SelectItem>
+                                    <SelectItem value="PT">PT</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label htmlFor="ip_address">IP Address *</Label>
+                                <Input
+                                  id="ip_address"
+                                  name="ip_address"
+                                  defaultValue={editingModality?.ip_address}
+                                  placeholder="192.168.1.10"
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="ae_title">AE Title</Label>
+                                <Input
+                                  id="ae_title"
+                                  name="ae_title"
+                                  defaultValue={editingModality?.ae_title}
+                                  placeholder="MODALITY_AE"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="port">Port</Label>
+                                <Input
+                                  id="port"
+                                  name="port"
+                                  type="number"
+                                  defaultValue={editingModality?.port}
+                                  placeholder="104"
+                                />
+                              </div>
+                              <div className="col-span-2 border-t pt-4">
+                                <h4 className="font-semibold mb-3">Worklist Configuration</h4>
+                              </div>
+                              <div>
+                                <Label htmlFor="worklist_ip_address">Worklist IP</Label>
+                                <Input
+                                  id="worklist_ip_address"
+                                  name="worklist_ip_address"
+                                  defaultValue={editingModality?.worklist_ip_address}
+                                  placeholder="192.168.1.11"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="worklist_ae_title">Worklist AE Title</Label>
+                                <Input
+                                  id="worklist_ae_title"
+                                  name="worklist_ae_title"
+                                  defaultValue={editingModality?.worklist_ae_title}
+                                  placeholder="WORKLIST_AE"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="worklist_port">Worklist Port</Label>
+                                <Input
+                                  id="worklist_port"
+                                  name="worklist_port"
+                                  type="number"
+                                  defaultValue={editingModality?.worklist_port}
+                                  placeholder="104"
+                                />
+                              </div>
+                              <div className="col-span-2">
+                                <Label htmlFor="notes">Notes</Label>
+                                <Textarea
+                                  id="notes"
+                                  name="notes"
+                                  defaultValue={editingModality?.notes}
+                                  rows={3}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                              <Button type="button" variant="outline" onClick={() => setShowModalityDialog(false)}>
+                                Cancel
+                              </Button>
+                              <Button type="submit">Save</Button>
+                            </div>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                   </CardHeader>
                   <CardContent>
                     {modalities.length === 0 ? (
@@ -559,28 +840,60 @@ export function ModalityDetails() {
                           <TableHeader>
                             <TableRow>
                               <TableHead>Name</TableHead>
+                              <TableHead>Brand</TableHead>
+                              <TableHead>Location</TableHead>
                               <TableHead>IP Address</TableHead>
                               <TableHead>AE Title</TableHead>
                               <TableHead>Port</TableHead>
                               <TableHead>Worklist</TableHead>
+                              {isAdmin && <TableHead>Actions</TableHead>}
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {modalities.map((modality) => (
-                              <TableRow key={modality.id}>
-                                <TableCell className="font-medium">{modality.name}</TableCell>
-                                <TableCell>{modality.ip_address}</TableCell>
-                                <TableCell>{modality.ae_title || '-'}</TableCell>
-                                <TableCell>{modality.port || '-'}</TableCell>
-                                <TableCell>
-                                  {modality.worklist_ip_address ? (
-                                    <Badge variant="success">Configured</Badge>
-                                  ) : (
-                                    <Badge variant="secondary">None</Badge>
+                            {modalities.map((modality) => {
+                              const brand = brands.find(b => b.id === modality.brand_id);
+                              const location = locations.find(l => l.id === modality.location_id);
+                              return (
+                                <TableRow key={modality.id}>
+                                  <TableCell className="font-medium">{modality.name}</TableCell>
+                                  <TableCell>{brand?.display_name || '-'}</TableCell>
+                                  <TableCell>{location?.name || '-'}</TableCell>
+                                  <TableCell>{modality.ip_address}</TableCell>
+                                  <TableCell>{modality.ae_title || '-'}</TableCell>
+                                  <TableCell>{modality.port || '-'}</TableCell>
+                                  <TableCell>
+                                    {modality.worklist_ip_address ? (
+                                      <Badge variant="success">Configured</Badge>
+                                    ) : (
+                                      <Badge variant="secondary">None</Badge>
+                                    )}
+                                  </TableCell>
+                                  {isAdmin && (
+                                    <TableCell>
+                                      <div className="flex gap-2">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setEditingModality(modality);
+                                            setShowModalityDialog(true);
+                                          }}
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleDeleteModality(modality.id)}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </div>
+                                    </TableCell>
                                   )}
-                                </TableCell>
-                              </TableRow>
-                            ))}
+                                </TableRow>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </div>

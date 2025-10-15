@@ -895,10 +895,12 @@ export type Database = {
       modalities: {
         Row: {
           ae_title: string | null
+          brand_id: string | null
           clinic_id: string
           created_at: string
           id: string
           ip_address: string
+          location_id: string | null
           modality_type: string | null
           name: string
           notes: string | null
@@ -910,10 +912,12 @@ export type Database = {
         }
         Insert: {
           ae_title?: string | null
+          brand_id?: string | null
           clinic_id: string
           created_at?: string
           id?: string
           ip_address: string
+          location_id?: string | null
           modality_type?: string | null
           name: string
           notes?: string | null
@@ -925,10 +929,12 @@ export type Database = {
         }
         Update: {
           ae_title?: string | null
+          brand_id?: string | null
           clinic_id?: string
           created_at?: string
           id?: string
           ip_address?: string
+          location_id?: string | null
           modality_type?: string | null
           name?: string
           notes?: string | null
@@ -940,10 +946,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "modalities_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "modalities_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modalities_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
         ]
