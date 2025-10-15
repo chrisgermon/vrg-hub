@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,7 @@ interface MarketingRequestFormProps {
 }
 
 export function MarketingRequestForm({ onSuccess }: MarketingRequestFormProps) {
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -31,13 +32,23 @@ export function MarketingRequestForm({ onSuccess }: MarketingRequestFormProps) {
     target_audience: '',
     deadline: '',
     priority: 'medium',
-    brandId: '',
-    locationId: '',
+    brandId: profile?.brand_id || '',
+    locationId: profile?.location_id || '',
   });
   
-  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Update form when profile loads
+  useEffect(() => {
+    if (profile?.brand_id && !formData.brandId) {
+      setFormData(prev => ({
+        ...prev,
+        brandId: profile.brand_id || '',
+        locationId: profile.location_id || '',
+      }));
+    }
+  }, [profile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

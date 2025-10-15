@@ -45,10 +45,18 @@ export function DynamicDepartmentRequestForm({
   const [submitting, setSubmitting] = useState(false);
   const [template, setTemplate] = useState<FormTemplate | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
-  const [brandId, setBrandId] = useState('');
-  const [locationId, setLocationId] = useState('');
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const [brandId, setBrandId] = useState(profile?.brand_id || '');
+  const [locationId, setLocationId] = useState(profile?.location_id || '');
   const navigate = useNavigate();
+
+  // Update when profile loads
+  useEffect(() => {
+    if (profile?.brand_id && !brandId) {
+      setBrandId(profile.brand_id);
+      setLocationId(profile.location_id || '');
+    }
+  }, [profile]);
 
   useEffect(() => {
     loadTemplate();

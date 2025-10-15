@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -38,10 +38,18 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function TonerRequestForm() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [brandId, setBrandId] = useState('');
-  const [locationId, setLocationId] = useState('');
+  const [brandId, setBrandId] = useState(profile?.brand_id || '');
+  const [locationId, setLocationId] = useState(profile?.location_id || '');
+
+  // Update when profile loads
+  useEffect(() => {
+    if (profile?.brand_id && !brandId) {
+      setBrandId(profile.brand_id);
+      setLocationId(profile.location_id || '');
+    }
+  }, [profile]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

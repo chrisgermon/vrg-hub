@@ -24,11 +24,19 @@ export function TemplatedDepartmentRequestForm({
   const [submitting, setSubmitting] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [brandId, setBrandId] = useState('');
-  const [locationId, setLocationId] = useState('');
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const [brandId, setBrandId] = useState(profile?.brand_id || '');
+  const [locationId, setLocationId] = useState(profile?.location_id || '');
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Update when profile loads
+  useEffect(() => {
+    if (profile?.brand_id && !brandId) {
+      setBrandId(profile.brand_id);
+      setLocationId(profile.location_id || '');
+    }
+  }, [profile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
