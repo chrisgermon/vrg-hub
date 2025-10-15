@@ -51,40 +51,65 @@ const handler = async (req: Request): Promise<Response> => {
 
     let smsResult: any = null;
 
-    const payload: any = {
+    // Base payload per docs
+    const basePayload: any = {
       Body: message,
       Recipients: [{ type: 'mobile_number', value: e164 }],
-      ...(fromNumber ? { From: fromNumber } : {}),
       AddUnsubscribeLink: false,
       CallbackUrl: '',
       Metadata: { source: 'send-sms-reminder' },
       CampaignName: 'Reminders',
     };
 
-    console.log('Notifyre SMS request:', {
-      url: smsUrl,
-      to: e164,
-      messageLength: message?.length,
-      hasFrom: !!fromNumber,
-      recipientsShape: payload.Recipients,
-    });
+    const sendPayload = async (withFrom: boolean) => {
+      const payloadToSend = withFrom && fromNumber
+        ? { ...basePayload, From: fromNumber }
+        : basePayload;
 
-    const response = await fetch(smsUrl, {
-      method: 'POST',
-      headers: {
-        'x-api-token': notifyreApiKey,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+      console.log('Notifyre SMS request:', {
+        url: smsUrl,
+        to: e164,
+        messageLength: message?.length,
+        hasFrom: withFrom && !!fromNumber,
+        recipientsShape: payloadToSend.Recipients,
+      });
 
+      const resp = await fetch(smsUrl, {
+        method: 'POST',
+        headers: {
+          'x-api-token': notifyreApiKey,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payloadToSend),
+      });
+      return resp;
+    };
+
+    // First attempt: include From if provided, else send without From
+    let response = await sendPayload(!!fromNumber);
+
+    // If invalid from number, retry without From
     if (!response.ok) {
       const raw = await response.text();
       let parsed: any = null;
       try { parsed = JSON.parse(raw); } catch { /* not JSON */ }
-      const details = parsed ?? raw ?? 'Unknown error';
-      throw new Error(`Notifyre API error: ${response.status} - ${typeof details === 'string' ? details : JSON.stringify(details)}`);
+      const msgText = (typeof parsed === 'string' ? parsed : parsed?.message || raw || '').toString().toLowerCase();
+
+      if (fromNumber && response.status === 400 && msgText.includes('invalid from')) {
+        console.warn('Notifyre responded with invalid from number. Retrying without From.');
+        response = await sendPayload(false);
+        if (!response.ok) {
+          const raw2 = await response.text();
+          let parsed2: any = null;
+          try { parsed2 = JSON.parse(raw2); } catch { /* not JSON */ }
+          const details2 = parsed2 ?? raw2 ?? 'Unknown error';
+          throw new Error(`Notifyre API error (after retry without From): ${response.status} - ${typeof details2 === 'string' ? details2 : JSON.stringify(details2)}`);
+        }
+      } else {
+        const details = parsed ?? raw ?? 'Unknown error';
+        throw new Error(`Notifyre API error: ${response.status} - ${typeof details === 'string' ? details : JSON.stringify(details)}`);
+      }
     }
 
     smsResult = await response.json();
