@@ -46,11 +46,10 @@ const handler = async (req: Request): Promise<Response> => {
     const smsUrl = 'https://api.notifyre.com/sms/send';
     const fromNumber = Deno.env.get('NOTIFYRE_SMS_FROM') || undefined;
     const payload: any = {
-      Body: message,
-      Recipients: [{ type: 'mobile_number', value: phoneNumber }],
-      AddUnsubscribeLink: false,
+      body: message,
+      recipients: [phoneNumber],
     };
-    if (fromNumber) payload.From = fromNumber;
+    if (fromNumber) payload.from = fromNumber;
 
     console.log('Notifyre SMS request:', { url: smsUrl, to: phoneNumber, messageLength: message?.length, hasFrom: !!fromNumber });
     const response = await fetch(smsUrl, {
@@ -75,22 +74,21 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('SMS sent successfully:', smsResult);
 
-    // Log the notification (avoid invalid UUIDs)
+    // Log the notification only when we have a valid reminder_id (UUID)
     const isUuid = typeof reminderId === 'string' && /^[0-9a-fA-F-]{36}$/.test(reminderId);
-    const insertPayload: any = {
-      notification_type: 'sms',
-      status: 'sent',
-      recipient: phoneNumber,
-      metadata: { notifyre_response: smsResult, source: 'send-sms-reminder' },
-    };
-    if (isUuid) insertPayload.reminder_id = reminderId;
-
-    const { error: logError } = await supabase
-      .from('reminder_notifications')
-      .insert(insertPayload);
-
-    if (logError) {
-      console.error('Error logging notification:', logError);
+    if (isUuid) {
+      const { error: logError } = await supabase
+        .from('reminder_notifications')
+        .insert({
+          reminder_id: reminderId,
+          notification_type: 'sms',
+          status: 'sent',
+          recipient: phoneNumber,
+          metadata: { notifyre_response: smsResult, source: 'send-sms-reminder' },
+        });
+      if (logError) {
+        console.error('Error logging notification:', logError);
+      }
     }
 
     return new Response(
@@ -122,9 +120,11 @@ const handler = async (req: Request): Promise<Response> => {
         };
         if (isUuid) failurePayload.reminder_id = requestBody.reminderId;
 
-        await supabase
-          .from('reminder_notifications')
-          .insert(failurePayload);
+        if (isUuid) {
+          await supabase
+            .from('reminder_notifications')
+            .insert(failurePayload);
+        }
       } catch (logError) {
         console.error('Error logging failed notification:', logError);
       }
