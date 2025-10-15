@@ -43,10 +43,9 @@ serve(async (req) => {
 
     const { data, error } = await supabase
       .from("company_domains")
-      .select("company_id, domain, active, companies!inner(id, name, subdomain, active)")
+      .select("id, domain, is_active, is_verified, verified_at")
       .eq("domain", domainStr)
-      .eq("active", true)
-      .eq("companies.active", true)
+      .eq("is_active", true)
       .maybeSingle();
 
     if (error) {
@@ -57,21 +56,24 @@ serve(async (req) => {
       );
     }
 
-    if (!data || !(data as any).companies) {
+    if (!data) {
       return new Response(
         JSON.stringify({ error: "Not found" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    const companiesRel: any = (data as any).companies;
-    const company = Array.isArray(companiesRel) ? companiesRel[0] : companiesRel;
-    if (!company) {
-      return new Response(
-        JSON.stringify({ error: "Not found" }),
-        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    // Optional: fetch company name from app_config for display purposes
+    const { data: appConfig } = await supabase
+      .from("app_config")
+      .select("company_name")
+      .limit(1)
+      .maybeSingle();
+
+    const company = {
+      name: appConfig?.company_name ?? null,
+      subdomain: null,
+    };
 
     return new Response(
       JSON.stringify({ company }),
