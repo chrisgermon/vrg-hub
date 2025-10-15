@@ -3,17 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { MessageSquare, CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
+import { MessageSquare, CheckCircle2, XCircle, Clock, AlertCircle, RotateCcw } from "lucide-react";
 import { formatAUDateTime } from "@/lib/dateUtils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export function SmsLogsViewer() {
-  const { data: notifications, isLoading } = useQuery({
+  const { data: notifications, isLoading, refetch } = useQuery({
     queryKey: ['reminder-notifications'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('reminder_notifications')
-        .select('*, reminders(title, reminder_date)')
+        .select('*, reminders(title, description, reminder_date)')
         .order('sent_at', { ascending: false })
         .limit(100);
 
@@ -49,6 +51,59 @@ export function SmsLogsViewer() {
     );
   };
 
+  const getDaysMessage = (daysBefore: number | null | undefined, reminderDate?: string) => {
+    if (typeof daysBefore === 'number') {
+      if (daysBefore === 0) return 'Today';
+      if (daysBefore === 1) return 'Tomorrow';
+      return `in ${daysBefore} days`;
+    }
+    if (reminderDate) {
+      const today = new Date();
+      const target = new Date(reminderDate);
+      const diff = Math.ceil((target.getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / (1000*60*60*24));
+      if (diff === 0) return 'Today';
+      if (diff === 1) return 'Tomorrow';
+      return `in ${diff} days`;
+    }
+    return '';
+  };
+
+  const buildRetryMessage = (reminder: any, daysBefore: number | null | undefined) => {
+    const daysMsg = getDaysMessage(daysBefore, reminder?.reminder_date);
+    const desc = reminder?.description ? ` - ${reminder.description}` : '';
+    return `Reminder: ${reminder?.title || 'Reminder'}${desc} is ${daysMsg}!`;
+  };
+
+  const handleRetry = async (notification: any) => {
+    try {
+      if (!notification.recipient) {
+        toast.error('Missing recipient phone number');
+        return;
+      }
+      if (!notification.reminder_id) {
+        toast.error('Missing reminder id');
+        return;
+      }
+      const reminder = notification.reminders as any;
+      const message = buildRetryMessage(reminder, notification.days_before);
+
+      const { data, error } = await supabase.functions.invoke('send-sms-reminder', {
+        body: {
+          reminderId: notification.reminder_id,
+          phoneNumber: notification.recipient,
+          message,
+        },
+      });
+
+      if (error) throw error;
+      toast.success('Retry sent');
+      await refetch();
+    } catch (err: any) {
+      console.error('Retry failed', err);
+      toast.error(err?.message || 'Retry failed');
+    }
+  };
+
   const smsNotifications = notifications?.filter(n => n.notification_type === 'sms') || [];
   const emailNotifications = notifications?.filter(n => n.notification_type === 'email') || [];
 
@@ -77,6 +132,7 @@ export function SmsLogsViewer() {
               <TableHead>Sent At</TableHead>
               <TableHead>Days Before</TableHead>
               <TableHead>Details</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -110,6 +166,13 @@ export function SmsLogsViewer() {
                     ) : (
                       <span className="text-xs text-muted-foreground">Success</span>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    {type === 'sms' && notification.status === 'failed' ? (
+                      <Button variant="outline" size="sm" onClick={() => handleRetry(notification)}>
+                        <RotateCcw className="h-4 w-4 mr-2" /> Retry
+                      </Button>
+                    ) : null}
                   </TableCell>
                 </TableRow>
               );
