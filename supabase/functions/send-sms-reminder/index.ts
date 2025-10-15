@@ -42,77 +42,56 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Notifyre API key not configured');
     }
 
-    // Send SMS via Notifyre API (try multiple recipient payload shapes on v20220711)
-    const apiVersion = '20220711';
-    const smsUrl = `https://api.notifyre.com/${apiVersion}/sms/send`;
+    // Send SMS via Notifyre API (per docs: https://docs.notifyre.com/api/sms-send)
+    const smsUrl = `https://api.notifyre.com/sms/send`;
     const fromNumber = Deno.env.get('NOTIFYRE_SMS_FROM') || undefined;
 
-    const typeCandidates = ['toNumber', 'number', 'to', 'mobile', 'msisdn'];
-    const valueCandidates = [phoneNumber, phoneNumber.replace(/^\+/, '')];
-
-    const recipientShapes: any[] = [];
-    for (const t of typeCandidates) {
-      for (const v of valueCandidates) {
-        recipientShapes.push([{ type: t, value: v }]);
-      }
-    }
-
+    // Ensure E.164 with leading +
+    const e164 = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
 
     let smsResult: any = null;
-    let lastError: any = null;
 
-    for (const recipients of recipientShapes) {
-      try {
-        const payload: any = {
-          body: message,
-          recipients,
-          ...(fromNumber ? { from: fromNumber } : {}),
-          scheduledDate: null,
-          addUnsubscribeLink: false,
-          callbackUrl: '',
-          metadata: { source: 'send-sms-reminder' },
-          callbackFormat: 'notifyre',
-          apiVersion,
-          campaignName: 'Reminders',
-        };
+    const payload: any = {
+      Body: message,
+      Recipients: [{ type: 'mobile_number', value: e164 }],
+      ...(fromNumber ? { From: fromNumber } : {}),
+      AddUnsubscribeLink: false,
+      CallbackUrl: '',
+      Metadata: { source: 'send-sms-reminder' },
+      CampaignName: 'Reminders',
+    };
 
-        console.log('Notifyre SMS request:', {
-          url: smsUrl,
-          to: phoneNumber,
-          messageLength: message?.length,
-          hasFrom: !!fromNumber,
-          recipientsShape: recipients,
-        });
+    console.log('Notifyre SMS request:', {
+      url: smsUrl,
+      to: e164,
+      messageLength: message?.length,
+      hasFrom: !!fromNumber,
+      recipientsShape: payload.Recipients,
+    });
 
-        const response = await fetch(smsUrl, {
-          method: 'POST',
-          headers: {
-            'x-api-token': notifyreApiKey,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        });
+    const response = await fetch(smsUrl, {
+      method: 'POST',
+      headers: {
+        'x-api-token': notifyreApiKey,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
 
-        if (!response.ok) {
-          const raw = await response.text();
-          let parsed: any = null;
-          try { parsed = JSON.parse(raw); } catch { /* not JSON */ }
-          const details = parsed ?? raw ?? 'Unknown error';
-          throw new Error(`Notifyre API error: ${response.status} - ${typeof details === 'string' ? details : JSON.stringify(details)}`);
-        }
-
-        smsResult = await response.json();
-        console.log('SMS sent successfully:', smsResult);
-        break;
-      } catch (err) {
-        lastError = err;
-        console.warn('Notifyre attempt failed:', (err as any)?.message);
-      }
+    if (!response.ok) {
+      const raw = await response.text();
+      let parsed: any = null;
+      try { parsed = JSON.parse(raw); } catch { /* not JSON */ }
+      const details = parsed ?? raw ?? 'Unknown error';
+      throw new Error(`Notifyre API error: ${response.status} - ${typeof details === 'string' ? details : JSON.stringify(details)}`);
     }
 
+    smsResult = await response.json();
+    console.log('SMS sent successfully:', smsResult);
+
     if (!smsResult) {
-      throw lastError || new Error('Failed to send SMS after all attempts');
+      throw new Error('Failed to send SMS');
     }
 
     // Log the notification only when we have a valid reminder_id (UUID)
