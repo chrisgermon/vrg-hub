@@ -133,10 +133,17 @@ serve(async (req) => {
       console.log('New user created:', userId);
     }
 
-    // Generate a magic link token
+    // Get the referer to determine the original domain
+    const referer = req.headers.get('referer') || 'https://hub.visionradiology.com.au';
+    const redirectDomain = new URL(referer).origin;
+    
+    // Generate a magic link token with redirect to custom domain
     const { data: magicLinkData, error: magicLinkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
-      email: email
+      email: email,
+      options: {
+        redirectTo: redirectDomain
+      }
     });
 
     if (magicLinkError || !magicLinkData) {
