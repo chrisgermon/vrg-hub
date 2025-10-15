@@ -1,0 +1,327 @@
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Calendar, Clock, Mail, Phone, Bell, Edit, Trash2 } from "lucide-react";
+import { formatAUDateLong } from "@/lib/dateUtils";
+import { toast } from "sonner";
+import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+export default function ReminderDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const { data: reminder, isLoading } = useQuery({
+    queryKey: ['reminder', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('reminders')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) throw new Error('Reminder not found');
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const { data: notifications } = useQuery({
+    queryKey: ['reminder-notifications', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('reminder_notifications')
+        .select('*')
+        .eq('reminder_id', id)
+        .order('sent_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const handleDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from('reminders')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success('Reminder deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['reminders'] });
+      navigate('/reminders');
+    } catch (error: any) {
+      toast.error('Failed to delete reminder: ' + error.message);
+    }
+  };
+
+  const handleMarkCompleted = async () => {
+    try {
+      const { error } = await supabase
+        .from('reminders')
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success('Reminder marked as completed');
+      queryClient.invalidateQueries({ queryKey: ['reminder', id] });
+      queryClient.invalidateQueries({ queryKey: ['reminders'] });
+    } catch (error: any) {
+      toast.error('Failed to update reminder: ' + error.message);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container-responsive py-6">
+        <div className="flex items-center gap-4 mb-6">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/reminders')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!reminder) {
+    return (
+      <div className="container-responsive py-6">
+        <div className="flex items-center gap-4 mb-6">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/reminders')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="text-muted-foreground">Reminder not found</div>
+        </div>
+      </div>
+    );
+  }
+
+  const getDaysUntil = () => {
+    const today = new Date();
+    const reminderDate = new Date(reminder.reminder_date);
+    const diffTime = reminderDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const daysUntil = getDaysUntil();
+  const channels = reminder.notification_channels as { email?: boolean; sms?: boolean; in_app?: boolean };
+
+  return (
+    <div className="container-responsive py-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/reminders')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">{reminder.title}</h1>
+            <p className="text-muted-foreground">
+              {reminder.reminder_type.replace('_', ' ').charAt(0).toUpperCase() + 
+               reminder.reminder_type.replace('_', ' ').slice(1)}
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {reminder.status === 'active' && (
+            <Button variant="outline" onClick={handleMarkCompleted}>
+              Mark Completed
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => navigate(`/reminders/edit/${id}`)}>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+          <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Info Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Reminder Details</CardTitle>
+            <div className="flex gap-2">
+              <Badge variant={reminder.status === 'active' ? 'default' : 'secondary'}>
+                {reminder.status}
+              </Badge>
+              {reminder.is_recurring && (
+                <Badge variant="outline">Recurring</Badge>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {reminder.description && (
+            <div>
+              <h3 className="font-semibold mb-2">Description</h3>
+              <p className="text-muted-foreground">{reminder.description}</p>
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Reminder Date</p>
+                <p className="font-medium">{formatAUDateLong(reminder.reminder_date)}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Time Until</p>
+                <p className="font-medium">
+                  {daysUntil === 0 ? 'Today' : 
+                   daysUntil === 1 ? 'Tomorrow' :
+                   daysUntil < 0 ? `${Math.abs(daysUntil)} days ago` :
+                   `${daysUntil} days`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {reminder.is_recurring && (
+            <div>
+              <h3 className="font-semibold mb-2">Recurrence</h3>
+              <p className="text-muted-foreground">
+                {reminder.recurrence_pattern?.charAt(0).toUpperCase() + 
+                 reminder.recurrence_pattern?.slice(1)} - Every {reminder.recurrence_interval || 1}{' '}
+                {reminder.recurrence_pattern === 'daily' ? 'day(s)' :
+                 reminder.recurrence_pattern === 'weekly' ? 'week(s)' :
+                 reminder.recurrence_pattern === 'monthly' ? 'month(s)' :
+                 'year(s)'}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Notification Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Notification Settings</CardTitle>
+          <CardDescription>How you'll be notified about this reminder</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <h3 className="font-semibold mb-3">Channels</h3>
+            <div className="flex flex-wrap gap-2">
+              {channels.email && (
+                <Badge variant="outline" className="flex items-center gap-2">
+                  <Mail className="h-3 w-3" />
+                  Email {reminder.email ? `(${reminder.email})` : ''}
+                </Badge>
+              )}
+              {channels.sms && (
+                <Badge variant="outline" className="flex items-center gap-2">
+                  <Phone className="h-3 w-3" />
+                  SMS {reminder.phone_number ? `(${reminder.phone_number})` : ''}
+                </Badge>
+              )}
+              {channels.in_app && (
+                <Badge variant="outline" className="flex items-center gap-2">
+                  <Bell className="h-3 w-3" />
+                  In-App
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-semibold mb-2">Advance Notice</h3>
+            <p className="text-muted-foreground">
+              Notifications will be sent {reminder.advance_notice_days?.join(', ')} days before and on the day of the event
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notification History */}
+      {notifications && notifications.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Notification History</CardTitle>
+            <CardDescription>Recent notifications sent for this reminder</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {notifications.map((notification) => (
+                <div key={notification.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {notification.notification_type === 'email' ? (
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <div>
+                      <p className="font-medium capitalize">{notification.notification_type}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {notification.recipient} • {notification.days_before || 0} days before
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant={notification.status === 'sent' ? 'default' : 'destructive'}>
+                      {notification.status}
+                    </Badge>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatAUDateLong(notification.sent_at || '')}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this reminder and all its notification history.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
