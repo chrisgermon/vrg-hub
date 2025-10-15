@@ -42,23 +42,28 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Notifyre API key not configured');
     }
 
-    // Send SMS via Notifyre API
-    const response = await fetch('https://api.notifyre.com/send', {
+    // Send SMS via Notifyre API (correct SMS endpoint)
+    const smsUrl = 'https://api.notifyre.com/sms/send';
+    const payload = {
+      to: phoneNumber,
+      message,
+    };
+    console.log('Notifyre SMS request:', { url: smsUrl, to: phoneNumber, messageLength: message?.length });
+    const response = await fetch(smsUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${notifyreApiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        type: 'sms',
-        to: phoneNumber,
-        message: message,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Notifyre API error: ${response.status} - ${JSON.stringify(errorData)}`);
+      const raw = await response.text();
+      let parsed: any = null;
+      try { parsed = JSON.parse(raw); } catch { /* not JSON */ }
+      const details = parsed ?? raw ?? 'Unknown error';
+      throw new Error(`Notifyre API error: ${response.status} - ${typeof details === 'string' ? details : JSON.stringify(details)}`);
     }
 
     const smsResult = await response.json();
