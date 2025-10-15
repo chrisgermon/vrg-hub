@@ -1401,6 +1401,42 @@ export type Database = {
         }
         Relationships: []
       }
+      office365_connections: {
+        Row: {
+          access_token: string
+          company_id: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          refresh_token: string
+          tenant_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          company_id: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          refresh_token: string
+          tenant_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          company_id?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          refresh_token?: string
+          tenant_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       print_brands: {
         Row: {
           contact_email: string | null
@@ -1793,6 +1829,39 @@ export type Database = {
           query?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      sharepoint_configurations: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          folder_path: string | null
+          id: string
+          is_active: boolean | null
+          site_id: string | null
+          site_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          folder_path?: string | null
+          id?: string
+          is_active?: boolean | null
+          site_id?: string | null
+          site_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          folder_path?: string | null
+          id?: string
+          is_active?: boolean | null
+          site_id?: string | null
+          site_url?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
