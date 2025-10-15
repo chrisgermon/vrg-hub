@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 serve(async (req) => {
   try {
@@ -170,10 +170,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Azure callback error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': `/?error=${encodeURIComponent(error.message || 'Authentication failed')}`
+        'Location': `/?error=${encodeURIComponent(errorMessage)}`
       }
     });
   }
