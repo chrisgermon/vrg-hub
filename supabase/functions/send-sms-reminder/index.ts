@@ -44,11 +44,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send SMS via Notifyre API (correct SMS endpoint)
     const smsUrl = 'https://api.notifyre.com/sms/send';
-    const payload = {
-      to: phoneNumber,
-      message,
+    const fromNumber = Deno.env.get('NOTIFYRE_SMS_FROM') || undefined;
+    const payload: any = {
+      Body: message,
+      Recipients: [{ type: 'mobile_number', value: phoneNumber }],
+      AddUnsubscribeLink: false,
     };
-    console.log('Notifyre SMS request:', { url: smsUrl, to: phoneNumber, messageLength: message?.length });
+    if (fromNumber) payload.From = fromNumber;
+
+    console.log('Notifyre SMS request:', { url: smsUrl, to: phoneNumber, messageLength: message?.length, hasFrom: !!fromNumber });
     const response = await fetch(smsUrl, {
       method: 'POST',
       headers: {
