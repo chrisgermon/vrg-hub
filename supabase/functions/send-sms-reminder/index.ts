@@ -47,12 +47,16 @@ const handler = async (req: Request): Promise<Response> => {
     const smsUrl = `https://api.notifyre.com/${apiVersion}/sms/send`;
     const fromNumber = Deno.env.get('NOTIFYRE_SMS_FROM') || undefined;
 
-    const recipientShapes = [
-      [{ type: 'toNumber', value: phoneNumber }],
-      [{ type: 'phoneNumber', value: phoneNumber }],
-      [{ type: 'number', value: phoneNumber }],
-      [phoneNumber],
-    ];
+    const typeCandidates = ['toNumber', 'number', 'to', 'mobile', 'msisdn'];
+    const valueCandidates = [phoneNumber, phoneNumber.replace(/^\+/, '')];
+
+    const recipientShapes: any[] = [];
+    for (const t of typeCandidates) {
+      for (const v of valueCandidates) {
+        recipientShapes.push([{ type: t, value: v }]);
+      }
+    }
+
 
     let smsResult: any = null;
     let lastError: any = null;
