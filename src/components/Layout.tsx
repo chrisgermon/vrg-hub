@@ -21,6 +21,7 @@ import { useRoleImpersonation } from "@/hooks/useRoleImpersonation";
 import { RouteLoading } from "./RouteLoading";
 import { GlobalSearch } from "./GlobalSearch";
 import { SystemBanners } from "./banners/SystemBanners";
+import { ProfileDialog } from "./ProfileDialog";
 
 interface LayoutProps {
   children: ReactNode;
@@ -30,6 +31,7 @@ export function Layout({ children }: LayoutProps) {
   const { userRole, user, signOut } = useAuth();
   const { effectiveRole, isImpersonating } = useRoleImpersonation();
   const [logoUrl, setLogoUrl] = useState<string>(crowdITLogo);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     const loadCompanyLogo = async () => {
@@ -96,9 +98,14 @@ export function Layout({ children }: LayoutProps) {
                   </p>
                 )}
               </div>
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setProfileOpen(true)}
+                className="w-8 h-8 rounded-full bg-primary/10 flex-shrink-0"
+              >
                 <User className="w-4 h-4" />
-              </div>
+              </Button>
               <Button variant="ghost" size="sm" onClick={handleSignOut} className="flex-shrink-0">
                 <LogOut className="w-4 h-4" />
               </Button>
@@ -115,6 +122,7 @@ export function Layout({ children }: LayoutProps) {
           <Footer />
           </div>
         </div>
+        <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
       </SidebarProvider>
     </>
   );
