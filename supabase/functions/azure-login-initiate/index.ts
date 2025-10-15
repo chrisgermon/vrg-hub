@@ -18,8 +18,10 @@ serve(async (req) => {
       throw new Error('Microsoft Graph Client ID not configured');
     }
 
-    // Generate a random state parameter for security
-    const state = crypto.randomUUID();
+    // Include the caller origin in state for accurate post-login redirect
+    const origin = req.headers.get('origin') || 'https://hub.visionradiology.com.au';
+    const statePayload = { n: crypto.randomUUID(), r: origin };
+    const state = btoa(JSON.stringify(statePayload));
     
     // Build the Microsoft authorization URL
     const authUrl = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');

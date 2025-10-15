@@ -133,9 +133,41 @@ serve(async (req) => {
       console.log('New user created:', userId);
     }
 
-    // Get the referer to determine the original domain
-    const referer = req.headers.get('referer') || 'https://hub.visionradiology.com.au';
-    const redirectDomain = new URL(referer).origin;
+    // Prefer redirect origin encoded in OAuth state; fallback to referer; then default
+    const stateParam = url.searchParams.get('state');
+    let redirectDomain = 'https://hub.visionradiology.com.au';
+
+    const safeHost = (host: string) => {
+      return host.endsWith('.lovable.app') || host.endsWith('visionradiology.com.au');
+    };
+
+    if (stateParam) {
+      try {
+        const parsed = JSON.parse(atob(stateParam));
+        if (parsed?.r) {
+          const parsedUrl = new URL(parsed.r);
+          if (safeHost(parsedUrl.host)) {
+            redirectDomain = parsedUrl.origin;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse state for redirect origin:', e);
+      }
+    }
+
+    if (redirectDomain === 'https://hub.visionradiology.com.au') {
+      const referer = req.headers.get('referer');
+      if (referer) {
+        try {
+          const refUrl = new URL(referer);
+          if (safeHost(refUrl.host)) {
+            redirectDomain = refUrl.origin;
+          }
+        } catch (_) {}
+      }
+    }
+
+    console.log('Using redirect domain:', redirectDomain);
     
     // Generate a magic link token with redirect to custom domain
     const { data: magicLinkData, error: magicLinkError } = await supabaseAdmin.auth.admin.generateLink({
