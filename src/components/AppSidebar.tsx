@@ -508,7 +508,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
   const menuConfig = getMenuCategories();
 
   return (
-    <Sidebar className={collapsed ? "w-[120px]" : "w-[250px]"} collapsible="icon">
+    <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible="icon">
       {/* Company Selector at the top */}
       <div className={`border-b bg-card/50 ${collapsed ? 'px-2 py-3' : 'p-4'}`}>
         <CompanySelector />
