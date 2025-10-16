@@ -89,42 +89,11 @@ const Help = () => {
         <Button
           variant="outline"
           size="icon"
-          className="fixed top-20 left-4 z-50 lg:hidden"
+          className="fixed top-20 right-4 z-50 lg:hidden"
           onClick={() => setShowIndex(!showIndex)}
         >
           {showIndex ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </Button>
-
-        {/* Index Navigation */}
-        <aside className={cn(
-          "lg:sticky lg:top-6 lg:block h-fit transition-all",
-          showIndex ? "block fixed top-16 left-0 z-40 bg-background border-r p-4 w-64" : "hidden lg:block lg:w-64"
-        )}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Menu className="w-4 h-4" />
-                Quick Navigation
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[calc(100vh-12rem)]">
-                <nav className="space-y-1 p-4">
-                  {indexSections.map(({ id, label, icon: Icon }) => (
-                    <button
-                      key={id}
-                      onClick={() => scrollToSection(id)}
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors flex items-center gap-2"
-                    >
-                      <Icon className="w-4 h-4 text-primary" />
-                      {label}
-                    </button>
-                  ))}
-                </nav>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </aside>
 
         {/* Main Content */}
         <div className="flex-1 space-y-8 max-w-4xl">
@@ -1515,6 +1484,37 @@ const Help = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Index Navigation */}
+        <aside className={cn(
+          "lg:sticky lg:top-6 lg:block h-fit transition-all",
+          showIndex ? "block fixed top-16 right-0 z-40 bg-background border-l p-4 w-64" : "hidden lg:block lg:w-64"
+        )}>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Menu className="w-4 h-4" />
+                Quick Navigation
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ScrollArea className="h-[calc(100vh-12rem)]">
+                <nav className="space-y-1 p-4">
+                  {indexSections.map(({ id, label, icon: Icon }) => (
+                    <button
+                      key={id}
+                      onClick={() => scrollToSection(id)}
+                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors flex items-center gap-2"
+                    >
+                      <Icon className="w-4 h-4 text-primary" />
+                      {label}
+                    </button>
+                  ))}
+                </nav>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </aside>
       </div>
     </div>
   );
