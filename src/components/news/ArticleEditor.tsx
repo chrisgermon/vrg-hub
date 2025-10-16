@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Upload, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 interface ArticleEditorProps {
   articleId?: string;
@@ -30,6 +31,7 @@ export default function ArticleEditor({ articleId: propArticleId, onSave }: Arti
   const [content, setContent] = useState('');
   const [isPublished, setIsPublished] = useState(false);
   const [featuredImageUrl, setFeaturedImageUrl] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -67,6 +69,60 @@ export default function ArticleEditor({ articleId: propArticleId, onSave }: Arti
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFeaturedImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'Error',
+        description: 'Image size must be less than 5MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+      const filePath = `news-featured/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('company-assets')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('company-assets')
+        .getPublicUrl(filePath);
+
+      setFeaturedImageUrl(publicUrl);
+      toast({
+        title: 'Success',
+        description: 'Featured image uploaded successfully',
+      });
+    } catch (error: any) {
+      console.error('Error uploading featured image:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to upload featured image',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleRemoveFeaturedImage = () => {
+    setFeaturedImageUrl('');
   };
 
   const handleSave = async () => {
@@ -175,23 +231,49 @@ export default function ArticleEditor({ articleId: propArticleId, onSave }: Arti
 
           <div className="space-y-2">
             <Label htmlFor="content">Content</Label>
-            <Textarea
-              id="content"
+            <RichTextEditor
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Article content"
-              rows={12}
+              onChange={setContent}
+              placeholder="Write your article content here..."
+              enableImageUpload={true}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="featured-image">Featured Image URL</Label>
-            <Input
-              id="featured-image"
-              value={featuredImageUrl}
-              onChange={(e) => setFeaturedImageUrl(e.target.value)}
-              placeholder="https://example.com/image.jpg"
-            />
+            <Label htmlFor="featured-image">Featured Image</Label>
+            {featuredImageUrl ? (
+              <div className="relative">
+                <img
+                  src={featuredImageUrl}
+                  alt="Featured"
+                  className="w-full h-48 object-cover rounded-lg border"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="absolute top-2 right-2"
+                  onClick={handleRemoveFeaturedImage}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Input
+                  id="featured-image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFeaturedImageUpload}
+                  disabled={uploadingImage}
+                  className="flex-1"
+                />
+                {uploadingImage && <Loader2 className="h-4 w-4 animate-spin" />}
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground">
+              Upload a featured image or leave empty
+            </p>
           </div>
 
           <div className="flex items-center space-x-2">
