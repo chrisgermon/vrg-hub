@@ -174,7 +174,7 @@ serve(async (req) => {
       type: 'magiclink',
       email: email,
       options: {
-        redirectTo: redirectDomain
+        redirectTo: `${redirectDomain}/auth`
       }
     });
 
