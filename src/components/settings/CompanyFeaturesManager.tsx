@@ -4,9 +4,14 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export function CompanyFeaturesManager() {
   const queryClient = useQueryClient();
+  const { userRole } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canEdit = hasPermission('manage_company_features') || ['tenant_admin', 'super_admin'].includes(userRole || '');
 
   const { data: features = [], isLoading } = useQuery({
     queryKey: ['feature-flags'],
@@ -66,6 +71,7 @@ export function CompanyFeaturesManager() {
             <Switch
               id={feature.feature_key}
               checked={feature.is_enabled}
+              disabled={!canEdit}
               onCheckedChange={(checked) =>
                 toggleFeature.mutate({ id: feature.id, isEnabled: checked })
               }

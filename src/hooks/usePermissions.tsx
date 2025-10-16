@@ -1,69 +1,106 @@
+import { useMemo } from "react";
 import { useAuth } from "./useAuth";
+import { PERMISSION_GROUPS } from "@/lib/access-control/constants";
+import type { UserRoleKey } from "@/lib/access-control/types";
+import { useCompanyFeatures } from "./useCompanyFeatures";
 
 interface UsePermissionsOptions {
   companyId?: string;
   userId?: string;
 }
 
-/**
- * Stub implementation for single-tenant mode
- * All permission checks return false since multi-tenant features are disabled
- */
+// Map roles to permission groups (sensible defaults for single-tenant)
+const ROLE_GROUPS_MAP: Record<UserRoleKey, string[]> = {
+  requester: ["basic-access", "create-requests", "documentation"],
+  marketing: ["basic-access", "create-requests", "marketing", "documentation"],
+  manager: ["basic-access", "create-requests", "approvals", "management", "documentation"],
+  marketing_manager: ["basic-access", "create-requests", "marketing", "approvals", "documentation"],
+  tenant_admin: [
+    "basic-access",
+    "create-requests",
+    "approvals",
+    "marketing",
+    "management",
+    "configuration",
+    "documentation",
+  ],
+  super_admin: [
+    "basic-access",
+    "create-requests",
+    "approvals",
+    "marketing",
+    "management",
+    "configuration",
+    "documentation",
+    "system-admin",
+  ],
+};
+
 export function usePermissions(options: UsePermissionsOptions = {}) {
   const { userRole } = useAuth();
+  const { isFeatureEnabled } = useCompanyFeatures();
+
+  // Build the effective permission set for the current role
+  const permissionSet = useMemo(() => {
+    const roleKey = (userRole ?? "requester") as UserRoleKey;
+    const groups = ROLE_GROUPS_MAP[roleKey] || [];
+    const allowed = new Set<string>();
+    for (const groupKey of groups) {
+      const group = PERMISSION_GROUPS.find((g) => g.key === groupKey);
+      if (group) {
+        group.permissions.forEach((p) => allowed.add(p));
+      }
+    }
+    return allowed;
+  }, [userRole]);
 
   const hasPermission = (permission: string): boolean => {
-    // Only super_admin has permissions in single-tenant mode
-    return userRole === 'super_admin';
+    return permissionSet.has(permission) || (userRole === "super_admin");
   };
 
   const hasAnyPermission = (permissions: string[]): boolean => {
-    return userRole === 'super_admin';
+    return permissions.some((p) => hasPermission(p));
   };
 
   const hasAllPermissions = (permissions: string[]): boolean => {
-    return userRole === 'super_admin';
+    return permissions.every((p) => hasPermission(p));
   };
 
   const canViewMenuItem = (menuKey: string): boolean => {
-    // Basic menu items are visible to all users
-    const publicMenus = ['home', 'requests', 'help', 'settings'];
+    // Keep public menus visible to all users
+    const publicMenus = ["home", "requests", "help", "settings"];
     if (publicMenus.includes(menuKey)) return true;
-    
-    // Admin menus only for super_admin
-    return userRole === 'super_admin';
-  };
 
-  const isFeatureEnabled = (featureKey: string): boolean => {
-    // All features disabled in single-tenant mode
-    return false;
-  };
+    // Simple rule: admins can see everything
+    if (["tenant_admin", "super_admin"].includes(userRole || "")) return true;
 
-  const getUserFeatures = () => {
-    return [];
-  };
-
-  const getUserPermissions = () => {
-    return [];
+    // Otherwise rely on permissions if provided as menu key
+    return hasPermission(menuKey);
   };
 
   const hasFeature = (featureKey: string): boolean => {
-    // All features disabled in single-tenant mode
-    return false;
+    return isFeatureEnabled(featureKey as any);
   };
+
+  const getUserFeatures = () => {
+    // Not enumerating features here; rely on feature flags hook per check
+    return [] as string[];
+  };
+
+  const getUserPermissions = () => Array.from(permissionSet);
 
   return {
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,
     canViewMenuItem,
-    isFeatureEnabled,
+    isFeatureEnabled: hasFeature,
     hasFeature,
     getUserFeatures,
     getUserPermissions,
     isLoading: false,
-    userPermissions: [],
-    rolePermissions: [],
+    userPermissions: Array.from(permissionSet),
+    rolePermissions: Array.from(permissionSet),
     platformPermissions: [],
   };
 }
