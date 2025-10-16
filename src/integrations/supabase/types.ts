@@ -1220,6 +1220,7 @@ export type Database = {
           event_type: string
           id: string
           in_app_enabled: boolean | null
+          sms_enabled: boolean | null
           updated_at: string
           user_id: string
         }
@@ -1229,6 +1230,7 @@ export type Database = {
           event_type: string
           id?: string
           in_app_enabled?: boolean | null
+          sms_enabled?: boolean | null
           updated_at?: string
           user_id: string
         }
@@ -1238,6 +1240,7 @@ export type Database = {
           event_type?: string
           id?: string
           in_app_enabled?: boolean | null
+          sms_enabled?: boolean | null
           updated_at?: string
           user_id?: string
         }
@@ -1488,6 +1491,7 @@ export type Database = {
           location: string | null
           location_id: string | null
           phone: string | null
+          sms_enabled: boolean | null
           updated_at: string | null
         }
         Insert: {
@@ -1501,6 +1505,7 @@ export type Database = {
           location?: string | null
           location_id?: string | null
           phone?: string | null
+          sms_enabled?: boolean | null
           updated_at?: string | null
         }
         Update: {
@@ -1514,6 +1519,7 @@ export type Database = {
           location?: string | null
           location_id?: string | null
           phone?: string | null
+          sms_enabled?: boolean | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1769,6 +1775,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      request_notification_assignments: {
+        Row: {
+          assignee_ids: string[]
+          created_at: string
+          department: string | null
+          id: string
+          notification_level: string
+          request_type: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_ids?: string[]
+          created_at?: string
+          department?: string | null
+          id?: string
+          notification_level?: string
+          request_type: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_ids?: string[]
+          created_at?: string
+          department?: string | null
+          id?: string
+          notification_level?: string
+          request_type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       request_status_history: {
         Row: {

@@ -11,6 +11,7 @@ import { CannedResponsesManager } from '@/components/settings/CannedResponsesMan
 import { BrandsManager } from '@/components/settings/BrandsManager';
 import { LocationsManager } from '@/components/settings/LocationsManager';
 import { NotificationSettingsManager } from '@/components/settings/NotificationSettingsManager';
+import { RequestNotificationAssignments } from '@/components/settings/RequestNotificationAssignments';
 import { UsersSection } from '@/components/settings/UsersSection';
 import { PrintBrandsManager } from '@/components/settings/PrintBrandsManager';
 import { CompanyDomainsManager } from '@/components/settings/CompanyDomainsManager';
@@ -144,6 +145,9 @@ export default function Settings() {
 
         {isAdmin && (
           <TabsContent value="notifications" className="space-y-6">
+            {(isSuperAdmin || isTenantAdmin) && (
+              <RequestNotificationAssignments />
+            )}
             <NotificationSettingsManager />
           </TabsContent>
         )}
