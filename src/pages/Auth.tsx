@@ -41,29 +41,43 @@ export default function Auth() {
     }
   }, []);
 
-  // Handle magiclink tokens in URL hash and establish session explicitly
+  // Handle magiclink tokens in URL (hash or query) and establish session explicitly
   useEffect(() => {
-    const hash = window.location.hash;
-    if (!hash) return;
-    const params = new URLSearchParams(hash.substring(1));
-    const access_token = params.get('access_token');
-    const refresh_token = params.get('refresh_token');
-    const type = params.get('type');
+    const tryHandleParams = (params: URLSearchParams) => {
+      const access_token = params.get('access_token');
+      const refresh_token = params.get('refresh_token');
+      const type = params.get('type');
 
-    if (access_token && refresh_token && (type === 'magiclink' || type === 'recovery' || type === 'signup' || type === 'email')) {
-      setLoading(true);
-      supabase.auth.setSession({ access_token, refresh_token })
-        .then(({ error }) => {
-          if (error) {
-            console.error('Error setting session from magic link:', error);
-            setError('There was a problem completing sign-in. Please try again.');
-          } else {
-            // Clean tokens from URL
-            window.history.replaceState(null, '', window.location.pathname + window.location.search);
-            navigate('/home', { replace: true });
-          }
-        })
-        .finally(() => setLoading(false));
+      if (access_token && refresh_token) {
+        setLoading(true);
+        supabase.auth.setSession({ access_token, refresh_token })
+          .then(({ error }) => {
+            if (error) {
+              console.error('Error setting session from magic link:', error);
+              setError('There was a problem completing sign-in. Please try again.');
+            } else {
+              // Clean tokens from URL (remove both hash and query)
+              window.history.replaceState(null, '', window.location.pathname);
+              navigate('/home', { replace: true });
+            }
+          })
+          .finally(() => setLoading(false));
+        return true;
+      }
+      return false;
+    };
+
+    // 1) Try hash params (#access_token=...)
+    const hash = window.location.hash;
+    if (hash) {
+      const handled = tryHandleParams(new URLSearchParams(hash.substring(1)));
+      if (handled) return;
+    }
+
+    // 2) Fallback: some flows may return tokens in the query string ?access_token=...
+    const search = window.location.search;
+    if (search) {
+      tryHandleParams(new URLSearchParams(search.substring(1)));
     }
   }, [navigate]);
 
