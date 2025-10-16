@@ -510,14 +510,14 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
   return (
     <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible="icon">
       {/* Company Selector at the top */}
-      <div className={`border-b bg-card/50 ${collapsed ? 'px-2 py-3' : 'p-4'}`}>
+      <div className={`border-b border-sidebar-border ${collapsed ? 'px-2 py-3' : 'p-4'}`}>
         <CompanySelector />
       </div>
       
       <SidebarContent className="flex flex-col h-full overflow-x-hidden">
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
           {/* Global Search at the top */}
-          <div className={`${collapsed ? 'px-2 py-2' : 'px-3 py-2'} space-y-2`}>
+          <div className={`${collapsed ? 'px-2 py-3' : 'px-3 py-3'} space-y-3`}>
             <GlobalSearch />
             
             {/* Prominent New Request Button */}
@@ -526,7 +526,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 window.location.href = '/requests/new';
                 handleMenuItemClick();
               }}
-              className="w-full h-9 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+              className="w-full h-10 bg-sidebar-primary hover:bg-sidebar-primary/90 text-sidebar-primary-foreground font-medium rounded-lg shadow-sm"
             >
               <Plus className="w-4 h-4 mr-2" />
               {!collapsed && <span>New Request</span>}
@@ -545,20 +545,20 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 
                 const menuItem = (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild className="h-11">
+                    <SidebarMenuButton asChild>
                       <NavLink 
                         to={item.url} 
                         onClick={handleMenuItemClick}
                         className={({ isActive }) => 
-                          `flex items-center gap-3 px-3 py-3 rounded-md transition-smooth ${
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
                             isActive 
-                              ? 'bg-primary/10 text-primary font-medium' 
-                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
                           }`
                         }
                       >
-                        <CustomIcon className="w-5 h-5" />
-                        {!collapsed && <span>{customLabel}</span>}
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -590,20 +590,20 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                   
                   const menuItem = (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild className="h-11">
+                      <SidebarMenuButton asChild>
                         <NavLink 
                           to={item.url}
                           onClick={handleMenuItemClick}
                           className={({ isActive }) => 
-                            `flex items-center gap-3 px-3 py-3 rounded-md transition-smooth ${
+                            `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
                               isActive 
-                                ? 'bg-primary/10 text-primary font-medium' 
-                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                                : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
                             }`
                           }
                         >
-                          <CustomIcon className="w-5 h-5" />
-                          {!collapsed && <span>{customLabel}</span>}
+                          <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                          {!collapsed && <span className="text-sm">{customLabel}</span>}
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -633,11 +633,11 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                   >
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton className="h-11">
+                        <SidebarMenuButton className="mx-2">
                           <category.icon className="w-5 h-5" />
                           {!collapsed && (
                             <>
-                              <span className="flex-1 text-left">{category.title}</span>
+                              <span className="flex-1 text-left text-sm">{category.title}</span>
                               <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
                             </>
                           )}
@@ -652,20 +652,20 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                             
                             const menuItem = (
                               <SidebarMenuItem key={item.title}>
-                                <SidebarMenuButton asChild className="h-10">
+                                <SidebarMenuButton asChild>
                                   <NavLink 
                                     to={item.url}
                                     onClick={handleMenuItemClick}
                                     className={({ isActive }) => 
-                                      `flex items-center gap-3 px-3 py-2.5 rounded-md transition-smooth ${
+                                      `flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 ${
                                         isActive 
-                                          ? 'bg-primary/10 text-primary font-medium' 
-                                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                                          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                                          : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
                                       }`
                                     }
                                   >
-                                    <CustomIcon className="w-4 h-4" />
-                                    {!collapsed && <span>{customLabel}</span>}
+                                    <CustomIcon className="w-4 h-4 flex-shrink-0" />
+                                    {!collapsed && <span className="text-sm">{customLabel}</span>}
                                   </NavLink>
                                 </SidebarMenuButton>
                               </SidebarMenuItem>
@@ -700,20 +700,20 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 
                 const menuItem = (
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild className="h-11">
+                    <SidebarMenuButton asChild>
                       <NavLink 
                         to={menuConfig.approvals.url}
                         onClick={handleMenuItemClick}
                         className={({ isActive }) => 
-                          `flex items-center gap-3 px-3 py-3 rounded-md transition-smooth ${
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
                             isActive 
-                              ? 'bg-primary/10 text-primary font-medium' 
-                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
                           }`
                         }
                       >
-                        <CustomIcon className="w-5 h-5" />
-                        {!collapsed && <span>{customLabel}</span>}
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -742,20 +742,20 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 
                 const menuItem = (
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild className="h-11">
+                    <SidebarMenuButton asChild>
                       <NavLink 
                         to={menuConfig.news.url}
                         onClick={handleMenuItemClick}
                         className={({ isActive }) => 
-                          `flex items-center gap-3 px-3 py-3 rounded-md transition-smooth ${
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
                             isActive 
-                              ? 'bg-primary/10 text-primary font-medium' 
-                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
                           }`
                         }
                       >
-                        <CustomIcon className="w-5 h-5" />
-                        {!collapsed && <span>{customLabel}</span>}
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -784,20 +784,20 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 
                 const menuItem = (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild className="h-11">
+                    <SidebarMenuButton asChild>
                       <NavLink 
                         to={item.url}
                         onClick={handleMenuItemClick}
                         className={({ isActive }) => 
-                          `flex items-center gap-3 px-3 py-3 rounded-md transition-smooth ${
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
                             isActive 
-                              ? 'bg-primary/10 text-primary font-medium' 
-                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
                           }`
                         }
                       >
-                        <CustomIcon className="w-5 h-5" />
-                        {!collapsed && <span>{customLabel}</span>}
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -826,20 +826,20 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 
                 const menuItem = (
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild className="h-11">
+                    <SidebarMenuButton asChild>
                       <NavLink 
                         to={menuConfig.settings.url}
                         onClick={handleMenuItemClick}
                         className={({ isActive }) => 
-                          `flex items-center gap-3 px-3 py-3 rounded-md transition-smooth ${
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
                             isActive 
-                              ? 'bg-primary/10 text-primary font-medium' 
-                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
                           }`
                         }
                       >
-                        <CustomIcon className="w-5 h-5" />
-                        {!collapsed && <span>{customLabel}</span>}
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -868,20 +868,20 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 
                 const menuItem = (
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild className="h-11">
+                    <SidebarMenuButton asChild>
                       <NavLink 
                         to={menuConfig.newsletter.url}
                         onClick={handleMenuItemClick}
                         className={({ isActive }) => 
-                          `flex items-center gap-3 px-3 py-3 rounded-md transition-smooth ${
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
                             isActive 
-                              ? 'bg-primary/10 text-primary font-medium' 
-                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
                           }`
                         }
                       >
-                        <CustomIcon className="w-5 h-5" />
-                        {!collapsed && <span>{customLabel}</span>}
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -910,20 +910,20 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 
                 const menuItem = (
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild className="h-11">
+                    <SidebarMenuButton asChild>
                       <NavLink 
                         to={menuConfig.companyDocuments.url}
                         onClick={handleMenuItemClick}
                         className={({ isActive }) => 
-                          `flex items-center gap-3 px-3 py-3 rounded-md transition-smooth ${
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
                             isActive 
-                              ? 'bg-primary/10 text-primary font-medium' 
-                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
                           }`
                         }
                       >
-                        <CustomIcon className="w-5 h-5" />
-                        {!collapsed && <span>{customLabel}</span>}
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -952,20 +952,20 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 
                 const menuItem = (
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild className="h-11">
+                    <SidebarMenuButton asChild>
                       <NavLink 
                         to={menuConfig.modalityDetails.url}
                         onClick={handleMenuItemClick}
                         className={({ isActive }) => 
-                          `flex items-center gap-3 px-3 py-3 rounded-md transition-smooth ${
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
                             isActive 
-                              ? 'bg-primary/10 text-primary font-medium' 
-                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
                           }`
                         }
                       >
-                        <CustomIcon className="w-5 h-5" />
-                        {!collapsed && <span>{customLabel}</span>}
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -994,20 +994,20 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 
                 const menuItem = (
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild className="h-11">
+                    <SidebarMenuButton asChild>
                       <NavLink 
                         to={menuConfig.help.url}
                         onClick={handleMenuItemClick}
                         className={({ isActive }) => 
-                          `flex items-center gap-3 px-3 py-3 rounded-md transition-smooth ${
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
                             isActive 
-                              ? 'bg-primary/10 text-primary font-medium' 
-                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
                           }`
                         }
                       >
-                        <CustomIcon className="w-5 h-5" />
-                        {!collapsed && <span>{customLabel}</span>}
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -1034,12 +1034,12 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
         </div>
         
         {/* Footer buttons - Always visible at bottom */}
-        <div className="sticky bottom-0 p-3 border-t bg-background space-y-2 overflow-hidden">
+        <div className="sticky bottom-0 p-3 border-t border-sidebar-border bg-sidebar-background space-y-2 overflow-hidden">
           {/* Foxo Link */}
           <Button
             asChild
             variant="outline"
-            className={`w-full ${collapsed ? 'px-2' : 'py-3'}`}
+            className={`w-full border-sidebar-border hover:bg-sidebar-accent ${collapsed ? 'px-2' : 'py-3'}`}
             size={collapsed ? "icon" : "lg"}
           >
             <a 
@@ -1055,7 +1055,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           {/* Contact IT Support */}
           <Button
             asChild
-            className={`w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg ${collapsed ? 'px-2' : ''}`}
+            className={`w-full bg-sidebar-primary hover:bg-sidebar-primary/90 text-sidebar-primary-foreground shadow-sm ${collapsed ? 'px-2' : ''}`}
             size={collapsed ? "icon" : "default"}
           >
               <Link to="/contact-support" className="flex items-center justify-center gap-2 w-full overflow-hidden whitespace-nowrap">
