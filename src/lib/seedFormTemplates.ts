@@ -467,7 +467,7 @@ export const seedFormTemplates = async () => {
           options: [
             'Request Kestral training',
             'Request PACS training',
-            'Request Ertpos training',
+            'Request Eftpos training',
             'Request CT Canon Apps training',
             'Request CT Siemens Apps training',
             'Request MRI Siemens Apps training',
