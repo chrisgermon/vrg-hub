@@ -187,12 +187,15 @@ export function DynamicDepartmentRequestForm({
   };
 
   const renderField = (field: Field) => {
+    const isFullWidth = field.type === 'textarea';
+    const baseClasses = isFullWidth ? "col-span-full" : "col-span-full md:col-span-1";
+
     switch (field.type) {
       case 'text':
       case 'email':
       case 'number':
         return (
-          <div key={field.id} className="space-y-2">
+          <div key={field.id} className={`space-y-2 ${baseClasses}`}>
             <Label htmlFor={field.id}>
               {field.label} {field.required && '*'}
             </Label>
@@ -209,7 +212,7 @@ export function DynamicDepartmentRequestForm({
 
       case 'textarea':
         return (
-          <div key={field.id} className="space-y-2">
+          <div key={field.id} className={`space-y-2 ${baseClasses}`}>
             <Label htmlFor={field.id}>
               {field.label} {field.required && '*'}
             </Label>
@@ -226,7 +229,7 @@ export function DynamicDepartmentRequestForm({
 
       case 'select':
         return (
-          <div key={field.id} className="space-y-2">
+          <div key={field.id} className={`space-y-2 ${baseClasses}`}>
             <Label htmlFor={field.id}>
               {field.label} {field.required && '*'}
             </Label>
@@ -255,7 +258,7 @@ export function DynamicDepartmentRequestForm({
 
       case 'date':
         return (
-          <div key={field.id} className="space-y-2">
+          <div key={field.id} className={`space-y-2 ${baseClasses}`}>
             <Label htmlFor={field.id}>
               {field.label} {field.required && '*'}
             </Label>
@@ -321,17 +324,21 @@ export function DynamicDepartmentRequestForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <BrandLocationSelect
-            selectedBrandId={brandId}
-            selectedLocationId={locationId}
-            onBrandChange={setBrandId}
-            onLocationChange={setLocationId}
-            required
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <BrandLocationSelect
+              selectedBrandId={brandId}
+              selectedLocationId={locationId}
+              onBrandChange={setBrandId}
+              onLocationChange={setLocationId}
+              required
+            />
+          </div>
 
-          {template.fields.map(renderField)}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {template.fields.map(renderField)}
+          </div>
 
-          <div className="flex gap-4 justify-end pt-4">
+          <div className="flex gap-4 justify-end pt-4 border-t">
             <Button
               type="button"
               variant="outline"
