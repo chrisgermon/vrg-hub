@@ -25,20 +25,30 @@ export function FieldEditor({ field, onUpdate, onClose }: FieldEditorProps) {
 
   const handleAddOption = () => {
     const options = localField.options || [];
+    // Support both string arrays and FieldOption arrays
+    const newOption = typeof options[0] === 'string' 
+      ? '' 
+      : { label: '', value: `option_${Date.now()}` };
     handleUpdate({
-      options: [...options, { label: '', value: `option_${Date.now()}` }],
+      options: [...options, newOption] as any,
     });
   };
 
-  const handleUpdateOption = (index: number, updates: Partial<FieldOption>) => {
+  const handleUpdateOption = (index: number, value: string) => {
     const options = [...(localField.options || [])];
-    options[index] = { ...options[index], ...updates };
-    handleUpdate({ options });
+    // Support both string arrays and FieldOption arrays
+    if (typeof options[0] === 'string' || options.length === 0) {
+      options[index] = value;
+    } else {
+      (options[index] as FieldOption).label = value;
+      (options[index] as FieldOption).value = value.toLowerCase().replace(/\s+/g, '_');
+    }
+    handleUpdate({ options: options as any });
   };
 
   const handleDeleteOption = (index: number) => {
     const options = localField.options?.filter((_, i) => i !== index);
-    handleUpdate({ options });
+    handleUpdate({ options: options as any });
   };
 
   const needsOptions = ['select', 'multiselect', 'radio'].includes(field.type);
@@ -102,24 +112,25 @@ export function FieldEditor({ field, onUpdate, onClose }: FieldEditorProps) {
               </div>
               
               <div className="space-y-2">
-                {(localField.options || []).map((option, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      placeholder="Option label"
-                      value={option.label}
-                      onChange={(e) =>
-                        handleUpdateOption(index, { label: e.target.value })
-                      }
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteOption(index)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
+                {(localField.options || []).map((option, index) => {
+                  const optionValue = typeof option === 'string' ? option : option.label;
+                  return (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        placeholder="Option label"
+                        value={optionValue}
+                        onChange={(e) => handleUpdateOption(index, e.target.value)}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteOption(index)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

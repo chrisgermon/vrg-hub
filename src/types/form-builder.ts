@@ -33,7 +33,7 @@ export interface FormField {
   placeholder?: string;
   description?: string;
   required?: boolean;
-  options?: FieldOption[];
+  options?: string[] | FieldOption[]; // Support both string arrays and FieldOption arrays
   validation?: FieldValidation;
   defaultValue?: any;
   conditionalLogic?: {

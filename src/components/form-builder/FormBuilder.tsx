@@ -16,6 +16,8 @@ import { Save, X } from 'lucide-react';
 export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
   const [name, setName] = useState(template?.name || '');
   const [description, setDescription] = useState(template?.description || '');
+  const [department, setDepartment] = useState(template?.department || '');
+  const [subDepartment, setSubDepartment] = useState(template?.sub_department || '');
   const [fields, setFields] = useState<FormField[]>(template?.fields || []);
   const [selectedField, setSelectedField] = useState<FormField | null>(null);
   const [isActive, setIsActive] = useState(template?.is_active ?? true);
@@ -68,6 +70,8 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
     onSave({
       name,
       description,
+      department,
+      sub_department: subDepartment || undefined,
       fields: fields.map((field, index) => ({ ...field, order: index })),
       is_active: isActive,
     });
@@ -88,6 +92,26 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Hardware Request Form"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="form-department">Department</Label>
+              <Input
+                id="form-department"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                placeholder="e.g., IT, HR, Finance"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="form-subdepartment">Sub-Department (Optional)</Label>
+              <Input
+                id="form-subdepartment"
+                value={subDepartment}
+                onChange={(e) => setSubDepartment(e.target.value)}
+                placeholder="e.g., Services"
               />
             </div>
 

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SystemStatusManager } from '@/components/settings/SystemStatusManager';
 import { SystemBannerManager } from '@/components/banners/SystemBannerManager';
 import { ApprovalWorkflowManager } from '@/components/workflows/ApprovalWorkflowManager';
@@ -15,9 +16,12 @@ import { PrintBrandsManager } from '@/components/settings/PrintBrandsManager';
 import { CompanyDomainsManager } from '@/components/settings/CompanyDomainsManager';
 import { CompanyFeaturesManager } from '@/components/settings/CompanyFeaturesManager';
 import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Edit } from 'lucide-react';
 
 export default function Settings() {
   const { userRole } = useAuth();
+  const navigate = useNavigate();
   
   const isSuperAdmin = userRole === 'super_admin';
   const isTenantAdmin = userRole === 'tenant_admin';
@@ -47,6 +51,7 @@ export default function Settings() {
           {isAdmin && <TabsTrigger value="features">Features</TabsTrigger>}
           {isAdmin && <TabsTrigger value="company">Company</TabsTrigger>}
           {isAdmin && <TabsTrigger value="users">Users & Roles</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="forms">Request Forms</TabsTrigger>}
           {isAdmin && <TabsTrigger value="notifications">Notifications</TabsTrigger>}
           {isAdmin && <TabsTrigger value="menu">Menu</TabsTrigger>}
           {isSuperAdmin && <TabsTrigger value="system">System</TabsTrigger>}
@@ -110,6 +115,30 @@ export default function Settings() {
         {isAdmin && (
           <TabsContent value="users" className="space-y-6">
             <UsersSection />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="forms" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Request Form Templates</CardTitle>
+                <CardDescription>
+                  Customize department request forms with advanced form builder
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Edit and customize all department request forms including fields, validation, and layout.
+                  </p>
+                  <Button onClick={() => navigate('/form-templates')}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Open Form Editor
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         )}
 

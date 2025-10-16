@@ -12,13 +12,18 @@ import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { BrandLocationSelect } from '@/components/ui/brand-location-select';
 
+interface FieldOption {
+  label: string;
+  value: string;
+}
+
 interface Field {
   id: string;
   type: string;
   label: string;
   required: boolean;
   placeholder?: string;
-  options?: string[];
+  options?: string[] | FieldOption[];
 }
 
 interface FormTemplate {
@@ -226,11 +231,15 @@ export function DynamicDepartmentRequestForm({
                 <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
-                {field.options?.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
+                {field.options?.map((option) => {
+                  const optionValue = typeof option === 'string' ? option : option.value;
+                  const optionLabel = typeof option === 'string' ? option : option.label;
+                  return (
+                    <SelectItem key={optionValue} value={optionValue}>
+                      {optionLabel}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
