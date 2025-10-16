@@ -43,6 +43,27 @@ export default function Auth() {
 
   // Handle magiclink tokens in URL (hash or query) and establish session explicitly
   useEffect(() => {
+    // 0) Handle OAuth code exchange flow (some providers return ?code=...)
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get('code');
+    if (code) {
+      setLoading(true);
+      supabase.auth
+        .exchangeCodeForSession(window.location.href)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error exchanging code for session:', error);
+            setError('There was a problem completing sign-in. Please try again.');
+          } else {
+            // Clean URL
+            window.history.replaceState(null, '', window.location.pathname);
+            navigate('/home', { replace: true });
+          }
+        })
+        .finally(() => setLoading(false));
+      return; // Stop further handling once code is processed
+    }
+
     const tryHandleParams = (params: URLSearchParams) => {
       const access_token = params.get('access_token');
       const refresh_token = params.get('refresh_token');
