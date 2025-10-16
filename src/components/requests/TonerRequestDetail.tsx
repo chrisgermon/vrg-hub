@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { formatAUDate, formatAUDateTimeFull } from '@/lib/dateUtils';
 import { ArrowLeft, Loader2, Package, Calendar, CheckCircle } from 'lucide-react';
 
 interface TonerRequest {
@@ -174,7 +174,7 @@ export function TonerRequestDetail({ requestId }: TonerRequestDetailProps) {
                 <div>
                   <CardTitle>{request.title}</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Created {format(new Date(request.created_at), 'PPp')}
+                    Created {formatAUDateTimeFull(request.created_at)}
                   </p>
                 </div>
                 <Badge variant={getStatusColor(request.status) as any}>
@@ -322,7 +322,7 @@ export function TonerRequestDetail({ requestId }: TonerRequestDetailProps) {
                 <CardTitle className="text-base">Estimated Delivery</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm">{format(new Date(request.eta_delivery), 'PPP')}</p>
+                <p className="text-sm">{formatAUDate(request.eta_delivery)}</p>
               </CardContent>
             </Card>
           )}
@@ -350,7 +350,7 @@ export function TonerRequestDetail({ requestId }: TonerRequestDetailProps) {
                 <CardTitle className="text-base">Completed</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm">{format(new Date(request.completed_at), 'PPp')}</p>
+                <p className="text-sm">{formatAUDateTimeFull(request.completed_at)}</p>
               </CardContent>
             </Card>
           )}

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, ArrowLeft, CheckCircle, XCircle, Building2, MapPin } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatAUDateTimeFull } from '@/lib/dateUtils';
 import { RequestStatus } from '@/types/request';
 
 interface Request {
@@ -224,7 +224,7 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
             <div>
               <h3 className="font-semibold mb-2">Created</h3>
               <p className="text-muted-foreground">
-                {format(new Date(request.created_at), 'MMM d, yyyy h:mm a')}
+                {formatAUDateTimeFull(request.created_at)}
               </p>
             </div>
 

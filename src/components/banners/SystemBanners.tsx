@@ -25,11 +25,28 @@ export function SystemBanners() {
     const fetchBanners = async () => {
       const { data } = await supabase
         .from('system_banners')
-        .select('id, title, message, type, show_on_pages')
+        .select('id, title, message, type, show_on_pages, start_date, end_date')
         .eq('is_active', true);
 
       if (data) {
-        const activeBanners = data.filter(b => !dismissedBanners.includes(b.id)) as Banner[];
+        const now = new Date();
+        const activeBanners = data.filter(b => {
+          // Check if banner is dismissed
+          if (dismissedBanners.includes(b.id)) return false;
+          
+          // Check start date
+          if (b.start_date && new Date(b.start_date) > now) return false;
+          
+          // Check end date - banner should not show if end date has passed
+          if (b.end_date) {
+            const endDate = new Date(b.end_date);
+            // Set end date to end of day to include the full end date
+            endDate.setHours(23, 59, 59, 999);
+            if (endDate < now) return false;
+          }
+          
+          return true;
+        }) as Banner[];
         setBanners(activeBanners);
       }
     };

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Eye, Clock, CheckCircle, XCircle, Package } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatAUDate } from '@/lib/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { RequestStatus } from '@/types/request';
 
@@ -150,7 +150,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
                       }
                     </TableCell>
                     <TableCell>
-                      {format(new Date(request.created_at), 'MMM d, yyyy')}
+                      {formatAUDate(request.created_at)}
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <Button

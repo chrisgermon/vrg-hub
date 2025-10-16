@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Eye, Edit, Trash2, CheckCircle, Clock } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatAUDate } from '@/lib/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -142,12 +142,12 @@ export default function ArticlesList() {
                     </TableCell>
                     <TableCell>
                       {article.published_at
-                        ? format(new Date(article.published_at), 'MMM d, yyyy')
+                        ? formatAUDate(article.published_at)
                         : '-'
                       }
                     </TableCell>
                     <TableCell>
-                      {format(new Date(article.created_at), 'MMM d, yyyy')}
+                      {formatAUDate(article.created_at)}
                     </TableCell>
                     {isAdmin && (
                       <TableCell className="text-right">

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatAUDate, formatAUDateTimeFull } from '@/lib/dateUtils';
 
 interface MarketingRequest {
   id: string;
@@ -199,7 +199,7 @@ export function MarketingRequestDetail({ requestId: propRequestId }: MarketingRe
             <div>
               <h3 className="font-semibold mb-2">Created</h3>
               <p className="text-muted-foreground">
-                {format(new Date(request.created_at), 'MMM d, yyyy h:mm a')}
+                {formatAUDateTimeFull(request.created_at)}
               </p>
             </div>
 
@@ -207,7 +207,7 @@ export function MarketingRequestDetail({ requestId: propRequestId }: MarketingRe
               <div>
                 <h3 className="font-semibold mb-2">Deadline</h3>
                 <p className="text-muted-foreground">
-                  {format(new Date(request.deadline), 'MMM d, yyyy')}
+                  {formatAUDate(request.deadline)}
                 </p>
               </div>
             )}

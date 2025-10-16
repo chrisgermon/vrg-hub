@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RefreshCw, Download, Loader2, Send, CheckCircle, XCircle, Clock } from "lucide-react";
-import { format } from "date-fns";
+import { formatAUDateTimeFull } from "@/lib/dateUtils";
 
 interface FaxCampaign {
   id: string;
@@ -138,7 +138,7 @@ export const NotifyreFaxCampaigns = () => {
               </Button>
               <h2 className="text-2xl font-bold mt-4">{selectedCampaign.campaign_name}</h2>
               <p className="text-muted-foreground">
-                {format(new Date(selectedCampaign.sent_at), 'PPpp')}
+                {formatAUDateTimeFull(selectedCampaign.sent_at)}
               </p>
             </div>
           </div>
@@ -215,7 +215,7 @@ export const NotifyreFaxCampaigns = () => {
                             {log.cost_cents ? `$${(log.cost_cents / 100).toFixed(2)}` : '-'}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {log.sent_at ? format(new Date(log.sent_at), 'Pp') : '-'}
+                            {log.sent_at ? formatAUDateTimeFull(log.sent_at) : '-'}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -294,7 +294,7 @@ export const NotifyreFaxCampaigns = () => {
                         <span className="text-yellow-600 font-medium">{campaign.pending_count}</span>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(campaign.sent_at), 'PPp')}
+                        {formatAUDateTimeFull(campaign.sent_at)}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
