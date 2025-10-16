@@ -27,9 +27,13 @@ export default function Auth() {
   const currentSubdomain = extractSubdomain(window.location.hostname);
 
   // Force custom domain for auth to ensure tokens land on correct origin
+  // BUT only if there are no auth tokens in the URL
   useEffect(() => {
     const host = window.location.hostname;
-    if (host.endsWith('.lovable.app')) {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const hasAuthTokens = hashParams.has('access_token') || hashParams.has('refresh_token');
+    
+    if (host.endsWith('.lovable.app') && !hasAuthTokens) {
       const target = 'https://hub.visionradiology.com.au' + window.location.pathname + window.location.search + window.location.hash;
       if (window.location.href !== target) {
         window.location.replace(target);
