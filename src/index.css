@@ -60,21 +60,21 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 0 0% 7%;
 
-    --sidebar-foreground: 210 15% 20%;
+    --sidebar-foreground: 0 0% 100%;
 
-    --sidebar-primary: 199 100% 43%;
+    --sidebar-primary: 0 0% 100%;
 
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-primary-foreground: 0 0% 7%;
 
-    --sidebar-accent: 210 15% 95%;
+    --sidebar-accent: 0 0% 15%;
 
-    --sidebar-accent-foreground: 199 100% 43%;
+    --sidebar-accent-foreground: 0 0% 100%;
 
-    --sidebar-border: 210 15% 88%;
+    --sidebar-border: 0 0% 100%;
 
-    --sidebar-ring: 199 100% 43%;
+    --sidebar-ring: 195 100% 63%;
   }
 
   .dark {
