@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Edit } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { BrandLocationSelect } from '@/components/ui/brand-location-select';
 
@@ -50,10 +50,12 @@ export function DynamicDepartmentRequestForm({
   const [submitting, setSubmitting] = useState(false);
   const [template, setTemplate] = useState<FormTemplate | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
-  const { user, profile } = useAuth();
+  const { user, profile, userRole } = useAuth();
   const [brandId, setBrandId] = useState(profile?.brand_id || '');
   const [locationId, setLocationId] = useState(profile?.location_id || '');
   const navigate = useNavigate();
+
+  const isSuperAdmin = userRole === 'super_admin' || userRole === 'tenant_admin';
 
   // Update when profile loads
   useEffect(() => {
@@ -100,6 +102,12 @@ export function DynamicDepartmentRequestForm({
 
   const handleFieldChange = (fieldId: string, value: any) => {
     setFormData(prev => ({ ...prev, [fieldId]: value }));
+  };
+
+  const handleEditForm = () => {
+    if (template?.id) {
+      navigate(`/form-templates?edit=${template.id}`);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -291,10 +299,25 @@ export function DynamicDepartmentRequestForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{template.name}</CardTitle>
-        {template.description && (
-          <p className="text-sm text-muted-foreground">{template.description}</p>
-        )}
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle>{template.name}</CardTitle>
+            {template.description && (
+              <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
+            )}
+          </div>
+          {isSuperAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEditForm}
+              className="ml-4"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Form
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">

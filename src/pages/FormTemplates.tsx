@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,12 +25,26 @@ export default function FormTemplates() {
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
   const { userRole } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const isAdmin = userRole === 'tenant_admin' || userRole === 'super_admin';
 
   useEffect(() => {
     loadTemplates();
   }, []);
+
+  // Handle URL parameter for editing
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (editId && templates.length > 0) {
+      const templateToEdit = templates.find(t => t.id === editId);
+      if (templateToEdit) {
+        setEditingTemplate(templateToEdit);
+        // Clear the search param after loading
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, templates]);
 
   const loadTemplates = async () => {
     try {
