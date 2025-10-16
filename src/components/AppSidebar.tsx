@@ -1035,14 +1035,13 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
         
         {/* Footer buttons - Always visible at bottom */}
         <div className="sticky bottom-0 p-3 border-t bg-background space-y-2 overflow-hidden">
-          {/* Foxo Link - Only visible for Vision Radiology */}
-          {userCompany?.name === "Vision Radiology" && (
-            <Button
-              asChild
-              variant="outline"
-              className={`w-full ${collapsed ? 'px-2' : 'py-3'}`}
-              size={collapsed ? "icon" : "lg"}
-            >
+          {/* Foxo Link */}
+          <Button
+            asChild
+            variant="outline"
+            className={`w-full ${collapsed ? 'px-2' : 'py-3'}`}
+            size={collapsed ? "icon" : "lg"}
+          >
             <a 
               href="https://crowdit.com.au/files/foxo/index.html" 
               target="_blank" 
@@ -1050,9 +1049,8 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               className="flex items-center justify-center w-full"
             >
               <img src={foxoLogo} alt="Foxo" className={collapsed ? "h-6 w-6" : "h-8 w-auto object-contain"} />
-              </a>
-            </Button>
-          )}
+            </a>
+          </Button>
           
           {/* Contact IT Support */}
           <Button
