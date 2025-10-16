@@ -155,12 +155,12 @@ export function RequestNotificationAssignments() {
 
             <div className="space-y-2">
               <Label>Department (Optional)</Label>
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+              <Select value={selectedDepartment || 'all'} onValueChange={(value) => setSelectedDepartment(value === 'all' ? '' : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="All departments" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Departments</SelectItem>
+                  <SelectItem value="all">All Departments</SelectItem>
                   {DEPARTMENTS.map(dept => (
                     <SelectItem key={dept} value={dept}>
                       {dept}
