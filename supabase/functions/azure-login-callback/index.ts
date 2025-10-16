@@ -158,12 +158,16 @@ serve(async (req) => {
       throw new Error('No action_link returned for magic link');
     }
 
-    console.log('Redirecting to Supabase verify link:', actionLink);
+    // Force redirect_to to our custom domain regardless of project Site URL
+    const verifyUrl = new URL(actionLink);
+    verifyUrl.searchParams.set('redirect_to', `${redirectDomain}/auth`);
+
+    console.log('Redirecting to Supabase verify link:', verifyUrl.toString());
 
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': actionLink
+        'Location': verifyUrl.toString()
       }
     });
 
