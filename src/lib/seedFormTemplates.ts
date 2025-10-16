@@ -16,14 +16,11 @@ export const seedFormTemplates = async () => {
           label: 'Request Type',
           required: true,
           options: [
-            'New Hire',
-            'Termination',
-            'Leave Request',
-            'Benefits Inquiry',
-            'Policy Question',
-            'Training Request',
-            'Performance Review',
-            'Other'
+            'Incident form submission',
+            'Patient complaint',
+            'Staff complaint',
+            'Report HR compliance',
+            'General support'
           ]
         },
         {
@@ -77,19 +74,24 @@ export const seedFormTemplates = async () => {
       is_active: true,
       fields: [
         {
-          id: 'request_category',
+          id: 'request_type',
           type: 'select',
-          label: 'Request Category',
+          label: 'Request Type',
           required: true,
           options: [
-            'Hardware Issue',
-            'Software Issue',
-            'Network/Connectivity',
-            'Email/Communication',
-            'Access Request',
-            'New Equipment',
-            'Password Reset',
-            'Other'
+            'Get IT help',
+            'Access mail Inbox',
+            'Remote Access - VPN',
+            'Computer Support',
+            'License Support',
+            'Request New software',
+            'Request New hardware',
+            'Mobile Device Issues',
+            'Permission acces',
+            'Reset Password',
+            'Printing/printer Issue',
+            'Work from home equipment',
+            'General Support'
           ]
         },
         {
@@ -156,14 +158,8 @@ export const seedFormTemplates = async () => {
           label: 'Request Type',
           required: true,
           options: [
-            'Budget Approval',
-            'Purchase Order',
-            'Expense Report',
-            'Invoice Query',
-            'Payment Request',
-            'Budget Transfer',
-            'Financial Report',
-            'Other'
+            'Statement request',
+            'Payroll issues'
           ]
         },
         {
@@ -177,7 +173,7 @@ export const seedFormTemplates = async () => {
           id: 'amount',
           type: 'number',
           label: 'Amount (AUD)',
-          required: true,
+          required: false,
           placeholder: '0.00'
         },
         {
@@ -222,13 +218,9 @@ export const seedFormTemplates = async () => {
           label: 'Request Type',
           required: true,
           options: [
-            'Invoice Payment',
-            'Vendor Setup',
-            'Payment Inquiry',
-            'Credit Note',
-            'Payment Schedule',
-            'Vendor Update',
-            'Other'
+            'EFT payment',
+            'Staff Reimbursement request',
+            'General Inquiry'
           ]
         },
         {
@@ -293,14 +285,11 @@ export const seedFormTemplates = async () => {
           label: 'Request Type',
           required: true,
           options: [
-            'Maintenance',
-            'Repairs',
+            'General maintenance',
+            'Airconditioning',
+            'Lighting',
             'Cleaning',
-            'HVAC',
-            'Electrical',
-            'Plumbing',
-            'Security',
-            'Access Control',
+            'Merchandise',
             'Other'
           ]
         },
@@ -360,14 +349,10 @@ export const seedFormTemplates = async () => {
           label: 'Request Type',
           required: true,
           options: [
-            'Office Supplies',
-            'Furniture',
-            'Mail/Courier',
-            'Meeting Room Setup',
-            'Catering',
-            'Business Cards',
-            'Signage',
-            'Other'
+            'Print and Post',
+            'Couriers and Deliveries',
+            'Stationary Requests',
+            'Marketing and Print material request'
           ]
         },
         {
@@ -415,20 +400,13 @@ export const seedFormTemplates = async () => {
       is_active: true,
       fields: [
         {
-          id: 'service_type',
+          id: 'request_type',
           type: 'select',
-          label: 'Service Type',
+          label: 'Request Type',
           required: true,
           options: [
-            'Campaign Development',
-            'Creative Design',
-            'Digital Marketing',
-            'Content Creation',
-            'Event Support',
-            'Branding',
-            'Print Materials',
-            'Social Media',
-            'Other'
+            'Request MLO to see referrer',
+            'Referer complaint'
           ]
         },
         {
@@ -471,6 +449,68 @@ export const seedFormTemplates = async () => {
           label: 'Expected Deliverables',
           required: true,
           placeholder: 'What specific outputs do you need?'
+        }
+      ]
+    },
+    {
+      name: 'Technology Training Request Form',
+      department: 'Technology Trainings',
+      form_type: 'department_request',
+      description: 'Technology and application training requests',
+      is_active: true,
+      fields: [
+        {
+          id: 'request_type',
+          type: 'select',
+          label: 'Request Type',
+          required: true,
+          options: [
+            'Request Kestral training',
+            'Request PACS training',
+            'Request Ertpos training',
+            'Request CT Canon Apps training',
+            'Request CT Siemens Apps training',
+            'Request MRI Siemens Apps training',
+            'Request X-ray Apps Training',
+            'Request US Canon Apps training',
+            'Request US Philips Apps training',
+            'Request US GE Apps training',
+            'Request Lumicare training'
+          ]
+        },
+        {
+          id: 'trainee_name',
+          type: 'text',
+          label: 'Trainee Name',
+          required: true,
+          placeholder: 'Name of person requiring training'
+        },
+        {
+          id: 'department',
+          type: 'text',
+          label: 'Department',
+          required: true,
+          placeholder: 'Department name'
+        },
+        {
+          id: 'preferred_date',
+          type: 'date',
+          label: 'Preferred Training Date',
+          required: true,
+        },
+        {
+          id: 'number_of_trainees',
+          type: 'number',
+          label: 'Number of Trainees',
+          required: true,
+          placeholder: '1'
+        },
+        {
+          id: 'description',
+          type: 'textarea',
+          label: 'Additional Information',
+          required: false,
+          placeholder: 'Any specific training requirements or notes'
         }
       ]
     }
