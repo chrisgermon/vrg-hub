@@ -41,6 +41,32 @@ export default function Auth() {
     }
   }, []);
 
+  // Handle magiclink tokens in URL hash and establish session explicitly
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash) return;
+    const params = new URLSearchParams(hash.substring(1));
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    const type = params.get('type');
+
+    if (access_token && refresh_token && (type === 'magiclink' || type === 'recovery' || type === 'signup' || type === 'email')) {
+      setLoading(true);
+      supabase.auth.setSession({ access_token, refresh_token })
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error setting session from magic link:', error);
+            setError('There was a problem completing sign-in. Please try again.');
+          } else {
+            // Clean tokens from URL
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            navigate('/home', { replace: true });
+          }
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [navigate]);
+
   // Load company data based on subdomain
   useEffect(() => {
     const loadCompanyData = async () => {
