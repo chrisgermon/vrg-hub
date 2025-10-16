@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Loader2, Edit } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { BrandLocationSelect } from '@/components/ui/brand-location-select';
+import { FileDropzone, FileList } from '@/components/ui/file-dropzone';
 
 interface FieldOption {
   label: string;
@@ -50,6 +51,7 @@ export function DynamicDepartmentRequestForm({
   const [submitting, setSubmitting] = useState(false);
   const [template, setTemplate] = useState<FormTemplate | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [files, setFiles] = useState<File[]>([]);
   const { user, profile, userRole } = useAuth();
   const [brandId, setBrandId] = useState(profile?.brand_id || '');
   const [locationId, setLocationId] = useState(profile?.location_id || '');
@@ -175,6 +177,23 @@ export function DynamicDepartmentRequestForm({
         .single();
 
       if (error) throw error;
+
+      // Upload files if any
+      if (files.length > 0) {
+        const uploadPromises = files.map(async (file) => {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${request.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('request-attachments')
+            .upload(fileName, file);
+
+          if (uploadError) throw uploadError;
+          return fileName;
+        });
+
+        await Promise.all(uploadPromises);
+      }
 
       toast.success('Your request has been submitted successfully');
       navigate(`/requests/${request.id}`);
@@ -336,6 +355,18 @@ export function DynamicDepartmentRequestForm({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {template.fields.map(renderField)}
+          </div>
+
+          <div className="space-y-4">
+            <FileDropzone
+              onFilesSelected={(newFiles) => setFiles([...files, ...newFiles])}
+              accept="*"
+              multiple
+              maxSize={20}
+              label="Attachments"
+              description="Upload any relevant files (optional)"
+            />
+            <FileList files={files} onRemove={(index) => setFiles(files.filter((_, i) => i !== index))} />
           </div>
 
           <div className="flex gap-4 justify-end pt-4 border-t">
