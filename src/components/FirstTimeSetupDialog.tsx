@@ -157,7 +157,10 @@ export function FirstTimeSetupDialog() {
       }}
     >
       <DialogContent
-        className="sm:max-w-[600px]"
+        className={cn(
+          step === "location" ? "sm:max-w-[900px]" : "sm:max-w-[600px]",
+          "max-h-[90vh] overflow-hidden flex flex-col"
+        )}
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
@@ -234,32 +237,46 @@ export function FirstTimeSetupDialog() {
               </div>
             ) : (
               <>
-                <RadioGroup
-                  value={selectedLocationId}
-                  onValueChange={setSelectedLocationId}
-                  className="space-y-2"
-                >
-                  {locations.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No locations available for this brand
-                    </div>
-                  ) : (
-                    locations.map((location) => (
-                      <div
-                        key={location.id}
-                        className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-accent cursor-pointer"
-                      >
-                        <RadioGroupItem value={location.id} id={location.id} />
-                        <Label
-                          htmlFor={location.id}
-                          className="flex-1 cursor-pointer"
-                        >
-                          {location.name}
-                        </Label>
+                <div className="max-h-[60vh] overflow-y-auto pr-2">
+                  <RadioGroup
+                    value={selectedLocationId}
+                    onValueChange={setSelectedLocationId}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+                  >
+                    {locations.length === 0 ? (
+                      <div className="col-span-full text-center py-8 text-muted-foreground">
+                        No locations available for this brand
                       </div>
-                    ))
-                  )}
-                </RadioGroup>
+                    ) : (
+                      locations.map((location) => (
+                        <label
+                          key={location.id}
+                          htmlFor={location.id}
+                          className={cn(
+                            "relative flex items-center justify-center p-5 rounded-lg border-2 transition-all cursor-pointer min-h-[80px]",
+                            selectedLocationId === location.id
+                              ? "border-primary bg-primary/5"
+                              : "border-border bg-card hover:border-primary/50 hover:bg-accent"
+                          )}
+                        >
+                          {selectedLocationId === location.id && (
+                            <div className="absolute top-2 right-2">
+                              <Check className="h-5 w-5 text-primary" />
+                            </div>
+                          )}
+                          <RadioGroupItem
+                            value={location.id}
+                            id={location.id}
+                            className="sr-only"
+                          />
+                          <span className="text-sm font-medium text-center px-2">
+                            {location.name}
+                          </span>
+                        </label>
+                      ))
+                    )}
+                  </RadioGroup>
+                </div>
 
                 <div className="flex justify-between">
                   <Button
