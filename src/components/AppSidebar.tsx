@@ -297,9 +297,9 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
       { title: "Knowledge Base", url: "/knowledge-base", icon: BookOpen },
     ].filter(item => isMenuItemVisible(getMenuItemKey(item.title, item.url)));
 
-    const helpItem = { title: "Help Guide", url: "/help", icon: HelpCircle };
-    const helpTicketItem = { title: "Submit IT Ticket", url: "/help-ticket", icon: LifeBuoy };
-    const directoryItem = { title: "Company Directory", url: "/directory", icon: Users };
+    const helpItem = { title: "Help Guide", url: "/help", icon: HelpCircle, key: "help" };
+    const helpTicketItem = { title: "Submit IT Ticket", url: "/help-ticket", icon: LifeBuoy, key: "help-ticket" };
+    const directoryItem = { title: "Company Directory", url: "/directory", icon: Users, key: "directory" };
 
     // Helper to check if newsletter should be visible
     const isNewsletterVisible = () => {
@@ -383,9 +383,9 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
             ? { title: "Monthly Newsletter", url: "/newsletter", icon: Newspaper } 
             : null,
-          directory: isMenuItemVisible(getMenuItemKey(directoryItem.title, directoryItem.url)) ? directoryItem : null,
-          help: isMenuItemVisible(getMenuItemKey(helpItem.title, helpItem.url)) ? helpItem : null,
-          helpTicket: isMenuItemVisible(getMenuItemKey(helpTicketItem.title, helpTicketItem.url)) ? helpTicketItem : null
+          directory: isMenuItemVisible(directoryItem.key) ? directoryItem : null,
+          help: isMenuItemVisible(helpItem.key) ? helpItem : null,
+          helpTicket: isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
         };
       
       case "manager":
@@ -418,9 +418,9 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
             ? { title: "Monthly Newsletter", url: "/newsletter", icon: Newspaper } 
             : null,
-          directory: isMenuItemVisible(getMenuItemKey(directoryItem.title, directoryItem.url)) ? directoryItem : null,
-          help: isMenuItemVisible(getMenuItemKey(helpItem.title, helpItem.url)) ? helpItem : null,
-          helpTicket: isMenuItemVisible(getMenuItemKey(helpTicketItem.title, helpTicketItem.url)) ? helpTicketItem : null
+          directory: isMenuItemVisible(directoryItem.key) ? directoryItem : null,
+          help: isMenuItemVisible(helpItem.key) ? helpItem : null,
+          helpTicket: isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
         };
       
       case "tenant_admin":
@@ -452,10 +452,10 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
             ? { title: "Monthly Newsletter", url: "/newsletter", icon: Newspaper } 
             : null,
-          directory: isMenuItemVisible(getMenuItemKey(directoryItem.title, directoryItem.url)) ? directoryItem : null,
+          directory: isMenuItemVisible(directoryItem.key) ? directoryItem : null,
           settings: { title: "Settings", url: "/settings", icon: Settings },
-          help: isMenuItemVisible(getMenuItemKey(helpItem.title, helpItem.url)) ? helpItem : null,
-          helpTicket: isMenuItemVisible(getMenuItemKey(helpTicketItem.title, helpTicketItem.url)) ? helpTicketItem : null
+          help: isMenuItemVisible(helpItem.key) ? helpItem : null,
+          helpTicket: isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
         };
       
       case "super_admin":
@@ -489,18 +489,18 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
             ? { title: "Monthly Newsletter", url: "/newsletter", icon: Newspaper } 
             : null,
-          directory: isMenuItemVisible(getMenuItemKey(directoryItem.title, directoryItem.url)) ? directoryItem : null,
+          directory: isMenuItemVisible(directoryItem.key) ? directoryItem : null,
           settings: { title: "Settings", url: "/settings", icon: Settings },
-          help: isMenuItemVisible(getMenuItemKey(helpItem.title, helpItem.url)) ? helpItem : null,
-          helpTicket: isMenuItemVisible(getMenuItemKey(helpTicketItem.title, helpTicketItem.url)) ? helpTicketItem : null
+          help: isMenuItemVisible(helpItem.key) ? helpItem : null,
+          helpTicket: isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
         };
       
         default:
         return {
           common: commonItems,
           categories: [],
-          help: isMenuItemVisible(getMenuItemKey(helpItem.title, helpItem.url)) ? helpItem : null,
-          helpTicket: isMenuItemVisible(getMenuItemKey(helpTicketItem.title, helpTicketItem.url)) ? helpTicketItem : null
+          help: isMenuItemVisible(helpItem.key) ? helpItem : null,
+          helpTicket: isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
         };
     }
   };
