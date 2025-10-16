@@ -1,6 +1,7 @@
 import React, { ReactNode, Suspense, useEffect, useState } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
+import { RightSidebar } from "./RightSidebar";
 import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
 import crowdITLogo from "@/assets/crowdit-logo.png";
@@ -23,6 +24,7 @@ import { GlobalSearch } from "./GlobalSearch";
 import { SystemBanners } from "./banners/SystemBanners";
 import { ProfileDialog } from "./ProfileDialog";
 import { FirstTimeSetupDialog } from "./FirstTimeSetupDialog";
+import { useLocation } from "react-router-dom";
 
 interface LayoutProps {
   children: ReactNode;
@@ -33,6 +35,12 @@ export function Layout({ children }: LayoutProps) {
   const { effectiveRole, isImpersonating } = useRoleImpersonation();
   const [logoUrl, setLogoUrl] = useState<string>(crowdITLogo);
   const [profileOpen, setProfileOpen] = useState(false);
+  const location = useLocation();
+
+  // Hide right sidebar on certain pages
+  const hideRightSidebar = ['/form-templates', '/settings', '/admin'].some(path => 
+    location.pathname.startsWith(path)
+  );
 
   useEffect(() => {
     const loadCompanyLogo = async () => {
@@ -123,6 +131,13 @@ export function Layout({ children }: LayoutProps) {
           </main>
           <Footer />
           </div>
+          
+          {/* Right Sidebar - Only show on main pages */}
+          {!hideRightSidebar && (
+            <div className="hidden xl:block">
+              <RightSidebar />
+            </div>
+          )}
         </div>
         <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
       </SidebarProvider>
