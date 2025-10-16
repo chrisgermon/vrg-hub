@@ -57,7 +57,7 @@ export default function Auth() {
           } else {
             // Clean URL
             window.history.replaceState(null, '', window.location.pathname);
-            navigate('/home', { replace: true });
+            window.location.replace('/home');
           }
         })
         .finally(() => setLoading(false));
@@ -79,7 +79,7 @@ export default function Auth() {
             } else {
               // Clean tokens from URL (remove both hash and query)
               window.history.replaceState(null, '', window.location.pathname);
-              navigate('/home', { replace: true });
+              window.location.replace('/home');
             }
           })
           .finally(() => setLoading(false));
