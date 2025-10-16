@@ -26,6 +26,17 @@ export default function Auth() {
   
   const currentSubdomain = extractSubdomain(window.location.hostname);
 
+  // Force custom domain for auth to ensure tokens land on correct origin
+  useEffect(() => {
+    const host = window.location.hostname;
+    if (host.endsWith('.lovable.app')) {
+      const target = 'https://hub.visionradiology.com.au' + window.location.pathname + window.location.search + window.location.hash;
+      if (window.location.href !== target) {
+        window.location.replace(target);
+      }
+    }
+  }, []);
+
   // Load company data based on subdomain
   useEffect(() => {
     const loadCompanyData = async () => {
