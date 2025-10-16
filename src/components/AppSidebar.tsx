@@ -987,7 +987,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               })()}
 
               {/* Help */}
-              {(() => {
+              {menuConfig.help && (() => {
                 const itemKey = getMenuItemKey(menuConfig.help.title, menuConfig.help.url);
                 const CustomIcon = getCustomIcon(itemKey, menuConfig.help.icon);
                 const customLabel = getCustomLabel(itemKey, menuConfig.help.title);
