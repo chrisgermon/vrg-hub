@@ -12,12 +12,20 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header', configured: false }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: authHeader },
         },
       }
     );
@@ -27,20 +35,34 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (!user) {
-      throw new Error('Not authenticated');
+      return new Response(
+        JSON.stringify({ error: 'Not authenticated', configured: false }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const { folder_path } = await req.json();
 
-    // Get user's company
-    const { data: profile } = await supabaseClient
+    // Get user's company - use id instead of user_id
+    const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('company_id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
-    if (!profile) {
-      throw new Error('User profile not found');
+    if (profileError || !profile) {
+      console.error('Profile error:', profileError);
+      return new Response(
+        JSON.stringify({ error: 'User profile not found', details: profileError?.message, configured: false }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!profile.company_id) {
+      return new Response(
+        JSON.stringify({ error: 'User does not have a company assigned', configured: false }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Get SharePoint configuration

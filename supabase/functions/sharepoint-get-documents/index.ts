@@ -31,14 +31,18 @@ serve(async (req) => {
     }
 
     // Get user's company
-    const { data: profile } = await supabaseClient
+    const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('company_id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
-    if (!profile) {
-      throw new Error('User profile not found');
+    if (profileError || !profile) {
+      console.error('Profile error:', profileError);
+      return new Response(
+        JSON.stringify({ error: 'User profile not found', details: profileError?.message, configured: false }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Get SharePoint configuration for company
