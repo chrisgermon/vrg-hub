@@ -37,6 +37,29 @@ export function Layout({ children }: LayoutProps) {
 
   useEffect(() => {
     const loadCompanyLogo = async () => {
+      if (!user?.id) return;
+
+      // First, try to get the user's brand logo
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('brand_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profile?.brand_id) {
+        const { data: brand } = await supabase
+          .from('brands')
+          .select('logo_url')
+          .eq('id', profile.brand_id)
+          .maybeSingle();
+
+        if (brand?.logo_url) {
+          setLogoUrl(brand.logo_url);
+          return;
+        }
+      }
+
+      // Fallback to app_config logo if no brand logo
       const { data: config } = await supabase
         .from('app_config')
         .select('logo_url')
@@ -49,7 +72,7 @@ export function Layout({ children }: LayoutProps) {
     };
     
     loadCompanyLogo();
-  }, []);
+  }, [user?.id]);
 
   const handleSignOut = async () => {
     try {
