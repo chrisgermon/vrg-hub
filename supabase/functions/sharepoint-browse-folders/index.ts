@@ -30,6 +30,12 @@ serve(async (req) => {
       }
     );
 
+    // Admin client (service role) to safely read company-level configuration/tokens
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     const {
       data: { user },
     } = await supabaseClient.auth.getUser();
@@ -43,35 +49,12 @@ serve(async (req) => {
 
     const { folder_path } = await req.json();
 
-    // Get user's company - use id instead of user_id
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('company_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile) {
-      console.error('Profile error:', profileError);
-      return new Response(
-        JSON.stringify({ error: 'User profile not found', details: profileError?.message, configured: false }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!profile.company_id) {
-      return new Response(
-        JSON.stringify({ error: 'User does not have a company assigned', configured: false }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Get SharePoint configuration
-    const { data: config } = await supabaseClient
+    // Fetch active SharePoint configuration (single-tenant friendly)
+    const { data: config } = await supabaseAdmin
       .from('sharepoint_configurations')
       .select('site_id, folder_path')
-      .eq('company_id', profile.company_id)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
     if (!config) {
       return new Response(
@@ -84,33 +67,38 @@ serve(async (req) => {
       );
     }
 
-    // Try to get user's personal Office 365 token first, fall back to company token
-    let connection;
-    const { data: userConnection } = await supabaseClient
+    // Prefer company-level Office 365 token (admin-managed), fallback to user-level
+    let connection: { access_token: string } | null = null;
+
+    const { data: companyConnection } = await supabaseAdmin
       .from('office365_connections')
       .select('access_token')
-      .eq('user_id', user.id)
+      .is('user_id', null)
       .eq('is_active', true)
+      .order('created_at', { ascending: false })
       .maybeSingle();
 
-    if (userConnection?.access_token) {
-      connection = userConnection;
-      console.log('Using user-level Office 365 token');
-    } else {
-      // Fall back to company-level token
-      const { data: companyConnection } = await supabaseClient
-        .from('office365_connections')
-        .select('access_token')
-        .eq('company_id', profile.company_id)
-        .is('user_id', null)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (!companyConnection?.access_token) {
-        throw new Error('Office 365 not connected. Please connect your account.');
-      }
+    if (companyConnection?.access_token) {
       connection = companyConnection;
       console.log('Using company-level Office 365 token');
+    } else {
+      const { data: userConnection } = await supabaseAdmin
+        .from('office365_connections')
+        .select('access_token')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+      if (userConnection?.access_token) {
+        connection = userConnection;
+        console.log('Using user-level Office 365 token');
+      }
+    }
+
+    if (!connection?.access_token) {
+      return new Response(
+        JSON.stringify({ error: 'Office 365 not connected', configured: false }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Determine the path to browse
