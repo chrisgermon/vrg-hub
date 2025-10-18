@@ -9,6 +9,7 @@ import { Loader2, Eye, Clock, CheckCircle, XCircle, Package } from 'lucide-react
 import { formatAUDate } from '@/lib/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { RequestStatus } from '@/types/request';
+import { formatRequestIdShort } from '@/lib/requestUtils';
 
 interface Request {
   id: string;
@@ -121,6 +122,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>ID</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Brand</TableHead>
                   <TableHead>Location</TableHead>
@@ -138,6 +140,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
                     className={`cursor-pointer transition-colors ${selectedRequestId === request.id ? 'bg-muted' : 'hover:bg-muted/50'}`}
                     onClick={() => onRequestSelect ? onRequestSelect(request.id) : navigate(`/requests/${request.id}`)}
                   >
+                    <TableCell className="font-mono text-xs">{formatRequestIdShort(request.id)}</TableCell>
                     <TableCell className="font-medium">{request.title}</TableCell>
                     <TableCell>{(request as any).brands?.display_name || '-'}</TableCell>
                     <TableCell>{(request as any).locations?.name || '-'}</TableCell>

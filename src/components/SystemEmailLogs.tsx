@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { formatAUDateTimeFull } from '@/lib/dateUtils';
+import { formatRequestId } from '@/lib/requestUtils';
 
 interface EmailLog {
   id: string;
@@ -439,19 +440,19 @@ export function SystemEmailLogs() {
                       {selectedEmail.request_id && (
                         <div className="p-3 rounded-lg border bg-muted/50">
                           <p className="text-xs font-medium text-muted-foreground mb-1">Hardware Request ID</p>
-                          <p className="text-sm font-mono break-all">{selectedEmail.request_id}</p>
+                          <p className="text-sm font-mono break-all">{formatRequestId(selectedEmail.request_id)}</p>
                         </div>
                       )}
                       {selectedEmail.marketing_request_id && (
                         <div className="p-3 rounded-lg border bg-muted/50">
                           <p className="text-xs font-medium text-muted-foreground mb-1">Marketing Request ID</p>
-                          <p className="text-sm font-mono break-all">{selectedEmail.marketing_request_id}</p>
+                          <p className="text-sm font-mono break-all">{formatRequestId(selectedEmail.marketing_request_id)}</p>
                         </div>
                       )}
                       {selectedEmail.user_account_request_id && (
                         <div className="p-3 rounded-lg border bg-muted/50">
                           <p className="text-xs font-medium text-muted-foreground mb-1">User Account Request ID</p>
-                          <p className="text-sm font-mono break-all">{selectedEmail.user_account_request_id}</p>
+                          <p className="text-sm font-mono break-all">{formatRequestId(selectedEmail.user_account_request_id)}</p>
                         </div>
                       )}
                     </div>

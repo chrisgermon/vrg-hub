@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { formatRequestId } from '@/lib/requestUtils';
 
 export default function Requests() {
   const navigate = useNavigate();
@@ -122,7 +123,7 @@ export default function Requests() {
             </DetailsSection>
 
             <DetailsSection title="Information">
-              <DetailsField label="Request ID" value={selectedRequest.id.slice(0, 8)} />
+              <DetailsField label="Request ID" value={formatRequestId(selectedRequest.id)} />
               <DetailsField label="Title" value={selectedRequest.title} />
               <DetailsField 
                 label="Priority" 
