@@ -59,6 +59,7 @@ export function SharePointBrowser() {
       
       const { data, error } = await supabase.functions.invoke('sharepoint-browse-folders', {
         body: { folder_path: path },
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
       if (error) {

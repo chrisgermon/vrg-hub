@@ -88,7 +88,15 @@ export function Office365UserSync() {
 
   const connectOffice365 = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('office365-oauth-user-initiate');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please sign in again to connect Office 365');
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('office365-oauth-user-initiate', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
       if (error) throw error;
 
       if (data?.authUrl) {

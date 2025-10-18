@@ -9,9 +9,16 @@ export function ConnectOffice365Button() {
 
   const handleConnect = async () => {
     try {
-      setConnecting(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please sign in again to connect Office 365');
+        setConnecting(false);
+        return;
+      }
       
-      const { data, error } = await supabase.functions.invoke('office365-oauth-user-initiate');
+      const { data, error } = await supabase.functions.invoke('office365-oauth-user-initiate', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
       
       if (error) throw error;
       
