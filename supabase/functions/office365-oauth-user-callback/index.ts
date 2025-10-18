@@ -87,15 +87,19 @@ Deno.serve(async (req) => {
 
     if (existing) {
       // Update existing connection
+      const updateData: Record<string, any> = {
+        access_token: tokens.access_token,
+        expires_at: expiresAt.toISOString(),
+        tenant_id: tenantId,
+        updated_at: new Date().toISOString(),
+      };
+      if (tokens.refresh_token) {
+        updateData.refresh_token = tokens.refresh_token;
+      }
+
       const { error: updateError } = await supabaseAdmin
         .from('office365_connections')
-        .update({
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          expires_at: expiresAt.toISOString(),
-          tenant_id: tenantId,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', existing.id);
 
       if (updateError) {
@@ -106,6 +110,14 @@ Deno.serve(async (req) => {
         );
       }
     } else {
+      // Before insert, ensure we have a refresh token
+      if (!tokens.refresh_token) {
+        console.error('No refresh_token received from Microsoft. Ensure offline_access scope and consent.');
+        return new Response(
+          '<html><body><script>window.close();</script><p>Connection failed: missing refresh permission. Please try again.</p></body></html>',
+          { headers: { 'Content-Type': 'text/html' } }
+        );
+      }
       // Create new user connection (include required company_id)
       const { error: insertError } = await supabaseAdmin
         .from('office365_connections')

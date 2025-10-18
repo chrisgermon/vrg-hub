@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
     const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/office365-oauth-user-callback`;
     
     const scopes = [
+      'offline_access',
       'openid',
       'profile',
       'email',
@@ -57,7 +58,8 @@ Deno.serve(async (req) => {
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&scope=${encodeURIComponent(scopes)}` +
       `&state=${state}` +
-      `&response_mode=query`;
+      `&response_mode=query` +
+      `&prompt=consent`;
 
     return new Response(
       JSON.stringify({ authUrl }),
