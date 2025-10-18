@@ -23,6 +23,7 @@ import { GlobalSearch } from "./GlobalSearch";
 import { SystemBanners } from "./banners/SystemBanners";
 import { ProfileDialog } from "./ProfileDialog";
 import { FirstTimeSetupDialog } from "./FirstTimeSetupDialog";
+import { LiveClock } from "./LiveClock";
 
 interface LayoutProps {
   children: ReactNode;
@@ -89,6 +90,7 @@ export function Layout({ children }: LayoutProps) {
                 </>
               )}
               <BetaFeedbackDialog />
+              <LiveClock />
               <div className="hidden sm:block text-right">
                 <p className="text-xs md:text-sm font-medium truncate max-w-[150px] md:max-w-none">
                   {user?.user_metadata?.full_name || user?.email}
