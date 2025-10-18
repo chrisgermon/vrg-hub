@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,9 +37,10 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
     brand_id: "",
     location_id: "",
   });
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    if (profile) {
+    if (open && profile) {
       setFormData({
         full_name: profile.full_name || "",
         email: profile.email || user?.email || "",
@@ -49,8 +51,9 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
         brand_id: profile.brand_id || "",
         location_id: profile.location_id || "",
       });
+      setInitialized(true);
     }
-  }, [profile, user]);
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,6 +114,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
+          <DialogDescription>Update your profile and preferred brand and location.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex justify-center">
@@ -201,8 +205,8 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
             <BrandLocationSelect
               selectedBrandId={formData.brand_id}
               selectedLocationId={formData.location_id}
-              onBrandChange={(brandId) => setFormData({ ...formData, brand_id: brandId })}
-              onLocationChange={(locationId) => setFormData({ ...formData, location_id: locationId })}
+              onBrandChange={(brandId) => setFormData((prev) => ({ ...prev, brand_id: brandId }))}
+              onLocationChange={(locationId) => setFormData((prev) => ({ ...prev, location_id: locationId }))}
             />
           </div>
 

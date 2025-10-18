@@ -98,7 +98,7 @@ export function BrandLocationSelect({
       <div className="space-y-2">
         <Label htmlFor="brand">Brand {required && '*'}</Label>
         <Select
-          value={selectedBrandId}
+          value={selectedBrandId && selectedBrandId.length > 0 ? selectedBrandId : undefined}
           onValueChange={handleBrandChange}
           disabled={loadingBrands}
           required={required}
@@ -120,7 +120,7 @@ export function BrandLocationSelect({
         <div className="space-y-2">
           <Label htmlFor="location">Location {required && '*'}</Label>
           <Select
-            value={selectedLocationId}
+            value={selectedLocationId && selectedLocationId.length > 0 ? selectedLocationId : undefined}
             onValueChange={onLocationChange}
             disabled={loadingLocations}
             required={required}
