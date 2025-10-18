@@ -57,25 +57,30 @@ export function Office365UserSync() {
   const checkConnection = async () => {
     setLoading(true);
     try {
-      // Check if Office 365 is connected
-      const { data, error } = await supabase
-        .from('app_config')
-        .select('*')
-        .maybeSingle();
+      // Determine if a user-level Office 365 connection exists
+      const { data: conn, error } = await ((supabase as any)
+        .from('office365_connections')
+        .select('id, updated_at')
+        .eq('user_id', user?.id || '')
+        .order('updated_at', { ascending: false })
+        .maybeSingle());
 
       if (error) throw error;
 
-      // For now, simulate connection status
-      // In production, you'd check actual Office 365 connection
-      setConnection({
-        id: '1',
-        connected: false,
-        last_sync: null,
-        sync_enabled: false
-      });
+      if (conn) {
+        setConnection({
+          id: (conn as any).id,
+          connected: true,
+          last_sync: null,
+          sync_enabled: true,
+        });
+      } else {
+        setConnection({ id: '1', connected: false, last_sync: null, sync_enabled: false });
+      }
     } catch (error) {
       console.error('Error checking connection:', error);
-      toast.error('Failed to check Office 365 connection');
+      // Fallback to not connected if status cannot be determined (likely RLS)
+      setConnection({ id: '1', connected: false, last_sync: null, sync_enabled: false });
     } finally {
       setLoading(false);
     }
@@ -83,32 +88,38 @@ export function Office365UserSync() {
 
   const connectOffice365 = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('office365-oauth-initiate', {
-        body: { company_id: 'single-tenant' }
-      });
-
+      const { data, error } = await supabase.functions.invoke('office365-oauth-user-initiate');
       if (error) throw error;
 
       if (data?.authUrl) {
-        // Open auth URL in popup
         const width = 600;
         const height = 700;
         const left = window.screenX + (window.outerWidth - width) / 2;
         const top = window.screenY + (window.outerHeight - height) / 2;
-        
-        window.open(
+
+        const popup = window.open(
           data.authUrl,
           'office365-auth',
           `width=${width},height=${height},left=${left},top=${top}`
         );
 
-        // Listen for auth completion
-        window.addEventListener('message', (event) => {
-          if (event.data.type === 'office365-connected') {
+        const handleMessage = (event: MessageEvent) => {
+          if (event.data?.type === 'office365-connected') {
             toast.success('Office 365 connected successfully');
+            window.removeEventListener('message', handleMessage);
+            try { popup?.close(); } catch {}
             checkConnection();
           }
-        });
+        };
+
+        window.addEventListener('message', handleMessage);
+
+        const poll = setInterval(() => {
+          if (!popup || popup.closed) {
+            clearInterval(poll);
+            window.removeEventListener('message', handleMessage);
+          }
+        }, 500);
       }
     } catch (error) {
       console.error('Error connecting Office 365:', error);

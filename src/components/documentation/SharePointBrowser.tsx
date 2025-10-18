@@ -63,6 +63,12 @@ export function SharePointBrowser() {
 
       if (error) {
         console.error('SharePoint function error:', error);
+        // Surface clearer auth error if present
+        if ((error as any)?.status === 401) {
+          toast.error('Your session expired. Please sign in again.');
+          setConfigured(false);
+          return;
+        }
         throw error;
       }
 

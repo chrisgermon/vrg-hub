@@ -70,33 +70,19 @@ Deno.serve(async (req) => {
     const payload = JSON.parse(atob(tokenParts[1]));
     const tenantId = payload.tid;
 
-    // Get user's company
+    // Store or update the user's Office 365 connection (single-tenant friendly)
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('company_id')
-      .eq('user_id', userId)
-      .single();
-
-    if (!profile) {
-      return new Response(
-        '<html><body><script>window.close();</script><p>User profile not found</p></body></html>',
-        { headers: { 'Content-Type': 'text/html' } }
-      );
-    }
-
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-    // Check if user connection already exists
+    // Check if a user-level connection already exists
     const { data: existing } = await supabaseAdmin
       .from('office365_connections')
       .select('id')
       .eq('user_id', userId)
-      .eq('company_id', profile.company_id)
       .maybeSingle();
 
     if (existing) {
@@ -104,20 +90,19 @@ Deno.serve(async (req) => {
       await supabaseAdmin
         .from('office365_connections')
         .update({
-          tenant_id: tenantId,
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token,
           token_expires_at: expiresAt.toISOString(),
+          tenant_id: tenantId,
           is_active: true,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
     } else {
-      // Create new user connection
+      // Create new user connection (no company linkage needed for single-tenant)
       await supabaseAdmin
         .from('office365_connections')
         .insert({
-          company_id: profile.company_id,
           user_id: userId,
           tenant_id: tenantId,
           access_token: tokens.access_token,
@@ -132,7 +117,7 @@ Deno.serve(async (req) => {
       `<html>
         <body>
           <script>
-            window.opener?.postMessage({ type: 'office365-connected' }, '*');
+            try { window.opener && window.opener.postMessage({ type: 'office365-connected' }, '*'); } catch (e) {}
             window.close();
           </script>
           <p>Successfully connected Office 365! You can close this window.</p>
