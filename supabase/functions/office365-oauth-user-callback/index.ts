@@ -87,30 +87,44 @@ Deno.serve(async (req) => {
 
     if (existing) {
       // Update existing connection
-      await supabaseAdmin
+      const { error: updateError } = await supabaseAdmin
         .from('office365_connections')
         .update({
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token,
-          token_expires_at: expiresAt.toISOString(),
+          expires_at: expiresAt.toISOString(),
           tenant_id: tenantId,
-          is_active: true,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
+
+      if (updateError) {
+        console.error('Failed updating connection:', updateError);
+        return new Response(
+          '<html><body><script>window.close();</script><p>Failed to save connection</p></body></html>',
+          { headers: { 'Content-Type': 'text/html' } }
+        );
+      }
     } else {
-      // Create new user connection (no company linkage needed for single-tenant)
-      await supabaseAdmin
+      // Create new user connection (include required company_id)
+      const { error: insertError } = await supabaseAdmin
         .from('office365_connections')
         .insert({
           user_id: userId,
           tenant_id: tenantId,
+          company_id: tenantId,
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token,
-          token_expires_at: expiresAt.toISOString(),
-          connected_by: userId,
-          is_active: true,
+          expires_at: expiresAt.toISOString(),
         });
+
+      if (insertError) {
+        console.error('Failed inserting connection:', insertError);
+        return new Response(
+          '<html><body><script>window.close();</script><p>Failed to save connection</p></body></html>',
+          { headers: { 'Content-Type': 'text/html' } }
+        );
+      }
     }
 
     return new Response(
