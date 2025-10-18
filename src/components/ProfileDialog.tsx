@@ -22,7 +22,7 @@ interface ProfileDialogProps {
 }
 
 export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
-  const { user, profile } = useAuth();
+  const { user, profile, refetchProfile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
@@ -74,6 +74,10 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      
+      // Refetch profile in auth context to update logo
+      await refetchProfile();
+      
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",

@@ -16,6 +16,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<void>;
   signInWithAzure: () => Promise<void>;
   signOut: () => Promise<void>;
+  refetchProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -181,6 +182,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refetchProfile = async () => {
+    if (user?.id) {
+      await fetchProfile(user.id);
+    }
+  };
+
   return (
     <AuthContext.Provider
     value={{
@@ -194,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUp,
       signInWithAzure,
       signOut,
+      refetchProfile,
     }}
       >
       {children}
