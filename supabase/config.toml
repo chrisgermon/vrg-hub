@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.azure-login-callback]
 verify_jwt = false
+
+[functions.office365-oauth-user-callback]
+verify_jwt = false
+
+[functions.office365-oauth-callback]
+verify_jwt = false
