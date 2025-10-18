@@ -12,10 +12,18 @@ serve(async (req) => {
   }
 
   try {
+    console.log('SharePoint browse-folders request received');
+    
     const authHeader = req.headers.get('Authorization');
+    console.log('Auth header present:', !!authHeader);
+    
     if (!authHeader) {
+      console.error('No authorization header found in request');
       return new Response(
-        JSON.stringify({ error: 'Missing authorization header', configured: false }),
+        JSON.stringify({ 
+          error: 'Missing authorization header. Please refresh the page and try again.', 
+          configured: false 
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -41,11 +49,17 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (!user) {
+      console.error('User authentication failed');
       return new Response(
-        JSON.stringify({ error: 'Not authenticated', configured: false }),
+        JSON.stringify({ 
+          error: 'Not authenticated. Please log in again.', 
+          configured: false 
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('User authenticated:', user.email);
 
     const { folder_path } = await req.json();
 

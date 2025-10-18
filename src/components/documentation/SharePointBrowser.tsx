@@ -45,36 +45,34 @@ export function SharePointBrowser() {
   const loadItems = async (path: string) => {
     try {
       setLoading(true);
-      // Ensure we have a valid session before invoking the function
-      const { data: sessionData } = await supabase.auth.getSession();
-      let session = sessionData?.session;
-      if (!session) {
-        await supabase.auth.refreshSession();
-        const { data: refreshed } = await supabase.auth.getSession();
-        session = refreshed?.session || null;
+      
+      // Get current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        toast.error('Please log in again to access SharePoint documents');
+        setConfigured(false);
+        return;
       }
+      
+      console.log('Invoking sharepoint-browse-folders with session:', !!session);
+      
+      const { data, error } = await supabase.functions.invoke('sharepoint-browse-folders', {
+        body: { folder_path: path },
+      });
 
-      const invoke = async () =>
-        await supabase.functions.invoke('sharepoint-browse-folders', {
-          body: { folder_path: path },
-        });
-
-      let { data, error } = await invoke();
-
-      // Retry once on auth-related errors
-      if ((error as any)?.status === 401 || /Missing authorization header/i.test((error as any)?.message || '')) {
-        await supabase.auth.refreshSession();
-        ({ data, error } = await invoke());
+      if (error) {
+        console.error('SharePoint function error:', error);
+        throw error;
       }
-
-      if (error) throw error as any;
 
       setFolders(data.folders || []);
       setFiles(data.files || []);
       setConfigured(!!data.configured);
     } catch (error: any) {
       console.error('Error loading SharePoint items:', error);
-      toast.error(error?.message || 'Failed to load SharePoint content');
+      toast.error(error?.message || 'Failed to load SharePoint content. Please refresh the page.');
+      setConfigured(false);
     } finally {
       setLoading(false);
     }
