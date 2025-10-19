@@ -94,15 +94,18 @@ serve(async (req) => {
     //   .select()
     //   .maybeSingle();
 
-    // Assign role
+    // Assign role (use INSERT ... ON CONFLICT DO NOTHING to handle trigger-assigned roles)
     const { error: roleError } = await supabase
       .from('user_roles')
       .insert({
         user_id: userId,
         role: role,
-      });
+      })
+      .select()
+      .maybeSingle();
 
-    if (roleError) throw roleError;
+    // Ignore duplicate key errors since trigger may have already assigned role
+    if (roleError && roleError.code !== '23505') throw roleError;
 
     // Log to audit
     await supabase

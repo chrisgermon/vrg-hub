@@ -5,13 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Shield, Search, RefreshCw, UserCog, Eye } from 'lucide-react';
+import { Users, Shield, Search, RefreshCw, UserCog, Eye, ArrowUpDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { RBACUserRolesManager } from './RBACUserRolesManager';
 import { RBACUserPermissionsManager } from './RBACUserPermissionsManager';
 import { RBACEffectivePermissions } from './RBACEffectivePermissions';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface User {
   id: string;
@@ -30,6 +31,9 @@ export function RBACUserManagement() {
   const [viewMode, setViewMode] = useState<'roles' | 'overrides' | 'effective'>('roles');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+  const [sortField, setSortField] = useState<'name' | 'email' | 'created_at'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('active');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -75,10 +79,34 @@ export function RBACUserManagement() {
     fetchUsers();
   }, []);
 
-  const filteredUsers = users.filter(user =>
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Filter users
+  let filteredUsers = users.filter(user => {
+    const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesActiveFilter = filterActive === 'all' || 
+      (filterActive === 'active' && user.is_active) ||
+      (filterActive === 'inactive' && !user.is_active);
+    
+    return matchesSearch && matchesActiveFilter;
+  });
+
+  // Sort users
+  filteredUsers = [...filteredUsers].sort((a, b) => {
+    let compareValue = 0;
+    
+    if (sortField === 'name') {
+      const aName = a.full_name || a.email;
+      const bName = b.full_name || b.email;
+      compareValue = aName.localeCompare(bName);
+    } else if (sortField === 'email') {
+      compareValue = a.email.localeCompare(b.email);
+    } else if (sortField === 'created_at') {
+      compareValue = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    }
+    
+    return sortOrder === 'asc' ? compareValue : -compareValue;
+  });
 
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -110,8 +138,8 @@ export function RBACUserManagement() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search users..."
@@ -120,6 +148,34 @@ export function RBACUserManagement() {
                 className="pl-8"
               />
             </div>
+            <Select value={filterActive} onValueChange={(value: any) => setFilterActive(value)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Users</SelectItem>
+                <SelectItem value="active">Active Only</SelectItem>
+                <SelectItem value="inactive">Inactive Only</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortField} onValueChange={(value: any) => setSortField(value)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Sort by Name</SelectItem>
+                <SelectItem value="email">Sort by Email</SelectItem>
+                <SelectItem value="created_at">Sort by Date</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            >
+              <ArrowUpDown className="h-4 w-4 mr-2" />
+              {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
+            </Button>
           </div>
 
           <Table>

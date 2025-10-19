@@ -30,6 +30,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { Progress } from '@/components/ui/progress';
 
 interface Office365Connection {
   id: string;
@@ -57,6 +58,7 @@ export function Office365UserSync() {
   const [selectedRole, setSelectedRole] = useState<string>('requester');
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [bulkImporting, setBulkImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const usersPerPage = 20;
@@ -344,17 +346,23 @@ export function Office365UserSync() {
     }
 
     setBulkImporting(true);
+    setImportProgress(0);
     let successCount = 0;
     let errorCount = 0;
+    let skippedCount = 0;
 
     try {
       const companyId = await getTenantCompanyId();
       if (!companyId) {
         toast.error('Could not determine company ID');
+        setBulkImporting(false);
         return;
       }
 
-      for (const o365User of office365Users) {
+      const totalUsers = office365Users.length;
+
+      for (let i = 0; i < totalUsers; i++) {
+        const o365User = office365Users[i];
         try {
           const { data: syncedUser } = await (supabase as any)
             .from('synced_office365_users')
@@ -368,7 +376,7 @@ export function Office365UserSync() {
             continue;
           }
 
-          const { error } = await supabase.functions.invoke('import-office365-user', {
+          const { data, error } = await supabase.functions.invoke('import-office365-user', {
             body: {
               o365User: {
                 id: syncedUser.user_principal_name,
@@ -388,6 +396,8 @@ export function Office365UserSync() {
           if (error) {
             console.error(`Failed to import ${o365User.displayName}:`, error);
             errorCount++;
+          } else if (data?.skipped) {
+            skippedCount++;
           } else {
             successCount++;
           }
@@ -395,14 +405,19 @@ export function Office365UserSync() {
           console.error(`Error processing ${o365User.displayName}:`, err);
           errorCount++;
         }
+
+        // Update progress
+        const progress = Math.round(((i + 1) / totalUsers) * 100);
+        setImportProgress(progress);
       }
 
-      toast.success(`Import complete: ${successCount} users imported successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`);
+      toast.success(`Import complete: ${successCount} imported, ${skippedCount} already existed${errorCount > 0 ? `, ${errorCount} failed` : ''}`);
     } catch (error) {
       console.error('Bulk import error:', error);
       toast.error('Bulk import failed');
     } finally {
       setBulkImporting(false);
+      setImportProgress(0);
     }
   };
 
@@ -536,6 +551,15 @@ export function Office365UserSync() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {bulkImporting && importProgress > 0 && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Importing users...</span>
+                  <span>{importProgress}%</span>
+                </div>
+                <Progress value={importProgress} />
+              </div>
+            )}
             <div>
               <Input
                 placeholder="Search by name or email..."
