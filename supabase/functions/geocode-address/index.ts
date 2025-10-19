@@ -26,7 +26,7 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { address, city, state, zipCode }: GeocodeRequest = await req.json();
     
-    const googleMapsApiKey = Deno.env.get('VITE_GOOGLE_MAPS_API_KEY');
+    const googleMapsApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
     
     if (!googleMapsApiKey) {
       throw new Error('Google Maps API key not configured');
