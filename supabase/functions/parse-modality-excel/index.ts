@@ -52,14 +52,24 @@ ${locations?.map(l => `- ${l.name} (brand_id: ${l.brand_id}, id: ${l.id})`).join
 Document content:
 ${parsedText}
 
-Parse this document and extract the structure. Match each site name (e.g., "Warilla", "Woonona - Focus", "Engadine - Focus", "Sebastopol", "Hampton", "Botanic Ridge") to the most appropriate brand and location based on the site name patterns.
+IMPORTANT: Use intelligent fuzzy matching for location names. Even if the Excel sheet name doesn't match exactly, find the most likely matching location from the available locations list.
 
-For example:
-- Sites ending with "- Focus" likely belong to the Focus Radiology brand
-- Sites with "Vision" or standalone names might belong to Vision Radiology brand  
-- Sites with "Light" might belong to Light Radiology brand
+Examples of fuzzy matching you should perform:
+- "Hampton" in Excel should match "Hampton East" in locations
+- "Warilla" should match "Warilla" (exact match)
+- "Woonona - Focus" should match "Woonona" location under Focus Radiology brand
+- "Sebastopol" should match "Sebastopol" location
+- "Botanic Ridge" should match "Botanic Ridge" location
+- "Torquay" should match "Torquay" location
+- "Logan" should match "Loganholme" location
+- "Rochedale" should match "Rochedale" location
 
-Return structured data with matched brand_id and location_id for each site.`;
+For brand matching:
+- Sites ending with "- Focus" belong to Focus Radiology brand
+- Sites ending with "- Light" belong to Light Radiology brand
+- Sites without suffix or with "- Vision" belong to Vision Radiology brand
+
+For each site, you MUST match it to an existing location_id from the available locations. Use your best judgment to find the closest match even if names aren't identical.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
