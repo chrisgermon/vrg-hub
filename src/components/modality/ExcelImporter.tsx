@@ -2,11 +2,10 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { FileUp, Loader2 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 
 interface ExcelImporterProps {
   onSuccess: () => void;
@@ -14,22 +13,15 @@ interface ExcelImporterProps {
 
 export function ExcelImporter({ onSuccess }: ExcelImporterProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [pastedData, setPastedData] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const { toast } = useToast();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setExcelFile(file);
-    }
-  };
-
   const handleImport = async () => {
-    if (!excelFile) {
+    if (!pastedData.trim()) {
       toast({
         title: 'Error',
-        description: 'Please select an Excel file',
+        description: 'Please paste the parsed Excel data',
         variant: 'destructive',
       });
       return;
@@ -38,24 +30,20 @@ export function ExcelImporter({ onSuccess }: ExcelImporterProps) {
     setIsImporting(true);
 
     try {
-      // Read Excel file
-      const data = await excelFile.arrayBuffer();
-      const workbook = XLSX.read(data);
+      console.log('Calling parse-modality-excel with data length:', pastedData.length);
       
-      // Convert each sheet to markdown format (similar to parsed document)
-      let parsedText = '';
-      workbook.SheetNames.forEach((sheetName) => {
-        const worksheet = workbook.Sheets[sheetName];
-        const csvData = XLSX.utils.sheet_to_csv(worksheet);
-        parsedText += `\n## ${sheetName}\n${csvData}\n`;
-      });
-
       // Call AI to parse and match
       const { data: aiResult, error: aiError } = await supabase.functions.invoke('parse-modality-excel', {
-        body: { parsedText }
+        body: { parsedText: pastedData }
       });
 
-      if (aiError) throw aiError;
+      console.log('AI Result:', aiResult);
+      console.log('AI Error:', aiError);
+
+      if (aiError) {
+        console.error('Edge function error:', aiError);
+        throw new Error(aiError.message || 'Failed to parse data');
+      }
 
       if (!aiResult.sites || aiResult.sites.length === 0) {
         throw new Error('No sites found in the document');
@@ -75,14 +63,14 @@ export function ExcelImporter({ onSuccess }: ExcelImporterProps) {
       }
 
       if (successCount > 0) {
-        toast({
-          title: 'Success',
-          description: `Successfully imported ${successCount} of ${aiResult.sites.length} sites`,
-        });
+          toast({
+            title: 'Success',
+            description: `Successfully imported ${successCount} of ${aiResult.sites.length} sites`,
+          });
 
-        setIsOpen(false);
-        setExcelFile(null);
-        onSuccess();
+          setIsOpen(false);
+          setPastedData('');
+          onSuccess();
       }
 
       if (errors.length > 0) {
@@ -190,31 +178,31 @@ export function ExcelImporter({ onSuccess }: ExcelImporterProps) {
       <DialogTrigger asChild>
         <Button variant="outline">
           <FileUp className="w-4 h-4 mr-2" />
-          Import Excel
+          Import from Parsed Data
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Import DICOM Configuration from Excel</DialogTitle>
+          <DialogTitle>Import DICOM Configuration</DialogTitle>
           <DialogDescription>
-            Upload an Excel file with DICOM modality information. AI will automatically match sites to brands and locations.
+            Paste the parsed Excel data (from the document parser tool). AI will automatically match sites to brands and locations.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="excel-file">Excel File</Label>
-            <Input
-              id="excel-file"
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFileChange}
+            <Label htmlFor="parsed-data">Parsed Data</Label>
+            <Textarea
+              id="parsed-data"
+              placeholder="Paste parsed Excel data here..."
+              value={pastedData}
+              onChange={(e) => setPastedData(e.target.value)}
+              rows={15}
+              className="font-mono text-xs"
               disabled={isImporting}
             />
-            {excelFile && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Selected: {excelFile.name}
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground mt-2">
+              Tip: Use the document parser on your Excel file first, then paste the result here
+            </p>
           </div>
           <div className="flex gap-2 justify-end">
             <Button
@@ -224,7 +212,7 @@ export function ExcelImporter({ onSuccess }: ExcelImporterProps) {
             >
               Cancel
             </Button>
-            <Button onClick={handleImport} disabled={isImporting || !excelFile}>
+            <Button onClick={handleImport} disabled={isImporting || !pastedData.trim()}>
               {isImporting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

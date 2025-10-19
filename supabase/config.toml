@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.public-google-maps-key]
 verify_jwt = false
+
+[functions.parse-modality-excel]
+verify_jwt = true
