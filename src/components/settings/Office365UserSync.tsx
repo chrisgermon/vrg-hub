@@ -180,16 +180,46 @@ export function Office365UserSync() {
 
     setSyncing(true);
     try {
+      // Get company_id from the connection
+      const { data: conn } = await (supabase as any)
+        .from('office365_connections')
+        .select('company_id')
+        .eq('user_id', user?.id || '')
+        .maybeSingle();
+
+      if (!conn?.company_id) {
+        throw new Error('No company ID found for Office 365 connection');
+      }
+
+      // Call the sync function
       const { data, error } = await supabase.functions.invoke('office365-sync-data', {
-        body: { syncType: 'users' }
+        body: { company_id: conn.company_id }
       });
 
       if (error) throw error;
 
-      if (data?.users) {
-        setOffice365Users(data.users);
-        toast.success(`Found ${data.users.length} Office 365 users`);
-      }
+      // Query the synced users from the database
+      const { data: syncedUsers, error: queryError } = await (supabase as any)
+        .from('synced_office365_users')
+        .select('*')
+        .eq('company_id', conn.company_id)
+        .eq('is_active', true)
+        .order('display_name');
+
+      if (queryError) throw queryError;
+
+      // Map to the expected format
+      const users = (syncedUsers || []).map((u: any) => ({
+        id: u.user_principal_name,
+        displayName: u.display_name,
+        mail: u.mail,
+        userPrincipalName: u.user_principal_name,
+        jobTitle: u.job_title,
+        department: u.department,
+      }));
+
+      setOffice365Users(users);
+      toast.success(`Synced ${data?.users_synced || 0} Office 365 users successfully`);
 
       // Update last sync time
       setConnection({
@@ -198,7 +228,7 @@ export function Office365UserSync() {
       });
     } catch (error) {
       console.error('Error syncing users:', error);
-      toast.error('Failed to sync Office 365 users');
+      toast.error(error instanceof Error ? error.message : 'Failed to sync Office 365 users');
     } finally {
       setSyncing(false);
     }

@@ -2284,33 +2284,132 @@ export type Database = {
       sharepoint_configurations: {
         Row: {
           company_id: string
+          configured_by: string | null
           created_at: string | null
           folder_path: string | null
           id: string
           is_active: boolean | null
           site_id: string | null
+          site_name: string | null
           site_url: string | null
           updated_at: string | null
         }
         Insert: {
           company_id: string
+          configured_by?: string | null
           created_at?: string | null
           folder_path?: string | null
           id?: string
           is_active?: boolean | null
           site_id?: string | null
+          site_name?: string | null
           site_url?: string | null
           updated_at?: string | null
         }
         Update: {
           company_id?: string
+          configured_by?: string | null
           created_at?: string | null
           folder_path?: string | null
           id?: string
           is_active?: boolean | null
           site_id?: string | null
+          site_name?: string | null
           site_url?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      synced_office365_mailboxes: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          email_address: string
+          id: string
+          mailbox_name: string
+          mailbox_type: string | null
+          members: Json | null
+          synced_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          email_address: string
+          id?: string
+          mailbox_name: string
+          mailbox_type?: string | null
+          members?: Json | null
+          synced_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          email_address?: string
+          id?: string
+          mailbox_name?: string
+          mailbox_type?: string | null
+          members?: Json | null
+          synced_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      synced_office365_users: {
+        Row: {
+          assigned_licenses: Json | null
+          business_phones: Json | null
+          company_id: string
+          created_at: string | null
+          department: string | null
+          display_name: string | null
+          id: string
+          is_active: boolean | null
+          job_title: string | null
+          mail: string | null
+          member_of: Json | null
+          mobile_phone: string | null
+          office_location: string | null
+          synced_at: string | null
+          updated_at: string | null
+          user_principal_name: string
+        }
+        Insert: {
+          assigned_licenses?: Json | null
+          business_phones?: Json | null
+          company_id: string
+          created_at?: string | null
+          department?: string | null
+          display_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          job_title?: string | null
+          mail?: string | null
+          member_of?: Json | null
+          mobile_phone?: string | null
+          office_location?: string | null
+          synced_at?: string | null
+          updated_at?: string | null
+          user_principal_name: string
+        }
+        Update: {
+          assigned_licenses?: Json | null
+          business_phones?: Json | null
+          company_id?: string
+          created_at?: string | null
+          department?: string | null
+          display_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          job_title?: string | null
+          mail?: string | null
+          member_of?: Json | null
+          mobile_phone?: string | null
+          office_location?: string | null
+          synced_at?: string | null
+          updated_at?: string | null
+          user_principal_name?: string
         }
         Relationships: []
       }

@@ -158,31 +158,55 @@ export function SharePointConfiguration() {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (!connection) throw new Error('Office 365 not connected');
+      if (!connection?.company_id) {
+        throw new Error('Office 365 connection not found or missing company ID');
+      }
 
       const site = sites.find(s => s.id === selectedSite);
-      if (!site) throw new Error('Site not found');
+      if (!site) {
+        throw new Error('Selected site not found. Please try reloading the sites.');
+      }
+
+      // Validate site data
+      if (!site.id || !site.name || !site.webUrl) {
+        throw new Error('Invalid site data. Please select a different site.');
+      }
+
+      console.log('Saving SharePoint configuration:', {
+        company_id: connection.company_id,
+        site_id: site.id,
+        site_name: site.name,
+        site_url: site.webUrl,
+        folder_path: folderPath
+      });
 
       // Deactivate existing configs
-      await supabase
+      const { error: deactivateError } = await supabase
         .from('sharepoint_configurations')
         .update({ is_active: false })
         .eq('company_id', connection.company_id);
 
+      if (deactivateError) {
+        console.error('Error deactivating configs:', deactivateError);
+      }
+
       // Create new config
-      const { error } = await supabase
+      const { error: insertError } = await supabase
         .from('sharepoint_configurations')
         .insert({
           company_id: connection.company_id,
           site_id: site.id,
           site_name: site.name,
           site_url: site.webUrl,
-          folder_path: folderPath,
+          folder_path: folderPath || '/',
           configured_by: user.id,
           is_active: true
         });
 
-      if (error) throw error;
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw new Error(`Failed to save configuration: ${insertError.message}`);
+      }
 
       toast({
         title: 'Success',
