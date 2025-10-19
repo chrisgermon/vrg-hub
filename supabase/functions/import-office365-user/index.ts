@@ -34,6 +34,21 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Check if user already exists
+    const { data: existingAuthUser } = await supabase.auth.admin.listUsers();
+    const userExists = existingAuthUser?.users?.some((u: any) => u.email === o365User.mail);
+
+    if (userExists) {
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'User already exists',
+          skipped: true,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Create auth user
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: o365User.mail,
@@ -48,41 +63,42 @@ serve(async (req) => {
 
     const userId = authData.user.id;
 
-    // Create profile
+    // Update or create profile (trigger may have already created it)
     const { error: profileError } = await supabase
       .from('profiles')
-      .insert({
-        user_id: userId,
-        company_id: companyId,
-        name: o365User.display_name,
+      .upsert({
+        id: userId,
+        full_name: o365User.display_name,
         email: o365User.mail,
         department: o365User.department,
-        position: o365User.job_title,
         phone: o365User.business_phones?.[0] || o365User.mobile_phone,
-        office_location: o365User.office_location,
+        location: o365User.office_location,
+        is_active: false, // Inactive until first sign-in
+        imported_from_o365: true,
+      }, {
+        onConflict: 'id'
       });
 
     if (profileError) throw profileError;
 
+    // Skip company membership - not all setups have this table
     // Create company membership
-    const { data: membership, error: membershipError } = await supabase
-      .from('company_memberships')
-      .insert({
-        user_id: userId,
-        company_id: companyId,
-        is_primary: true,
-        status: 'active',
-      })
-      .select()
-      .single();
-
-    if (membershipError) throw membershipError;
+    // const { data: membership, error: membershipError } = await supabase
+    //   .from('company_memberships')
+    //   .insert({
+    //     user_id: userId,
+    //     company_id: companyId,
+    //     is_primary: true,
+    //     status: 'active',
+    //   })
+    //   .select()
+    //   .maybeSingle();
 
     // Assign role
     const { error: roleError } = await supabase
-      .from('membership_roles')
+      .from('user_roles')
       .insert({
-        membership_id: membership.id,
+        user_id: userId,
         role: role,
       });
 

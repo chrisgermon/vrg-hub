@@ -17,8 +17,19 @@ import {
   XCircle, 
   AlertCircle,
   Link as LinkIcon,
-  Unlink
+  Unlink,
+  Users,
+  Loader2
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { 
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 interface Office365Connection {
   id: string;
@@ -45,6 +56,10 @@ export function Office365UserSync() {
   const [selectedUser, setSelectedUser] = useState<Office365User | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>('requester');
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const usersPerPage = 20;
 
   const isAdmin = userRole === 'super_admin' || userRole === 'tenant_admin';
 
@@ -276,10 +291,39 @@ export function Office365UserSync() {
     if (!selectedUser) return;
 
     try {
+      const companyId = await getTenantCompanyId();
+      if (!companyId) {
+        toast.error('Could not determine company ID');
+        return;
+      }
+
+      // Get the full user data from synced users
+      const { data: syncedUser } = await (supabase as any)
+        .from('synced_office365_users')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('user_principal_name', selectedUser.id)
+        .single();
+
+      if (!syncedUser) {
+        toast.error('User not found in synced users');
+        return;
+      }
+
       const { error } = await supabase.functions.invoke('import-office365-user', {
         body: {
-          o365UserId: selectedUser.id,
-          role: selectedRole
+          o365User: {
+            id: syncedUser.user_principal_name,
+            mail: syncedUser.mail,
+            display_name: syncedUser.display_name,
+            job_title: syncedUser.job_title,
+            department: syncedUser.department,
+            office_location: syncedUser.office_location,
+            business_phones: syncedUser.business_phones,
+            mobile_phone: syncedUser.mobile_phone,
+          },
+          role: selectedRole,
+          companyId,
         }
       });
 
@@ -291,6 +335,74 @@ export function Office365UserSync() {
     } catch (error) {
       console.error('Error importing user:', error);
       toast.error('Failed to import user');
+    }
+  };
+
+  const bulkImportUsers = async () => {
+    if (!confirm(`Import all ${office365Users.length} synced users as inactive "requester" accounts? They will be activated when they first sign in.`)) {
+      return;
+    }
+
+    setBulkImporting(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      const companyId = await getTenantCompanyId();
+      if (!companyId) {
+        toast.error('Could not determine company ID');
+        return;
+      }
+
+      for (const o365User of office365Users) {
+        try {
+          const { data: syncedUser } = await (supabase as any)
+            .from('synced_office365_users')
+            .select('*')
+            .eq('company_id', companyId)
+            .eq('user_principal_name', o365User.id)
+            .single();
+
+          if (!syncedUser) {
+            errorCount++;
+            continue;
+          }
+
+          const { error } = await supabase.functions.invoke('import-office365-user', {
+            body: {
+              o365User: {
+                id: syncedUser.user_principal_name,
+                mail: syncedUser.mail,
+                display_name: syncedUser.display_name,
+                job_title: syncedUser.job_title,
+                department: syncedUser.department,
+                office_location: syncedUser.office_location,
+                business_phones: syncedUser.business_phones,
+                mobile_phone: syncedUser.mobile_phone,
+              },
+              role: 'requester',
+              companyId,
+            }
+          });
+
+          if (error) {
+            console.error(`Failed to import ${o365User.displayName}:`, error);
+            errorCount++;
+          } else {
+            successCount++;
+          }
+        } catch (err) {
+          console.error(`Error processing ${o365User.displayName}:`, err);
+          errorCount++;
+        }
+      }
+
+      toast.success(`Import complete: ${successCount} users imported successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`);
+    } catch (error) {
+      console.error('Bulk import error:', error);
+      toast.error('Bulk import failed');
+    } finally {
+      setBulkImporting(false);
     }
   };
 
@@ -397,12 +509,43 @@ export function Office365UserSync() {
       {office365Users.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Office 365 Users</CardTitle>
-            <CardDescription>
-              Import users from your Office 365 directory
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Office 365 Users ({office365Users.length})</CardTitle>
+                <CardDescription>
+                  Import users from your Office 365 directory
+                </CardDescription>
+              </div>
+              <Button 
+                onClick={bulkImportUsers} 
+                disabled={bulkImporting}
+                variant="default"
+              >
+                {bulkImporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Users className="h-4 w-4 mr-2" />
+                    Import All Users
+                  </>
+                )}
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div>
+              <Input
+                placeholder="Search by name or email..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -414,35 +557,113 @@ export function Office365UserSync() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {office365Users.map((o365User) => (
-                  <TableRow key={o365User.id}>
-                    <TableCell className="font-medium">
-                      {o365User.displayName}
-                    </TableCell>
-                    <TableCell>{o365User.mail || o365User.userPrincipalName}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {o365User.jobTitle || '-'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {o365User.department || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedUser(o365User);
-                          setImportDialogOpen(true);
-                        }}
-                      >
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Import
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {(() => {
+                  const filteredUsers = office365Users.filter(user => 
+                    user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (user.mail && user.mail.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                    user.userPrincipalName.toLowerCase().includes(searchQuery.toLowerCase())
+                  );
+                  
+                  const startIndex = (currentPage - 1) * usersPerPage;
+                  const endIndex = startIndex + usersPerPage;
+                  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+                  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+
+                  return (
+                    <>
+                      {paginatedUsers.map((o365User) => (
+                        <TableRow key={o365User.id}>
+                          <TableCell className="font-medium">
+                            {o365User.displayName}
+                          </TableCell>
+                          <TableCell>{o365User.mail || o365User.userPrincipalName}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {o365User.jobTitle || '-'}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {o365User.department || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedUser(o365User);
+                                setImportDialogOpen(true);
+                              }}
+                              disabled={bulkImporting}
+                            >
+                              <UserPlus className="h-4 w-4 mr-2" />
+                              Import
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {paginatedUsers.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            No users found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
+                  );
+                })()}
               </TableBody>
             </Table>
+            {(() => {
+              const filteredUsers = office365Users.filter(user => 
+                user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (user.mail && user.mail.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                user.userPrincipalName.toLowerCase().includes(searchQuery.toLowerCase())
+              );
+              const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+              
+              if (totalPages <= 1) return null;
+              
+              return (
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <PaginationItem key={pageNum}>
+                          <PaginationLink
+                            onClick={() => setCurrentPage(pageNum)}
+                            isActive={currentPage === pageNum}
+                            className="cursor-pointer"
+                          >
+                            {pageNum}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              );
+            })()}
           </CardContent>
         </Card>
       )}
