@@ -39,62 +39,76 @@ export function ExcelImporter({ onSuccess }: ExcelImporterProps) {
       // Parse Excel file
       const data = await excelFile.arrayBuffer();
       const workbook = XLSX.read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const parsedText = XLSX.utils.sheet_to_txt(worksheet);
       
-      console.log('Calling parse-modality-excel with data length:', parsedText.length);
+      console.log(`Found ${workbook.SheetNames.length} sheets in Excel file`);
       
-      // Call AI to parse and match
-      const { data: aiResult, error: aiError } = await supabase.functions.invoke('parse-modality-excel', {
-        body: { parsedText }
-      });
-
-      console.log('AI Result:', aiResult);
-      console.log('AI Error:', aiError);
-
-      if (aiError) {
-        console.error('Edge function error:', aiError);
-        throw new Error(aiError.message || 'Failed to parse data');
-      }
-
-      if (!aiResult.sites || aiResult.sites.length === 0) {
-        throw new Error('No sites found in the document');
-      }
-
-      // Import each site
-      let successCount = 0;
-      const errors: string[] = [];
-
-      for (const site of aiResult.sites) {
+      // Process all sheets
+      let totalSuccessCount = 0;
+      const allErrors: string[] = [];
+      
+      for (const sheetName of workbook.SheetNames) {
+        console.log(`Processing sheet: ${sheetName}`);
+        
+        const worksheet = workbook.Sheets[sheetName];
+        const parsedText = XLSX.utils.sheet_to_txt(worksheet);
+        
+        // Skip empty sheets
+        if (!parsedText.trim()) {
+          console.log(`Skipping empty sheet: ${sheetName}`);
+          continue;
+        }
+        
         try {
-          await importSiteData(site);
-          successCount++;
-        } catch (siteError: any) {
-          errors.push(`${site.location_name}: ${siteError.message}`);
+          // Call AI to parse and match for this sheet
+          const { data: aiResult, error: aiError } = await supabase.functions.invoke('parse-modality-excel', {
+            body: { parsedText }
+          });
+
+          if (aiError) {
+            console.error(`Error processing sheet ${sheetName}:`, aiError);
+            allErrors.push(`${sheetName}: ${aiError.message || 'Failed to parse'}`);
+            continue;
+          }
+
+          if (!aiResult.sites || aiResult.sites.length === 0) {
+            console.log(`No sites found in sheet: ${sheetName}`);
+            continue;
+          }
+
+          // Import each site from this sheet
+          for (const site of aiResult.sites) {
+            try {
+              await importSiteData(site);
+              totalSuccessCount++;
+              console.log(`Successfully imported ${site.location_name} from sheet ${sheetName}`);
+            } catch (siteError: any) {
+              allErrors.push(`${sheetName} - ${site.location_name}: ${siteError.message}`);
+            }
+          }
+        } catch (sheetError: any) {
+          console.error(`Error processing sheet ${sheetName}:`, sheetError);
+          allErrors.push(`${sheetName}: ${sheetError.message}`);
         }
       }
 
       // Show results
-      if (errors.length > 0) {
-        console.error('Import errors:', errors);
+      if (allErrors.length > 0) {
+        console.error('Import errors:', allErrors);
         toast({
-          title: errors.length === aiResult.sites.length ? 'Import Failed' : 'Partial Success',
-          description: errors.length === aiResult.sites.length 
-            ? `Failed to import all sites. Check console for details.`
-            : `${successCount} sites imported successfully, ${errors.length} failed. Check console for details.`,
-          variant: errors.length === aiResult.sites.length ? 'destructive' : 'default',
+          title: totalSuccessCount > 0 ? 'Partial Success' : 'Import Failed',
+          description: totalSuccessCount > 0
+            ? `Imported ${totalSuccessCount} location${totalSuccessCount > 1 ? 's' : ''}, ${allErrors.length} failed. Check console for details.`
+            : `Failed to import locations. Check console for details.`,
+          variant: totalSuccessCount > 0 ? 'default' : 'destructive',
         });
-        
-        // Only refresh selection; keep dialog open to review
-        if (successCount === aiResult.sites.length) {
-          setExcelFile(null);
-        }
       } else {
         toast({
           title: 'Success',
-          description: `Successfully imported ${successCount} site${successCount > 1 ? 's' : ''}`,
+          description: `Successfully imported ${totalSuccessCount} location${totalSuccessCount > 1 ? 's' : ''} from ${workbook.SheetNames.length} sheet${workbook.SheetNames.length > 1 ? 's' : ''}`,
         });
         setExcelFile(null);
+        setIsOpen(false);
+        onSuccess();
       }
     } catch (error: any) {
       console.error('Error importing Excel:', error);
