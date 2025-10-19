@@ -94,13 +94,24 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get connection
-    const { data: connection, error: connError } = await supabase
+    // Get connection (prefer company_id if provided, else user-level)
+    let { data: connection, error: connError } = await supabase
       .from('office365_connections')
       .select('*')
       .eq('company_id', company_id)
-      .eq('is_active', true)
-      .single();
+      .order('updated_at', { ascending: false })
+      .maybeSingle();
+
+    if ((!connection || connError) && !company_id) {
+      const res = await supabase
+        .from('office365_connections')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .maybeSingle();
+      connection = res.data as any;
+      connError = res.error as any;
+    }
 
     if (connError || !connection) {
       throw new Error('No active Office 365 connection found');
@@ -109,7 +120,7 @@ serve(async (req) => {
     let accessToken = connection.access_token;
     
     // Check if token needs refresh
-    if (new Date(connection.token_expires_at) <= new Date()) {
+    if (new Date(connection.expires_at) <= new Date()) {
       const clientId = Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID');
       const clientSecret = Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET');
       
@@ -122,12 +133,13 @@ serve(async (req) => {
         .update({
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token || connection.refresh_token,
-          token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
         })
         .eq('id', connection.id);
     }
 
     // Fetch users with phone numbers and groups
+    const effectiveCompanyId = company_id ?? connection.company_id;
     const usersData = await fetchGraphData(accessToken, 'users?$select=userPrincipalName,displayName,mail,jobTitle,department,officeLocation,assignedLicenses,businessPhones,mobilePhone,memberOf&$expand=memberOf($select=id,displayName)');
     
     // Track sync statistics
@@ -149,7 +161,7 @@ serve(async (req) => {
       await supabase
         .from('synced_office365_users')
         .upsert({
-          company_id,
+          company_id: effectiveCompanyId,
           user_principal_name: graphUser.userPrincipalName,
           display_name: graphUser.displayName,
           mail: graphUser.mail,
@@ -192,7 +204,7 @@ serve(async (req) => {
       await supabase
         .from('synced_office365_mailboxes')
         .upsert({
-          company_id,
+          company_id: effectiveCompanyId,
           mailbox_name: mailbox.displayName,
           email_address: mailbox.mail || mailbox.userPrincipalName,
           mailbox_type: 'shared',
@@ -206,7 +218,7 @@ serve(async (req) => {
     // Update last sync time
     await supabase
       .from('office365_connections')
-      .update({ last_sync_at: new Date().toISOString() })
+      .update({ updated_at: new Date().toISOString() })
       .eq('id', connection.id);
 
     return new Response(

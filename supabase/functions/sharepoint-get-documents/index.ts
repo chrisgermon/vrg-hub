@@ -57,8 +57,7 @@ serve(async (req) => {
       .from('office365_connections')
       .select('access_token')
       .is('user_id', null)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
+      .order('updated_at', { ascending: false })
       .maybeSingle();
 
     if (companyConnection?.access_token) {
@@ -69,7 +68,7 @@ serve(async (req) => {
         .from('office365_connections')
         .select('access_token')
         .eq('user_id', user.id)
-        .eq('is_active', true)
+        .order('updated_at', { ascending: false })
         .maybeSingle();
       if (userConnection?.access_token) {
         connection = userConnection;

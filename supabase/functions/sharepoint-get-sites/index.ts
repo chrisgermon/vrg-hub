@@ -36,13 +36,33 @@ serve(async (req) => {
       throw new Error('Company ID is required');
     }
 
-    // Get Office 365 connection
-    const { data: connection } = await supabaseClient
-      .from('office365_connections')
-      .select('access_token')
-      .eq('company_id', company_id)
-      .eq('is_active', true)
-      .single();
+    // Get Office 365 connection (prefer company-level via admin, fallback to user-level)
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    let connection: { access_token: string } | null = null;
+
+    if (company_id) {
+      const { data: companyConn } = await supabaseAdmin
+        .from('office365_connections')
+        .select('access_token')
+        .eq('company_id', company_id)
+        .order('updated_at', { ascending: false })
+        .maybeSingle();
+      if (companyConn?.access_token) connection = companyConn;
+    }
+
+    if (!connection) {
+      const { data: userConn } = await supabaseAdmin
+        .from('office365_connections')
+        .select('access_token')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .maybeSingle();
+      if (userConn?.access_token) connection = userConn;
+    }
 
     if (!connection || !connection.access_token) {
       throw new Error('Office 365 not connected');
