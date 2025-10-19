@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { FileUp, Loader2 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface ExcelImporterProps {
   onSuccess: () => void;
@@ -13,15 +13,21 @@ interface ExcelImporterProps {
 
 export function ExcelImporter({ onSuccess }: ExcelImporterProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [pastedData, setPastedData] = useState('');
+  const [excelFile, setExcelFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const { toast } = useToast();
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setExcelFile(e.target.files[0]);
+    }
+  };
+
   const handleImport = async () => {
-    if (!pastedData.trim()) {
+    if (!excelFile) {
       toast({
         title: 'Error',
-        description: 'Please paste the parsed Excel data',
+        description: 'Please select an Excel file',
         variant: 'destructive',
       });
       return;
@@ -30,11 +36,17 @@ export function ExcelImporter({ onSuccess }: ExcelImporterProps) {
     setIsImporting(true);
 
     try {
-      console.log('Calling parse-modality-excel with data length:', pastedData.length);
+      // Parse Excel file
+      const data = await excelFile.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const parsedText = XLSX.utils.sheet_to_txt(worksheet);
+      
+      console.log('Calling parse-modality-excel with data length:', parsedText.length);
       
       // Call AI to parse and match
       const { data: aiResult, error: aiError } = await supabase.functions.invoke('parse-modality-excel', {
-        body: { parsedText: pastedData }
+        body: { parsedText }
       });
 
       console.log('AI Result:', aiResult);
@@ -69,7 +81,7 @@ export function ExcelImporter({ onSuccess }: ExcelImporterProps) {
           });
 
           setIsOpen(false);
-          setPastedData('');
+          setExcelFile(null);
           onSuccess();
       }
 
@@ -178,31 +190,32 @@ export function ExcelImporter({ onSuccess }: ExcelImporterProps) {
       <DialogTrigger asChild>
         <Button variant="outline">
           <FileUp className="w-4 h-4 mr-2" />
-          Import from Parsed Data
+          Import Excel File
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Import DICOM Configuration</DialogTitle>
           <DialogDescription>
-            Paste the parsed Excel data (from the document parser tool). AI will automatically match sites to brands and locations.
+            Upload your Excel file with DICOM modality information. AI will automatically match sites to existing brands and locations.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="parsed-data">Parsed Data</Label>
-            <Textarea
-              id="parsed-data"
-              placeholder="Paste parsed Excel data here..."
-              value={pastedData}
-              onChange={(e) => setPastedData(e.target.value)}
-              rows={15}
-              className="font-mono text-xs"
+            <Label htmlFor="excel-file">Excel File</Label>
+            <input
+              id="excel-file"
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleFileChange}
               disabled={isImporting}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
-            <p className="text-xs text-muted-foreground mt-2">
-              Tip: Use the document parser on your Excel file first, then paste the result here
-            </p>
+            {excelFile && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Selected: {excelFile.name}
+              </p>
+            )}
           </div>
           <div className="flex gap-2 justify-end">
             <Button
@@ -212,7 +225,7 @@ export function ExcelImporter({ onSuccess }: ExcelImporterProps) {
             >
               Cancel
             </Button>
-            <Button onClick={handleImport} disabled={isImporting || !pastedData.trim()}>
+            <Button onClick={handleImport} disabled={isImporting || !excelFile}>
               {isImporting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
