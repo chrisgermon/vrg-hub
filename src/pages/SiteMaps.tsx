@@ -1,12 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, MapPin } from 'lucide-react';
+import { Loader2, MapPin, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Location {
   id: string;
@@ -18,6 +19,8 @@ interface Location {
   phone: string | null;
   email: string | null;
   brand_id: string;
+  latitude?: number | null;
+  longitude?: number | null;
   brands?: {
     display_name: string;
   };
@@ -42,6 +45,8 @@ export default function SiteMaps() {
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [geocodedLocations, setGeocodedLocations] = useState<Map<string, google.maps.LatLngLiteral>>(new Map());
+  const [geocoding, setGeocoding] = useState(false);
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
@@ -93,48 +98,79 @@ export default function SiteMaps() {
     setMap(null);
   }, []);
 
-  // Adjust map bounds when locations change
-  const fitBounds = useCallback(() => {
-    if (!map || !locations || locations.length === 0) return;
-
-    const bounds = new google.maps.LatLngBounds();
-    let hasValidCoords = false;
-
-    locations.forEach((location) => {
-      // For demo purposes, using approximate coordinates based on city/state
-      // In production, you'd want to geocode the addresses or store lat/lng
-      const coords = getCoordinatesForLocation(location);
-      if (coords) {
-        bounds.extend(coords);
-        hasValidCoords = true;
-      }
-    });
-
-    if (hasValidCoords) {
-      map.fitBounds(bounds);
+  // Geocode a single location
+  const geocodeLocation = async (location: Location): Promise<google.maps.LatLngLiteral | null> => {
+    // Check if already geocoded
+    if (geocodedLocations.has(location.id)) {
+      return geocodedLocations.get(location.id)!;
     }
-  }, [map, locations]);
 
-  // Helper function to get coordinates (simplified - in production use geocoding)
-  const getCoordinatesForLocation = (location: Location): google.maps.LatLngLiteral | null => {
-    // This is a simplified demo - in production, you'd geocode addresses
-    // or store lat/lng in the database
-    if (!location.city && !location.state) return null;
-    
-    // Example: Return approximate coordinates based on state
-    // You should implement proper geocoding or store coordinates in DB
-    const stateCoords: Record<string, google.maps.LatLngLiteral> = {
-      'NSW': { lat: -33.8688, lng: 151.2093 },
-      'VIC': { lat: -37.8136, lng: 144.9631 },
-      'QLD': { lat: -27.4698, lng: 153.0251 },
-      'SA': { lat: -34.9285, lng: 138.6007 },
-      'WA': { lat: -31.9505, lng: 115.8605 },
-      'TAS': { lat: -42.8821, lng: 147.3272 },
-      'NT': { lat: -12.4634, lng: 130.8456 },
-      'ACT': { lat: -35.2809, lng: 149.1300 },
+    // Check if coordinates are stored in database
+    if (location.latitude && location.longitude) {
+      const coords = { lat: location.latitude, lng: location.longitude };
+      setGeocodedLocations(prev => new Map(prev).set(location.id, coords));
+      return coords;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('geocode-address', {
+        body: {
+          address: location.address,
+          city: location.city,
+          state: location.state,
+          zipCode: location.zip_code,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data && data.lat && data.lng) {
+        const coords = { lat: data.lat, lng: data.lng };
+        setGeocodedLocations(prev => new Map(prev).set(location.id, coords));
+        return coords;
+      }
+    } catch (error) {
+      console.error(`Failed to geocode location ${location.name}:`, error);
+    }
+
+    return null;
+  };
+
+  // Geocode all locations when they load
+  useEffect(() => {
+    if (!locations || locations.length === 0) return;
+
+    const geocodeAll = async () => {
+      setGeocoding(true);
+      let geocodedCount = 0;
+      
+      for (const location of locations) {
+        const coords = await geocodeLocation(location);
+        if (coords) geocodedCount++;
+      }
+      
+      setGeocoding(false);
+      if (geocodedCount > 0) {
+        toast.success(`Successfully geocoded ${geocodedCount} of ${locations.length} locations`);
+      }
     };
 
-    return location.state ? stateCoords[location.state.toUpperCase()] || defaultCenter : defaultCenter;
+    geocodeAll();
+  }, [locations]);
+
+  // Get coordinates for a location
+  const getCoordinatesForLocation = (location: Location): google.maps.LatLngLiteral | null => {
+    // Try geocoded coordinates first
+    if (geocodedLocations.has(location.id)) {
+      return geocodedLocations.get(location.id)!;
+    }
+    
+    // Try database coordinates
+    if (location.latitude && location.longitude) {
+      return { lat: location.latitude, lng: location.longitude };
+    }
+    
+    return null;
   };
 
   if (loadError) {
@@ -180,6 +216,7 @@ export default function SiteMaps() {
                   ? `Showing all ${locations?.length || 0} locations`
                   : `Showing ${locations?.length || 0} ${brands?.find(b => b.id === selectedBrand)?.display_name} locations`
                 }
+                {geocoding && ' (Geocoding addresses...)'}
               </CardDescription>
             </div>
             <div className="w-[200px]">
@@ -273,10 +310,19 @@ export default function SiteMaps() {
         </CardContent>
       </Card>
 
+      {geocoding && (
+        <Alert>
+          <RefreshCw className="h-4 w-4 animate-spin" />
+          <AlertDescription>
+            Geocoding location addresses using Google Maps API...
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Note: Location coordinates are approximate. For accurate mapping, geocode addresses or store latitude/longitude in the database.
+          Locations are geocoded using Google's Geocoding API for accurate positioning on the map.
         </AlertDescription>
       </Alert>
     </div>

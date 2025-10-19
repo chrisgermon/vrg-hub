@@ -1,0 +1,90 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+interface GeocodeRequest {
+  address: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+}
+
+interface GeocodeResponse {
+  lat: number;
+  lng: number;
+  formatted_address?: string;
+}
+
+const handler = async (req: Request): Promise<Response> => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { address, city, state, zipCode }: GeocodeRequest = await req.json();
+    
+    const googleMapsApiKey = Deno.env.get('VITE_GOOGLE_MAPS_API_KEY');
+    
+    if (!googleMapsApiKey) {
+      throw new Error('Google Maps API key not configured');
+    }
+
+    // Build address string
+    const addressParts = [address, city, state, zipCode].filter(Boolean);
+    const fullAddress = addressParts.join(', ');
+
+    if (!fullAddress) {
+      throw new Error('No address provided');
+    }
+
+    // Call Google Geocoding API
+    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${googleMapsApiKey}`;
+    
+    const response = await fetch(geocodeUrl);
+    const data = await response.json();
+
+    if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+      console.error('Geocoding failed:', data.status, data.error_message);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to geocode address',
+          status: data.status,
+          message: data.error_message 
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const location = data.results[0].geometry.location;
+    const result: GeocodeResponse = {
+      lat: location.lat,
+      lng: location.lng,
+      formatted_address: data.results[0].formatted_address,
+    };
+
+    return new Response(
+      JSON.stringify(result),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
+  } catch (error: any) {
+    console.error("[geocode-address] ERROR:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
+  }
+};
+
+serve(handler);
