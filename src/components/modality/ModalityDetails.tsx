@@ -42,6 +42,7 @@ import {
   MonitorDot
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { ExcelImporter } from './ExcelImporter';
 
 interface Clinic {
   id: string;
@@ -541,11 +542,13 @@ export function ModalityDetails() {
         </div>
         {isAdmin && (
           <div className="flex gap-2">
+            <ExcelImporter onSuccess={loadClinics} />
+            
             <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
               <DialogTrigger asChild>
                 <Button variant="outline">
                   <FileUp className="w-4 h-4 mr-2" />
-                  Import with AI
+                  Import Text Data
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
