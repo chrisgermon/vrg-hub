@@ -43,8 +43,15 @@ const defaultCenter = {
 
 export default function SiteMaps() {
   // Small loader component to initialize Google Maps script only when API key is ready
-  function MapsLoader({ apiKey, children }: { apiKey: string; children: () => JSX.Element }) {
+  function MapsLoader({ apiKey, children, onLoaded }: { apiKey: string; children: () => JSX.Element; onLoaded?: () => void }) {
     const { isLoaded, loadError } = useJsApiLoader({ googleMapsApiKey: apiKey });
+
+    useEffect(() => {
+      if (isLoaded) {
+        onLoaded?.();
+      }
+    }, [isLoaded, onLoaded]);
+
     if (loadError) {
       return (
         <div className="container mx-auto py-8 space-y-6">
@@ -73,6 +80,8 @@ export default function SiteMaps() {
   const [geocoding, setGeocoding] = useState(false);
 
   const [apiKey, setApiKey] = useState<string>(GOOGLE_MAPS_API_KEY);
+  const [mapsLoaded, setMapsLoaded] = useState<boolean>(false);
+  const [mapsLoadTimedOut, setMapsLoadTimedOut] = useState<boolean>(false);
 
   // Fallback: fetch public key from backend if not in frontend env
   useEffect(() => {
@@ -90,6 +99,13 @@ export default function SiteMaps() {
     };
     fetchKey();
   }, [apiKey]);
+
+  // Show a helpful error if the Maps script takes too long to load
+  useEffect(() => {
+    if (!apiKey || mapsLoaded) return;
+    const t = setTimeout(() => setMapsLoadTimedOut(true), 15000);
+    return () => clearTimeout(t);
+  }, [apiKey, mapsLoaded]);
 
   // Fetch brands
   const { data: brands } = useQuery({
@@ -232,13 +248,6 @@ export default function SiteMaps() {
     return null;
   };
 
-  if (!apiKey) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -288,77 +297,93 @@ export default function SiteMaps() {
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="rounded-lg overflow-hidden border">
-              <MapsLoader apiKey={apiKey}>
-                {() => (
-                  <GoogleMap
-                    mapContainerStyle={mapContainerStyle}
-                    center={defaultCenter}
-                    zoom={4}
-                    onLoad={onLoad}
-                    onUnmount={onUnmount}
-                    options={{
-                      streetViewControl: false,
-                      mapTypeControl: true,
-                      fullscreenControl: true,
-                    }}
-                  >
-                    {locations?.map((location) => {
-                      const coords = getCoordinatesForLocation(location);
-                      if (!coords) return null;
+            {!apiKey ? (
+              <div className="flex items-center justify-center h-[600px]">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="rounded-lg overflow-hidden border">
+                <MapsLoader apiKey={apiKey} onLoaded={() => setMapsLoaded(true)}>
+                  {() => (
+                    <GoogleMap
+                      mapContainerStyle={mapContainerStyle}
+                      center={defaultCenter}
+                      zoom={4}
+                      onLoad={onLoad}
+                      onUnmount={onUnmount}
+                      options={{
+                        streetViewControl: false,
+                        mapTypeControl: true,
+                        fullscreenControl: true,
+                      }}
+                    >
+                      {locations?.map((location) => {
+                        const coords = getCoordinatesForLocation(location);
+                        if (!coords) return null;
 
-                      return (
-                        <Marker
-                          key={location.id}
-                          position={coords}
-                          onClick={() => setSelectedLocation(location)}
-                          title={location.name}
-                        />
-                      );
-                    })}
+                        return (
+                          <Marker
+                            key={location.id}
+                            position={coords}
+                            onClick={() => setSelectedLocation(location)}
+                            title={location.name}
+                          />
+                        );
+                      })}
 
-                    {selectedLocation && (
-                      <InfoWindow
-                        position={getCoordinatesForLocation(selectedLocation)!}
-                        onCloseClick={() => setSelectedLocation(null)}
-                      >
-                        <div className="p-2">
-                          <h3 className="font-semibold text-sm mb-1">{selectedLocation.name}</h3>
-                          {selectedLocation.brands && (
-                            <p className="text-xs text-muted-foreground mb-2">
-                              {selectedLocation.brands.display_name}
-                            </p>
-                          )}
-                          {selectedLocation.address && (
-                            <p className="text-xs">{selectedLocation.address}</p>
-                          )}
-                          {(selectedLocation.city || selectedLocation.state || selectedLocation.zip_code) && (
-                            <p className="text-xs">
-                              {[selectedLocation.city, selectedLocation.state, selectedLocation.zip_code]
-                                .filter(Boolean)
-                                .join(', ')}
-                            </p>
-                          )}
-                          {selectedLocation.phone && (
-                            <p className="text-xs mt-1">
-                              <strong>Phone:</strong> {selectedLocation.phone}
-                            </p>
-                          )}
-                          {selectedLocation.email && (
-                            <p className="text-xs">
-                              <strong>Email:</strong> {selectedLocation.email}
-                            </p>
-                          )}
-                        </div>
-                      </InfoWindow>
-                    )}
-                  </GoogleMap>
-                )}
-              </MapsLoader>
-            </div>
+                      {selectedLocation && (
+                        <InfoWindow
+                          position={getCoordinatesForLocation(selectedLocation)!}
+                          onCloseClick={() => setSelectedLocation(null)}
+                        >
+                          <div className="p-2">
+                            <h3 className="font-semibold text-sm mb-1">{selectedLocation.name}</h3>
+                            {selectedLocation.brands && (
+                              <p className="text-xs text-muted-foreground mb-2">
+                                {selectedLocation.brands.display_name}
+                              </p>
+                            )}
+                            {selectedLocation.address && (
+                              <p className="text-xs">{selectedLocation.address}</p>
+                            )}
+                            {(selectedLocation.city || selectedLocation.state || selectedLocation.zip_code) && (
+                              <p className="text-xs">
+                                {[selectedLocation.city, selectedLocation.state, selectedLocation.zip_code]
+                                  .filter(Boolean)
+                                  .join(', ')}
+                              </p>
+                            )}
+                            {selectedLocation.phone && (
+                              <p className="text-xs mt-1">
+                                <strong>Phone:</strong> {selectedLocation.phone}
+                              </p>
+                            )}
+                            {selectedLocation.email && (
+                              <p className="text-xs">
+                                <strong>Email:</strong> {selectedLocation.email}
+                              </p>
+                            )}
+                          </div>
+                        </InfoWindow>
+                      )}
+                    </GoogleMap>
+                  )}
+                </MapsLoader>
+              </div>
+            )}
           )}
         </CardContent>
       </Card>
+
+      {mapsLoadTimedOut && !mapsLoaded && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Maps load timeout</AlertTitle>
+          <AlertDescription>
+            We couldn't load Google Maps. Check API key restrictions for this preview domain and ensure billing is enabled.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {geocoding && (
         <Alert>
