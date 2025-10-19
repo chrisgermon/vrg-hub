@@ -42,15 +42,54 @@ const defaultCenter = {
 };
 
 export default function SiteMaps() {
+  // Small loader component to initialize Google Maps script only when API key is ready
+  function MapsLoader({ apiKey, children }: { apiKey: string; children: () => JSX.Element }) {
+    const { isLoaded, loadError } = useJsApiLoader({ googleMapsApiKey: apiKey });
+    if (loadError) {
+      return (
+        <div className="container mx-auto py-8 space-y-6">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Error loading Google Maps. Verify domain restrictions for your API key include your preview domain and that billing is enabled.
+            </AlertDescription>
+          </Alert>
+        </div>
+      );
+    }
+    if (!isLoaded) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+    return children();
+  }
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [geocodedLocations, setGeocodedLocations] = useState<Map<string, google.maps.LatLngLiteral>>(new Map());
   const [geocoding, setGeocoding] = useState(false);
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-  });
+  const [apiKey, setApiKey] = useState<string>(GOOGLE_MAPS_API_KEY);
+
+  // Fallback: fetch public key from backend if not in frontend env
+  useEffect(() => {
+    const fetchKey = async () => {
+      if (!apiKey) {
+        try {
+          const { data, error } = await supabase.functions.invoke('public-google-maps-key');
+          if (!error && data?.apiKey) {
+            setApiKey(data.apiKey);
+          }
+        } catch (e) {
+          console.error('Failed to fetch public Google Maps key', e);
+        }
+      }
+    };
+    fetchKey();
+  }, [apiKey]);
 
   // Fetch brands
   const { data: brands } = useQuery({
@@ -193,63 +232,7 @@ export default function SiteMaps() {
     return null;
   };
 
-  if (!isGoogleMapsConfigured()) {
-    return (
-      <div className="container mx-auto py-8 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Site Maps</h1>
-          <p className="text-muted-foreground mt-2">View all business locations on the map</p>
-        </div>
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Google Maps API Key Required</AlertTitle>
-          <AlertDescription>
-            To use the maps feature, you need to add your Google Maps API key to the environment variables.
-            <br /><br />
-            Add <code className="bg-muted px-1 py-0.5 rounded text-xs">VITE_GOOGLE_MAPS_API_KEY</code> to your .env file with your API key.
-            <br /><br />
-            Get your key from:{' '}
-            <a
-              href="https://console.cloud.google.com/google/maps-apis/credentials"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-foreground"
-            >
-              Google Cloud Console
-            </a>
-            <br /><br />
-            Make sure to enable the <strong>Maps JavaScript API</strong> for your project.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <div className="container mx-auto py-8 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Site Maps</h1>
-          <p className="text-muted-foreground mt-2">View all business locations on the map</p>
-        </div>
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error Loading Maps</AlertTitle>
-          <AlertDescription>
-            There was an error loading Google Maps. Please check your API key configuration and ensure:
-            <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-              <li>The API key is valid and not restricted to other domains</li>
-              <li>Maps JavaScript API is enabled in Google Cloud Console</li>
-              <li>Billing is set up for your Google Cloud project</li>
-              <li>The API key has the correct permissions</li>
-            </ul>
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
-  if (!isLoaded) {
+  if (!apiKey) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -306,68 +289,72 @@ export default function SiteMaps() {
             </div>
           ) : (
             <div className="rounded-lg overflow-hidden border">
-              <GoogleMap
-                mapContainerStyle={mapContainerStyle}
-                center={defaultCenter}
-                zoom={4}
-                onLoad={onLoad}
-                onUnmount={onUnmount}
-                options={{
-                  streetViewControl: false,
-                  mapTypeControl: true,
-                  fullscreenControl: true,
-                }}
-              >
-                {locations?.map((location) => {
-                  const coords = getCoordinatesForLocation(location);
-                  if (!coords) return null;
-
-                  return (
-                    <Marker
-                      key={location.id}
-                      position={coords}
-                      onClick={() => setSelectedLocation(location)}
-                      title={location.name}
-                    />
-                  );
-                })}
-
-                {selectedLocation && (
-                  <InfoWindow
-                    position={getCoordinatesForLocation(selectedLocation)!}
-                    onCloseClick={() => setSelectedLocation(null)}
+              <MapsLoader apiKey={apiKey}>
+                {() => (
+                  <GoogleMap
+                    mapContainerStyle={mapContainerStyle}
+                    center={defaultCenter}
+                    zoom={4}
+                    onLoad={onLoad}
+                    onUnmount={onUnmount}
+                    options={{
+                      streetViewControl: false,
+                      mapTypeControl: true,
+                      fullscreenControl: true,
+                    }}
                   >
-                    <div className="p-2">
-                      <h3 className="font-semibold text-sm mb-1">{selectedLocation.name}</h3>
-                      {selectedLocation.brands && (
-                        <p className="text-xs text-muted-foreground mb-2">
-                          {selectedLocation.brands.display_name}
-                        </p>
-                      )}
-                      {selectedLocation.address && (
-                        <p className="text-xs">{selectedLocation.address}</p>
-                      )}
-                      {(selectedLocation.city || selectedLocation.state || selectedLocation.zip_code) && (
-                        <p className="text-xs">
-                          {[selectedLocation.city, selectedLocation.state, selectedLocation.zip_code]
-                            .filter(Boolean)
-                            .join(', ')}
-                        </p>
-                      )}
-                      {selectedLocation.phone && (
-                        <p className="text-xs mt-1">
-                          <strong>Phone:</strong> {selectedLocation.phone}
-                        </p>
-                      )}
-                      {selectedLocation.email && (
-                        <p className="text-xs">
-                          <strong>Email:</strong> {selectedLocation.email}
-                        </p>
-                      )}
-                    </div>
-                  </InfoWindow>
+                    {locations?.map((location) => {
+                      const coords = getCoordinatesForLocation(location);
+                      if (!coords) return null;
+
+                      return (
+                        <Marker
+                          key={location.id}
+                          position={coords}
+                          onClick={() => setSelectedLocation(location)}
+                          title={location.name}
+                        />
+                      );
+                    })}
+
+                    {selectedLocation && (
+                      <InfoWindow
+                        position={getCoordinatesForLocation(selectedLocation)!}
+                        onCloseClick={() => setSelectedLocation(null)}
+                      >
+                        <div className="p-2">
+                          <h3 className="font-semibold text-sm mb-1">{selectedLocation.name}</h3>
+                          {selectedLocation.brands && (
+                            <p className="text-xs text-muted-foreground mb-2">
+                              {selectedLocation.brands.display_name}
+                            </p>
+                          )}
+                          {selectedLocation.address && (
+                            <p className="text-xs">{selectedLocation.address}</p>
+                          )}
+                          {(selectedLocation.city || selectedLocation.state || selectedLocation.zip_code) && (
+                            <p className="text-xs">
+                              {[selectedLocation.city, selectedLocation.state, selectedLocation.zip_code]
+                                .filter(Boolean)
+                                .join(', ')}
+                            </p>
+                          )}
+                          {selectedLocation.phone && (
+                            <p className="text-xs mt-1">
+                              <strong>Phone:</strong> {selectedLocation.phone}
+                            </p>
+                          )}
+                          {selectedLocation.email && (
+                            <p className="text-xs">
+                              <strong>Email:</strong> {selectedLocation.email}
+                            </p>
+                          )}
+                        </div>
+                      </InfoWindow>
+                    )}
+                  </GoogleMap>
                 )}
-              </GoogleMap>
+              </MapsLoader>
             </div>
           )}
         </CardContent>

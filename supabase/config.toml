@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.office365-oauth-callback]
 verify_jwt = false
+
+[functions.public-google-maps-key]
+verify_jwt = false
