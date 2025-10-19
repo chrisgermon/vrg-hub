@@ -40,24 +40,49 @@ export function useTeams() {
   return useQuery({
     queryKey: ['teams'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get teams with members
+      const { data: teams, error: teamsError } = await supabase
         .from('teams')
         .select(`
           *,
-          team_members(
-            id,
-            user_id,
-            role_in_team,
-            workload_capacity,
-            out_of_office_from,
-            out_of_office_to,
-            timezone,
-            user:profiles(full_name, email)
-          )
+          team_members(*)
         `)
         .order('name');
-      if (error) throw error;
-      return data;
+      
+      if (teamsError) throw teamsError;
+      if (!teams) return [];
+
+      // Then fetch profile info for each member
+      const teamsWithProfiles = await Promise.all(
+        teams.map(async (team) => {
+          if (!team.team_members || team.team_members.length === 0) {
+            return { ...team, team_members: [] };
+          }
+
+          const userIds = team.team_members.map((m: any) => m.user_id).filter(Boolean);
+          
+          if (userIds.length === 0) {
+            return { ...team, team_members: team.team_members.map((m: any) => ({ ...m, user: null })) };
+          }
+
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', userIds);
+
+          const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+          return {
+            ...team,
+            team_members: team.team_members.map((member: any) => ({
+              ...member,
+              user: profilesMap.get(member.user_id) || null
+            }))
+          };
+        })
+      );
+
+      return teamsWithProfiles;
     },
   });
 }
