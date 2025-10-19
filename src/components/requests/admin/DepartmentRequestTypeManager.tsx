@@ -60,9 +60,12 @@ export function DepartmentRequestTypeManager() {
                     <CardDescription className="mt-1 text-sm">{dept.description}</CardDescription>
                   )}
                 </div>
-                <Badge variant={dept.is_active ? 'default' : 'secondary'}>
-                  {dept.is_active ? 'Active' : 'Inactive'}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={dept.is_active ? 'default' : 'secondary'}>
+                    {dept.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
+                  <DepartmentDialog department={dept} />
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -71,9 +74,12 @@ export function DepartmentRequestTypeManager() {
                 {requestTypes?.filter(rt => rt.department_id === dept.id).map(rt => (
                   <div key={rt.id} className="flex items-center justify-between rounded-md border p-2">
                     <span className="text-sm">{rt.name}</span>
-                    <Badge variant={rt.is_active ? 'outline' : 'secondary'} className="text-xs">
-                      {rt.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={rt.is_active ? 'outline' : 'secondary'} className="text-xs">
+                        {rt.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
+                      <RequestTypeDialog departments={departments || []} requestType={rt} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -85,32 +91,50 @@ export function DepartmentRequestTypeManager() {
   );
 }
 
-function DepartmentDialog() {
+function DepartmentDialog({ department }: { department?: any }) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [isActive, setIsActive] = useState(true);
+  const [name, setName] = useState(department?.name || '');
+  const [description, setDescription] = useState(department?.description || '');
+  const [isActive, setIsActive] = useState(department?.is_active ?? true);
   const createDepartment = useCreateDepartment();
+  const updateDepartment = useUpdateDepartment();
+
+  const isEdit = !!department;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createDepartment.mutateAsync({ name, description, is_active: isActive });
+    if (isEdit) {
+      await updateDepartment.mutateAsync({ 
+        id: department.id, 
+        data: { name, description, is_active: isActive } 
+      });
+    } else {
+      await createDepartment.mutateAsync({ name, description, is_active: isActive });
+    }
     setOpen(false);
-    setName('');
-    setDescription('');
+    if (!isEdit) {
+      setName('');
+      setDescription('');
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="mr-2 h-4 w-4" />
-          New Department
-        </Button>
+        {isEdit ? (
+          <Button size="icon" variant="ghost" className="h-8 w-8">
+            <Edit2 className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            New Department
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create Department</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit' : 'Create'} Department</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -125,48 +149,66 @@ function DepartmentDialog() {
             <Label htmlFor="active">Active</Label>
             <Switch id="active" checked={isActive} onCheckedChange={setIsActive} />
           </div>
-          <Button type="submit" className="w-full">Create Department</Button>
+          <Button type="submit" className="w-full">{isEdit ? 'Update' : 'Create'} Department</Button>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
 
-function RequestTypeDialog({ departments }: { departments: any[] }) {
+function RequestTypeDialog({ departments, requestType }: { departments: any[]; requestType?: any }) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [departmentId, setDepartmentId] = useState('');
-  const [slug, setSlug] = useState('');
-  const [isActive, setIsActive] = useState(true);
+  const [name, setName] = useState(requestType?.name || '');
+  const [description, setDescription] = useState(requestType?.description || '');
+  const [departmentId, setDepartmentId] = useState(requestType?.department_id || '');
+  const [slug, setSlug] = useState(requestType?.slug || '');
+  const [isActive, setIsActive] = useState(requestType?.is_active ?? true);
   const createRequestType = useCreateRequestType();
+  const updateRequestType = useUpdateRequestType();
+
+  const isEdit = !!requestType;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createRequestType.mutateAsync({
+    const data = {
       name,
       description,
       department_id: departmentId,
       slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
       is_active: isActive,
-    });
+    };
+
+    if (isEdit) {
+      await updateRequestType.mutateAsync({ id: requestType.id, data });
+    } else {
+      await createRequestType.mutateAsync(data);
+    }
     setOpen(false);
-    setName('');
-    setDescription('');
-    setSlug('');
+    if (!isEdit) {
+      setName('');
+      setDescription('');
+      setSlug('');
+      setDepartmentId('');
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          <FolderPlus className="mr-2 h-4 w-4" />
-          New Request Type
-        </Button>
+        {isEdit ? (
+          <Button size="icon" variant="ghost" className="h-6 w-6">
+            <Edit2 className="h-3 w-3" />
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline">
+            <FolderPlus className="mr-2 h-4 w-4" />
+            New Request Type
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create Request Type</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit' : 'Create'} Request Type</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -198,7 +240,7 @@ function RequestTypeDialog({ departments }: { departments: any[] }) {
             <Label htmlFor="active">Active</Label>
             <Switch id="active" checked={isActive} onCheckedChange={setIsActive} />
           </div>
-          <Button type="submit" className="w-full">Create Request Type</Button>
+          <Button type="submit" className="w-full">{isEdit ? 'Update' : 'Create'} Request Type</Button>
         </form>
       </DialogContent>
     </Dialog>
