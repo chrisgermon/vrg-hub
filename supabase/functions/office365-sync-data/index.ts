@@ -221,6 +221,43 @@ serve(async (req) => {
         });
     }
 
+    // Auto-create auth users for synced O365 users (as inactive)
+    // Create admin client for user management
+    const adminClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    
+    let usersCreated = 0;
+    let usersExisted = 0;
+    
+    for (const syncedUser of usersData.value || []) {
+      if (!syncedUser.mail) continue;
+      
+      // Check if user already exists
+      const { data: existingUser } = await adminClient.auth.admin.listUsers();
+      const userExists = existingUser?.users?.some((u: any) => u.email === syncedUser.mail);
+      
+      if (!userExists) {
+        try {
+          // Create auth user marked as O365 import
+          await adminClient.auth.admin.createUser({
+            email: syncedUser.mail,
+            email_confirm: true,
+            user_metadata: {
+              full_name: syncedUser.displayName,
+              imported_from_o365: true,
+            },
+          });
+          usersCreated++;
+        } catch (error) {
+          console.error(`Failed to create user ${syncedUser.mail}:`, error);
+        }
+      } else {
+        usersExisted++;
+      }
+    }
+
     // Update last sync time
     await supabase
       .from('office365_connections')
@@ -233,6 +270,8 @@ serve(async (req) => {
         total_users_found: totalUsers,
         users_synced: usersWithLicenses,
         users_skipped: usersSkipped,
+        users_created: usersCreated,
+        users_existed: usersExisted,
         mailboxes_synced: mailboxesData.value?.length || 0,
         sync_completed_at: new Date().toISOString(),
       }),

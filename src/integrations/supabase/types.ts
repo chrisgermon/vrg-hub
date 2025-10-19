@@ -1616,6 +1616,8 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          imported_from_o365: boolean | null
+          is_active: boolean | null
           location: string | null
           location_id: string | null
           phone: string | null
@@ -1630,6 +1632,8 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          imported_from_o365?: boolean | null
+          is_active?: boolean | null
           location?: string | null
           location_id?: string | null
           phone?: string | null
@@ -1644,6 +1648,8 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          imported_from_o365?: boolean | null
+          is_active?: boolean | null
           location?: string | null
           location_id?: string | null
           phone?: string | null

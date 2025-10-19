@@ -125,12 +125,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithPassword = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) throw error;
+
+    // Activate user profile if this is their first sign-in
+    if (data.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_active, imported_from_o365')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      if (profile && !profile.is_active && profile.imported_from_o365) {
+        await supabase
+          .from('profiles')
+          .update({ is_active: true })
+          .eq('id', data.user.id);
+      }
+    }
   };
 
   const signUp = async (email: string, password: string) => {
