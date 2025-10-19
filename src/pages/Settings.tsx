@@ -16,6 +16,11 @@ import { UsersSection } from '@/components/settings/UsersSection';
 import { PrintBrandsManager } from '@/components/settings/PrintBrandsManager';
 import { CompanyDomainsManager } from '@/components/settings/CompanyDomainsManager';
 import { CompanyFeaturesManager } from '@/components/settings/CompanyFeaturesManager';
+import { DepartmentRequestTypeManager } from '@/components/requests/admin/DepartmentRequestTypeManager';
+import { TeamManagement } from '@/components/requests/admin/TeamManagement';
+import { RoutingRulesManager } from '@/components/requests/admin/RoutingRulesManager';
+import { TicketQueueManager } from '@/components/requests/admin/TicketQueueManager';
+import { TicketAuditLog } from '@/components/requests/admin/TicketAuditLog';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Edit } from 'lucide-react';
@@ -54,6 +59,7 @@ export default function Settings() {
           {isAdmin && <TabsTrigger value="company">Company</TabsTrigger>}
           {isAdmin && <TabsTrigger value="users">Users & Roles</TabsTrigger>}
           {isAdmin && <TabsTrigger value="forms">Request Forms</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="ticketing">Ticketing System</TabsTrigger>}
           {isAdmin && <TabsTrigger value="notifications">Notifications</TabsTrigger>}
           {isAdmin && <TabsTrigger value="menu">Menu</TabsTrigger>}
           {isSuperAdmin && <TabsTrigger value="system">System</TabsTrigger>}
@@ -163,6 +169,35 @@ export default function Settings() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="ticketing" className="space-y-6">
+            <Tabs defaultValue="departments" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="departments">Departments & Types</TabsTrigger>
+                <TabsTrigger value="teams">Teams</TabsTrigger>
+                <TabsTrigger value="routing">Routing Rules</TabsTrigger>
+                <TabsTrigger value="queue">Ticket Queue</TabsTrigger>
+                <TabsTrigger value="audit">Audit Log</TabsTrigger>
+              </TabsList>
+              <TabsContent value="departments">
+                <DepartmentRequestTypeManager />
+              </TabsContent>
+              <TabsContent value="teams">
+                <TeamManagement />
+              </TabsContent>
+              <TabsContent value="routing">
+                <RoutingRulesManager />
+              </TabsContent>
+              <TabsContent value="queue">
+                <TicketQueueManager />
+              </TabsContent>
+              <TabsContent value="audit">
+                <TicketAuditLog />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         )}
 
