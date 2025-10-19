@@ -48,11 +48,13 @@ export default function SiteMaps() {
 
     useEffect(() => {
       if (isLoaded) {
+        console.log('[SiteMaps] Google Maps script isLoaded');
         onLoaded?.();
       }
     }, [isLoaded, onLoaded]);
 
     if (loadError) {
+      console.error('[SiteMaps] Google Maps loadError', loadError);
       return (
         <div className="container mx-auto py-8 space-y-6">
           <Alert variant="destructive">
@@ -90,6 +92,7 @@ export default function SiteMaps() {
         try {
           const { data, error } = await supabase.functions.invoke('public-google-maps-key');
           if (!error && data?.apiKey) {
+            console.log('[SiteMaps] Maps API key fetched from backend. hasKey:', data.hasKey);
             setApiKey(data.apiKey);
           }
         } catch (e) {
@@ -103,7 +106,10 @@ export default function SiteMaps() {
   // Show a helpful error if the Maps script takes too long to load
   useEffect(() => {
     if (!apiKey || mapsLoaded) return;
-    const t = setTimeout(() => setMapsLoadTimedOut(true), 15000);
+    const t = setTimeout(() => {
+      console.error('[SiteMaps] Google Maps load timed out. Origin:', window.location.origin);
+      setMapsLoadTimedOut(true);
+    }, 15000);
     return () => clearTimeout(t);
   }, [apiKey, mapsLoaded]);
 
@@ -379,6 +385,7 @@ export default function SiteMaps() {
           <AlertTitle>Maps load timeout</AlertTitle>
           <AlertDescription>
             We couldn't load Google Maps. Check API key restrictions for this preview domain and ensure billing is enabled.
+            Allowed referrer (add to key restrictions): {window.location.origin}
           </AlertDescription>
         </Alert>
       )}
