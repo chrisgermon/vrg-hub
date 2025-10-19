@@ -4,10 +4,10 @@ import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-map
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, MapPin, RefreshCw } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { Loader2, MapPin, RefreshCw, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
+import { GOOGLE_MAPS_API_KEY, isGoogleMapsConfigured } from '@/lib/googleMapsConfig';
 
 interface Location {
   id: string;
@@ -49,7 +49,7 @@ export default function SiteMaps() {
   const [geocoding, setGeocoding] = useState(false);
 
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
   });
 
   // Fetch brands
@@ -193,13 +193,56 @@ export default function SiteMaps() {
     return null;
   };
 
-  if (loadError) {
+  if (!isGoogleMapsConfigured()) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto py-8 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Site Maps</h1>
+          <p className="text-muted-foreground mt-2">View all business locations on the map</p>
+        </div>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Google Maps API Key Required</AlertTitle>
           <AlertDescription>
-            Failed to load Google Maps. Please make sure the GOOGLE_MAPS_API_KEY is configured.
+            To use the maps feature, you need to add your Google Maps API key to the environment variables.
+            <br /><br />
+            Add <code className="bg-muted px-1 py-0.5 rounded text-xs">VITE_GOOGLE_MAPS_API_KEY</code> to your .env file with your API key.
+            <br /><br />
+            Get your key from:{' '}
+            <a
+              href="https://console.cloud.google.com/google/maps-apis/credentials"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              Google Cloud Console
+            </a>
+            <br /><br />
+            Make sure to enable the <strong>Maps JavaScript API</strong> for your project.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="container mx-auto py-8 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Site Maps</h1>
+          <p className="text-muted-foreground mt-2">View all business locations on the map</p>
+        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error Loading Maps</AlertTitle>
+          <AlertDescription>
+            There was an error loading Google Maps. Please check your API key configuration and ensure:
+            <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+              <li>The API key is valid and not restricted to other domains</li>
+              <li>Maps JavaScript API is enabled in Google Cloud Console</li>
+              <li>Billing is set up for your Google Cloud project</li>
+              <li>The API key has the correct permissions</li>
+            </ul>
           </AlertDescription>
         </Alert>
       </div>
