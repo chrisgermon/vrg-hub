@@ -2279,6 +2279,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_rbac_role: {
+        Args: { _role_name: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
