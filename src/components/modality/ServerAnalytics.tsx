@@ -36,11 +36,13 @@ export function ServerAnalytics() {
     try {
       setLoading(true);
 
-      // Get all DICOM servers
+      // Get all DICOM servers, excluding backup PACS
       const { data: servers, error: serversError } = await supabase
         .from('dicom_servers')
         .select('*')
-        .order('name');
+        .not('name', 'ilike', '%Backup PACS%')
+        .not('function', 'ilike', '%Backup PACS%')
+        .order('ae_title');
 
       if (serversError) throw serversError;
 
@@ -49,31 +51,53 @@ export function ServerAnalytics() {
         return;
       }
 
-      // For each server, count modalities that reference it
-      const serverLoadPromises = servers.map(async (server) => {
-        // Count modalities with matching IP address
-        const { count: modalityCount } = await supabase
-          .from('modalities')
-          .select('*', { count: 'exact', head: true })
-          .or(`ip_address.eq.${server.ip_address},worklist_ip_address.eq.${server.ip_address}`);
+      // Group servers by AE Title
+      const serversByAeTitle = new Map<string, typeof servers>();
+      
+      servers.forEach(server => {
+        const aeTitle = server.ae_title || 'Unknown';
+        if (!serversByAeTitle.has(aeTitle)) {
+          serversByAeTitle.set(aeTitle, []);
+        }
+        serversByAeTitle.get(aeTitle)!.push(server);
+      });
 
-        // Get unique clinics that have this server
-        const { data: clinicsData } = await supabase
-          .from('dicom_servers')
-          .select('clinic_id')
-          .eq('ip_address', server.ip_address);
+      // For each AE Title group, aggregate counts
+      const serverLoadPromises = Array.from(serversByAeTitle.entries()).map(async ([aeTitle, serverGroup]) => {
+        let totalModalityCount = 0;
+        const allClinicIds = new Set<string>();
 
-        const uniqueClinicIds = new Set(clinicsData?.map(c => c.clinic_id) || []);
+        // Aggregate counts from all servers in this AE Title group
+        for (const server of serverGroup) {
+          // Count modalities with matching IP address
+          const { count: modalityCount } = await supabase
+            .from('modalities')
+            .select('*', { count: 'exact', head: true })
+            .or(`ip_address.eq.${server.ip_address},worklist_ip_address.eq.${server.ip_address}`);
+
+          totalModalityCount += modalityCount || 0;
+
+          // Get unique clinics that have this server
+          const { data: clinicsData } = await supabase
+            .from('dicom_servers')
+            .select('clinic_id')
+            .eq('ip_address', server.ip_address);
+
+          clinicsData?.forEach(c => allClinicIds.add(c.clinic_id));
+        }
+
+        // Use the first server's details as representative
+        const representative = serverGroup[0];
 
         return {
-          id: server.id,
-          name: server.name,
-          ip_address: server.ip_address,
-          ae_title: server.ae_title,
-          port: server.port,
-          function: server.function,
-          modality_count: modalityCount || 0,
-          clinic_count: uniqueClinicIds.size,
+          id: representative.id,
+          name: aeTitle,
+          ip_address: serverGroup.map(s => s.ip_address).join(', '),
+          ae_title: aeTitle,
+          port: representative.port,
+          function: representative.function,
+          modality_count: totalModalityCount,
+          clinic_count: allClinicIds.size,
         };
       });
 
