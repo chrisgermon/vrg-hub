@@ -10,6 +10,7 @@ interface GeocodeRequest {
   city?: string;
   state?: string;
   zipCode?: string;
+  locationId?: string;
 }
 
 interface GeocodeResponse {
@@ -24,7 +25,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { address, city, state, zipCode }: GeocodeRequest = await req.json();
+    const { address, city, state, zipCode, locationId }: GeocodeRequest = await req.json();
     
     const googleMapsApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
     
@@ -67,6 +68,26 @@ const handler = async (req: Request): Promise<Response> => {
       lng: location.lng,
       formatted_address: data.results[0].formatted_address,
     };
+
+    // Save coordinates to database if locationId is provided
+    if (locationId) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      
+      await fetch(`${supabaseUrl}/rest/v1/locations?id=eq.${locationId}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          latitude: location.lat,
+          longitude: location.lng
+        })
+      });
+    }
 
     return new Response(
       JSON.stringify(result),

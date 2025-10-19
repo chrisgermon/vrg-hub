@@ -100,7 +100,7 @@ export default function SiteMaps() {
 
   // Geocode a single location
   const geocodeLocation = async (location: Location): Promise<google.maps.LatLngLiteral | null> => {
-    // Check if already geocoded
+    // Check if already geocoded in memory
     if (geocodedLocations.has(location.id)) {
       return geocodedLocations.get(location.id)!;
     }
@@ -112,6 +112,7 @@ export default function SiteMaps() {
       return coords;
     }
 
+    // Only geocode if we don't have coordinates
     try {
       const { data, error } = await supabase.functions.invoke('geocode-address', {
         body: {
@@ -119,6 +120,7 @@ export default function SiteMaps() {
           city: location.city,
           state: location.state,
           zipCode: location.zip_code,
+          locationId: location.id, // Pass locationId to save to database
         },
       });
 
@@ -136,27 +138,45 @@ export default function SiteMaps() {
     return null;
   };
 
-  // Geocode all locations when they load
+  // Geocode only new locations and fit map bounds
   useEffect(() => {
-    if (!locations || locations.length === 0) return;
+    if (!locations || locations.length === 0 || !map) return;
 
-    const geocodeAll = async () => {
+    const geocodeNewAndFitBounds = async () => {
       setGeocoding(true);
-      let geocodedCount = 0;
+      let newGeocodedCount = 0;
+      const bounds = new google.maps.LatLngBounds();
       
+      // Geocode only locations without coordinates
       for (const location of locations) {
         const coords = await geocodeLocation(location);
-        if (coords) geocodedCount++;
+        if (coords) {
+          bounds.extend(coords);
+          // Only count as new if it didn't have coordinates in database
+          if (!location.latitude || !location.longitude) {
+            newGeocodedCount++;
+          }
+        }
       }
       
       setGeocoding(false);
-      if (geocodedCount > 0) {
-        toast.success(`Successfully geocoded ${geocodedCount} of ${locations.length} locations`);
+      
+      // Show toast only for newly geocoded locations
+      if (newGeocodedCount > 0) {
+        toast.success(`Geocoded ${newGeocodedCount} new location${newGeocodedCount > 1 ? 's' : ''}`);
+      }
+      
+      // Fit map to show all markers
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds);
+        // Add padding for better visualization
+        const padding = { top: 50, right: 50, bottom: 50, left: 50 };
+        map.fitBounds(bounds, padding);
       }
     };
 
-    geocodeAll();
-  }, [locations]);
+    geocodeNewAndFitBounds();
+  }, [locations, map]);
 
   // Get coordinates for a location
   const getCoordinatesForLocation = (location: Location): google.maps.LatLngLiteral | null => {
@@ -246,7 +266,7 @@ export default function SiteMaps() {
               <GoogleMap
                 mapContainerStyle={mapContainerStyle}
                 center={defaultCenter}
-                zoom={5}
+                zoom={4}
                 onLoad={onLoad}
                 onUnmount={onUnmount}
                 options={{

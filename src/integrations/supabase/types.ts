@@ -725,6 +725,8 @@ export type Database = {
           email: string | null
           id: string
           is_active: boolean
+          latitude: number | null
+          longitude: number | null
           name: string
           phone: string | null
           sort_order: number | null
@@ -740,6 +742,8 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name: string
           phone?: string | null
           sort_order?: number | null
@@ -755,6 +759,8 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           phone?: string | null
           sort_order?: number | null
