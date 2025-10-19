@@ -20,32 +20,39 @@ export default function RequestDetail() {
     queryFn: async () => {
       if (!requestNumber) return null;
 
-      // Convert VRG-XXXX format back to UUID prefix
-      const prefix = requestNumber.replace('VRG-', '').toLowerCase();
+      // Convert VRG-##### format back to find matching UUID
+      const numericPart = requestNumber.replace('VRG-', '');
+      const targetNumber = parseInt(numericPart, 10);
       
-      // Search for requests where UUID starts with this prefix
-      const { data, error } = await supabase
+      // Fetch all requests and find the one that matches
+      const { data: allRequests, error } = await supabase
         .from('hardware_requests')
         .select(`
           *,
           brands:brand_id(display_name),
           locations:location_id(name)
-        `)
-        .ilike('id', `${prefix}%`)
-        .limit(1)
-        .maybeSingle();
+        `);
 
       if (error) throw error;
-      if (!data) return null;
+      if (!allRequests) return null;
+
+      // Find request where the formatted number matches
+      const matchingRequest = allRequests.find(req => {
+        const hexPart = req.id.slice(0, 8);
+        const numericValue = parseInt(hexPart, 16) % 100000;
+        return numericValue === targetNumber;
+      });
+
+      if (!matchingRequest) return null;
 
       // Fetch user profile separately
       const { data: profile } = await supabase
         .from('profiles')
         .select('full_name, email')
-        .eq('id', data.user_id)
+        .eq('id', matchingRequest.user_id)
         .maybeSingle();
 
-      return { ...data, profile };
+      return { ...matchingRequest, profile };
     },
     enabled: !!requestNumber,
   });
