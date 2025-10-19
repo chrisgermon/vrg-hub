@@ -61,12 +61,18 @@ export default function NewReminder() {
         return;
       }
 
+      // Convert datetime-local to UTC ISO string
+      // The input value is in format "YYYY-MM-DDTHH:MM" which represents local time
+      // We need to convert this to a proper ISO string with timezone info
+      const localDate = new Date(formData.reminder_date);
+      const utcDateString = localDate.toISOString();
+
       const { error } = await supabase.from('reminders').insert({
         user_id: user.id,
         title: formData.title,
         description: formData.description,
         reminder_type: formData.reminder_type,
-        reminder_date: formData.reminder_date,
+        reminder_date: utcDateString,
         is_recurring: formData.is_recurring,
         recurrence_pattern: formData.is_recurring ? formData.recurrence_pattern : null,
         recurrence_interval: formData.is_recurring ? formData.recurrence_interval : null,
