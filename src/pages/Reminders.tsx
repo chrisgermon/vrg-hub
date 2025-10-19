@@ -1,18 +1,41 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Bell, Calendar, Clock, Mail, Phone, Smartphone } from "lucide-react";
+import { Plus, Bell, Calendar, Clock, Mail, Phone, Smartphone, X, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatAUDate, formatAUDateLong } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import { SmsLogsViewer } from "@/components/reminders/SmsLogsViewer";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Reminders() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('active');
+
+  // Fetch in-app notifications
+  const { data: inAppNotifications } = useQuery({
+    queryKey: ['in-app-notifications'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('reminder_notifications')
+        .select(`
+          *,
+          reminders(title, description, reminder_date)
+        `)
+        .eq('notification_type', 'in_app')
+        .eq('status', 'sent')
+        .order('sent_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 60000, // Refetch every minute
+  });
 
   const { data: reminders, isLoading } = useQuery({
     queryKey: ['reminders', filter],
@@ -87,8 +110,64 @@ export default function Reminders() {
     }
   };
 
+  const handleDismissNotification = async (notificationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('reminder_notifications')
+        .update({ status: 'read' })
+        .eq('id', notificationId);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['in-app-notifications'] });
+      toast.success('Notification dismissed');
+    } catch (error: any) {
+      toast.error('Failed to dismiss notification: ' + error.message);
+    }
+  };
+
+  const getDaysMessage = (daysUntil: number) => {
+    if (daysUntil === 0) return 'Today';
+    if (daysUntil === 1) return 'Tomorrow';
+    if (daysUntil < 0) return `${Math.abs(daysUntil)} days ago`;
+    return `in ${daysUntil} days`;
+  };
+
   return (
     <div className="container-responsive py-6 space-y-6">
+      {/* In-App Notifications */}
+      {inAppNotifications && inAppNotifications.length > 0 && (
+        <div className="space-y-2">
+          {inAppNotifications.slice(0, 3).map((notification) => {
+            const reminder = notification.reminders as any;
+            const reminderDate = new Date(reminder?.reminder_date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            reminderDate.setHours(0, 0, 0, 0);
+            const daysUntil = Math.round((reminderDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            
+            return (
+              <Alert key={notification.id} className="border-l-4 border-l-primary">
+                <Bell className="h-4 w-4" />
+                <AlertDescription className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <strong>{reminder?.title}</strong> is {getDaysMessage(daysUntil)}
+                    {reminder?.description && <span className="text-muted-foreground"> - {reminder.description}</span>}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDismissNotification(notification.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            );
+          })}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

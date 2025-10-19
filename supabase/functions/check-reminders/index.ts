@@ -146,10 +146,27 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
 
-      // Create in-app notification (would integrate with your notification system)
+      // Create in-app notification
       if (channels.in_app) {
-        // TODO: Integrate with in-app notification system
-        console.log('In-app notification would be created here');
+        try {
+          await supabase
+            .from('reminder_notifications')
+            .insert({
+              reminder_id: reminder.id,
+              notification_type: 'in_app',
+              status: 'sent',
+              days_before: daysUntil,
+              metadata: {
+                message: message,
+                reminder_title: reminder.title,
+                reminder_date: reminder.reminder_date,
+              }
+            });
+          console.log('Created in-app notification for reminder:', reminder.id);
+          sentCount++;
+        } catch (error) {
+          console.error('Error creating in-app notification:', error);
+        }
       }
 
       // Mark reminder as completed if it's the actual date
