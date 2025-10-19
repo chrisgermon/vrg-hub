@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle2, XCircle, RefreshCw, MessageSquare } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SharePointConfiguration } from "@/components/settings/SharePointConfiguration";
+import { Office365UserSync } from "@/components/settings/Office365UserSync";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Integrations() {
@@ -331,7 +332,8 @@ export default function Integrations() {
       {/* SharePoint Integration - Super Admin Only */}
       {isSuperAdmin && <SharePointConfiguration />}
 
-      {/* Placeholder for future integrations */}
+      {/* Office 365 User Sync - Super Admin Only */}
+      {isSuperAdmin && <Office365UserSync />}
       <Card className="border-dashed">
         <CardHeader>
           <CardTitle className="text-muted-foreground">Additional Integrations</CardTitle>
