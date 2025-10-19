@@ -74,24 +74,31 @@ export function ExcelImporter({ onSuccess }: ExcelImporterProps) {
         }
       }
 
-      if (successCount > 0) {
-          toast({
-            title: 'Success',
-            description: `Successfully imported ${successCount} of ${aiResult.sites.length} sites`,
-          });
-
-          setIsOpen(false);
-          setExcelFile(null);
-          onSuccess();
-      }
-
+      // Show results
       if (errors.length > 0) {
         console.error('Import errors:', errors);
         toast({
-          title: 'Partial Success',
-          description: `${successCount} sites imported, ${errors.length} failed`,
+          title: errors.length === aiResult.sites.length ? 'Import Failed' : 'Partial Success',
+          description: errors.length === aiResult.sites.length 
+            ? `Failed to import all sites. Check console for details.`
+            : `${successCount} sites imported successfully, ${errors.length} failed. Check console for details.`,
           variant: errors.length === aiResult.sites.length ? 'destructive' : 'default',
         });
+        
+        // Only close if all succeeded
+        if (successCount === aiResult.sites.length) {
+          setIsOpen(false);
+          setExcelFile(null);
+          onSuccess();
+        }
+      } else {
+        toast({
+          title: 'Success',
+          description: `Successfully imported ${successCount} site${successCount > 1 ? 's' : ''}`,
+        });
+        setIsOpen(false);
+        setExcelFile(null);
+        onSuccess();
       }
     } catch (error: any) {
       console.error('Error importing Excel:', error);
