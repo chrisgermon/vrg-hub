@@ -1005,8 +1005,8 @@ export function ModalityDetails() {
                                   <TableCell>{modality.ae_title || '-'}</TableCell>
                                   <TableCell>{modality.port || '-'}</TableCell>
                                   <TableCell>
-                                    {modality.worklist_ip_address ? (
-                                      <Badge variant="success">Configured</Badge>
+                                    {modality.worklist_ae_title ? (
+                                      <span className="font-mono text-xs">{modality.worklist_ae_title}</span>
                                     ) : (
                                       <Badge variant="secondary">None</Badge>
                                     )}
