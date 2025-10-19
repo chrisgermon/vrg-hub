@@ -152,6 +152,7 @@ export default function SiteMaps() {
   });
 
   const onLoad = useCallback((map: google.maps.Map) => {
+    console.log('[SiteMaps] Map onLoad, setting map instance');
     setMap(map);
   }, []);
 
@@ -205,6 +206,7 @@ export default function SiteMaps() {
 
     const geocodeNewAndFitBounds = async () => {
       setGeocoding(true);
+      console.log('[SiteMaps] Start geocode/fitBounds. locations:', locations?.length || 0);
       let newGeocodedCount = 0;
       const bounds = new google.maps.LatLngBounds();
       
@@ -221,6 +223,7 @@ export default function SiteMaps() {
       }
       
       setGeocoding(false);
+      console.log('[SiteMaps] Geocode done. New count:', newGeocodedCount, 'Bounds empty?', bounds.isEmpty());
       
       // Show toast only for newly geocoded locations
       if (newGeocodedCount > 0) {
@@ -233,6 +236,9 @@ export default function SiteMaps() {
         // Add padding for better visualization
         const padding = { top: 50, right: 50, bottom: 50, left: 50 };
         map.fitBounds(bounds, padding);
+        console.log('[SiteMaps] fitBounds applied with padding');
+      } else {
+        console.warn('[SiteMaps] No bounds to fit - no coords available');
       }
     };
 
