@@ -48,38 +48,88 @@ export function Office365UserSync() {
 
   const isAdmin = userRole === 'super_admin' || userRole === 'tenant_admin';
 
+  const getTenantCompanyId = async (): Promise<string | null> => {
+    try {
+      const { data } = await (supabase as any)
+        .from('synced_office365_users')
+        .select('company_id')
+        .limit(1)
+        .maybeSingle();
+      return data?.company_id ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  const loadUsers = async (companyIdParam?: string) => {
+    const companyId = companyIdParam || (await getTenantCompanyId());
+    if (!companyId) {
+      setOffice365Users([]);
+      return;
+    }
+    const { data: syncedUsers, error: queryError } = await (supabase as any)
+      .from('synced_office365_users')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .order('display_name');
+    if (queryError) {
+      console.error('Error loading synced users:', queryError);
+      toast.error('Failed to load synced users');
+      setOffice365Users([]);
+      return;
+    }
+    const users = (syncedUsers || []).map((u: any) => ({
+      id: u.user_principal_name,
+      displayName: u.display_name,
+      mail: u.mail,
+      userPrincipalName: u.user_principal_name,
+      jobTitle: u.job_title,
+      department: u.department,
+    }));
+    setOffice365Users(users);
+  };
+
   useEffect(() => {
     if (isAdmin) {
       checkConnection();
+      // Also try to show any already-synced users
+      loadUsers();
     }
   }, [isAdmin]);
 
   const checkConnection = async () => {
     setLoading(true);
     try {
-      // Determine if a user-level Office 365 connection exists
+      // Try to find a connection for this user (may be restricted by RLS)
       const { data: conn, error } = await ((supabase as any)
         .from('office365_connections')
-        .select('id, updated_at')
+        .select('id, updated_at, company_id')
         .eq('user_id', user?.id || '')
         .order('updated_at', { ascending: false })
         .maybeSingle());
 
-      if (error) throw error;
-
-      if (conn) {
+      if (!error && conn) {
         setConnection({
           id: (conn as any).id,
           connected: true,
           last_sync: null,
           sync_enabled: true,
         });
+        // Preload users for this company
+        await loadUsers((conn as any).company_id);
       } else {
-        setConnection({ id: '1', connected: false, last_sync: null, sync_enabled: false });
+        // Fallback: infer connectivity from existing synced users (tenant-wide)
+        const companyId = await getTenantCompanyId();
+        if (companyId) {
+          setConnection({ id: 'tenant', connected: true, last_sync: null, sync_enabled: true });
+          await loadUsers(companyId);
+        } else {
+          setConnection({ id: '1', connected: false, last_sync: null, sync_enabled: false });
+        }
       }
     } catch (error) {
       console.error('Error checking connection:', error);
-      // Fallback to not connected if status cannot be determined (likely RLS)
       setConnection({ id: '1', connected: false, last_sync: null, sync_enabled: false });
     } finally {
       setLoading(false);
@@ -180,46 +230,34 @@ export function Office365UserSync() {
 
     setSyncing(true);
     try {
-      // Get company_id from the connection
+      // Try to read the current user's connection for company_id (may be blocked by RLS)
+      let companyId: string | null = null;
+
       const { data: conn } = await (supabase as any)
         .from('office365_connections')
         .select('company_id')
         .eq('user_id', user?.id || '')
         .maybeSingle();
 
-      if (!conn?.company_id) {
-        throw new Error('No company ID found for Office 365 connection');
+      companyId = conn?.company_id || (await getTenantCompanyId());
+
+      if (!companyId) {
+        toast.error('No Office 365 connection found for this tenant. A Super Admin must connect it in Integrations.');
+        return;
       }
 
       // Call the sync function
       const { data, error } = await supabase.functions.invoke('office365-sync-data', {
-        body: { company_id: conn.company_id }
+        body: { company_id: companyId }
       });
 
       if (error) throw error;
 
-      // Query the synced users from the database
-      const { data: syncedUsers, error: queryError } = await (supabase as any)
-        .from('synced_office365_users')
-        .select('*')
-        .eq('company_id', conn.company_id)
-        .eq('is_active', true)
-        .order('display_name');
+      // Refresh the list
+      await loadUsers(companyId);
 
-      if (queryError) throw queryError;
-
-      // Map to the expected format
-      const users = (syncedUsers || []).map((u: any) => ({
-        id: u.user_principal_name,
-        displayName: u.display_name,
-        mail: u.mail,
-        userPrincipalName: u.user_principal_name,
-        jobTitle: u.job_title,
-        department: u.department,
-      }));
-
-      setOffice365Users(users);
-      toast.success(`Synced ${data?.users_synced || 0} Office 365 users successfully`);
+      const synced = (data as any)?.users_synced ?? 0;
+      toast.success(`Sync complete${synced ? `: ${synced} users updated` : ''}`);
 
       // Update last sync time
       setConnection({
