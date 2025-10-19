@@ -10,22 +10,104 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+type UnifiedRequest = {
+  id: string;
+  title?: string;
+  description?: string;
+  status: string;
+  priority?: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  department?: string;
+  form_data?: Record<string, any>;
+  business_justification?: string;
+  clinic_name?: string;
+  total_amount?: number;
+  currency?: string;
+  expected_delivery_date?: string;
+  manager_approved_at?: string;
+  manager_approval_notes?: string;
+  admin_approved_at?: string;
+  admin_approval_notes?: string;
+  declined_at?: string;
+  decline_reason?: string;
+  locations?: { name: string };
+  brands?: { display_name: string };
+  profile?: { full_name: string; email: string };
+  type: 'hardware' | 'department';
+};
+
 export default function RequestDetail() {
-  const { requestNumber } = useParams<{ requestNumber: string }>();
+  const { requestNumber, id } = useParams<{ requestNumber?: string; id?: string }>();
   const navigate = useNavigate();
+  const requestParam = requestNumber || id;
 
-  // Query to find request by the formatted ID
-  const { data: request, isLoading, error } = useQuery({
-    queryKey: ['request-by-number', requestNumber],
-    queryFn: async () => {
-      if (!requestNumber) return null;
+  // Query to find request by the formatted ID or UUID
+  const { data: request, isLoading, error } = useQuery<UnifiedRequest | null>({
+    queryKey: ['request-by-identifier', requestParam],
+    queryFn: async (): Promise<UnifiedRequest | null> => {
+      if (!requestParam) return null;
 
-      // Convert VRG-##### format back to find matching UUID
-      const numericPart = requestNumber.replace('VRG-', '');
+      // Check if it's a UUID (starts with a hex pattern)
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestParam);
+
+      if (isUUID) {
+        // Direct UUID lookup - try department_requests first
+        const { data: deptRequest } = await supabase
+          .from('department_requests' as any)
+          .select('*')
+          .eq('id', requestParam)
+          .maybeSingle();
+
+        if (deptRequest) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', (deptRequest as any).user_id)
+            .maybeSingle();
+          
+          return { 
+            ...(deptRequest as any), 
+            type: 'department' as const, 
+            profile: profile || undefined 
+          } as UnifiedRequest;
+        }
+
+        // Try hardware_requests
+        const { data: hwRequest } = await supabase
+          .from('hardware_requests')
+          .select(`
+            *,
+            brands:brand_id(display_name),
+            locations:location_id(name)
+          `)
+          .eq('id', requestParam)
+          .maybeSingle();
+
+        if (hwRequest) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', hwRequest.user_id)
+            .maybeSingle();
+          
+          return { 
+            ...hwRequest, 
+            type: 'hardware' as const, 
+            profile: profile || undefined 
+          };
+        }
+
+        return null;
+      }
+
+      // Format VRG-##### lookup
+      const numericPart = requestParam.replace('VRG-', '');
       const targetNumber = parseInt(numericPart, 10);
       
-      // Fetch all requests and find the one that matches
-      const { data: allRequests, error } = await supabase
+      // Try hardware requests
+      const { data: allHwRequests } = await supabase
         .from('hardware_requests')
         .select(`
           *,
@@ -33,28 +115,58 @@ export default function RequestDetail() {
           locations:location_id(name)
         `);
 
-      if (error) throw error;
-      if (!allRequests) return null;
+      if (allHwRequests) {
+        const matchingRequest = allHwRequests.find(req => {
+          const hexPart = req.id.slice(0, 8);
+          const numericValue = parseInt(hexPart, 16) % 100000;
+          return numericValue === targetNumber;
+        });
 
-      // Find request where the formatted number matches
-      const matchingRequest = allRequests.find(req => {
-        const hexPart = req.id.slice(0, 8);
-        const numericValue = parseInt(hexPart, 16) % 100000;
-        return numericValue === targetNumber;
-      });
+        if (matchingRequest) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', matchingRequest.user_id)
+            .maybeSingle();
+          
+          return { 
+            ...matchingRequest, 
+            type: 'hardware' as const, 
+            profile: profile || undefined 
+          };
+        }
+      }
 
-      if (!matchingRequest) return null;
+      // Try department requests
+      const { data: allDeptRequests } = await supabase
+        .from('department_requests' as any)
+        .select('*');
 
-      // Fetch user profile separately
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, email')
-        .eq('id', matchingRequest.user_id)
-        .maybeSingle();
+      if (allDeptRequests) {
+        const matchingRequest = (allDeptRequests as any[]).find(req => {
+          const hexPart = req.id.slice(0, 8);
+          const numericValue = parseInt(hexPart, 16) % 100000;
+          return numericValue === targetNumber;
+        });
 
-      return { ...matchingRequest, profile };
+        if (matchingRequest) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', matchingRequest.user_id)
+            .maybeSingle();
+          
+          return { 
+            ...matchingRequest, 
+            type: 'department' as const, 
+            profile: profile || undefined 
+          } as UnifiedRequest;
+        }
+      }
+
+      return null;
     },
-    enabled: !!requestNumber,
+    enabled: !!requestParam,
   });
 
   const getStatusColor = (status: string) => {
@@ -99,12 +211,14 @@ export default function RequestDetail() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Request {requestNumber} not found. It may have been deleted or you may not have permission to view it.
+            Request {requestParam} not found. It may have been deleted or you may not have permission to view it.
           </AlertDescription>
         </Alert>
       </div>
     );
   }
+
+  const isDepartmentRequest = request.type === 'department';
 
   return (
     <div className="container max-w-4xl mx-auto py-8">
@@ -171,38 +285,68 @@ export default function RequestDetail() {
               <p className="text-sm text-muted-foreground">Email</p>
               <p>{request.profile?.email || 'N/A'}</p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Location</p>
-              <p>{request.locations?.name || 'N/A'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Brand</p>
-              <p>{request.brands?.display_name || 'N/A'}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Business Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Business Justification</p>
-              <p>{request.business_justification}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Clinic Name</p>
-              <p>{request.clinic_name || 'N/A'}</p>
-            </div>
-            {request.total_amount && (
+            {!isDepartmentRequest && (
+              <>
+                <div>
+                  <p className="text-sm text-muted-foreground">Location</p>
+                  <p>{request.locations?.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Brand</p>
+                  <p>{request.brands?.display_name || 'N/A'}</p>
+                </div>
+              </>
+            )}
+            {isDepartmentRequest && request.department && (
               <div>
-                <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p>{request.currency} {request.total_amount.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Department</p>
+                <p>{request.department}</p>
               </div>
             )}
           </CardContent>
         </Card>
+
+        {isDepartmentRequest && request.form_data && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Request Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {Object.entries(request.form_data as Record<string, any>).map(([key, value]) => (
+                <div key={key}>
+                  <p className="text-sm text-muted-foreground capitalize">
+                    {key.replace(/_/g, ' ')}
+                  </p>
+                  <p>{String(value)}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {!isDepartmentRequest && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Business Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Business Justification</p>
+                <p>{request.business_justification}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Clinic Name</p>
+                <p>{request.clinic_name || 'N/A'}</p>
+              </div>
+              {request.total_amount && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Amount</p>
+                  <p>{request.currency} {request.total_amount.toLocaleString()}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {(request.manager_approved_at || request.admin_approved_at || request.declined_at) && (
           <Card>
