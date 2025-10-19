@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAccessControl } from '@/hooks/useAccessControl';
 import { toast } from 'sonner';
 import { UserPermissionsManager } from '@/components/UserPermissionsManager';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 
 interface UserWithRole {
   id: string;
@@ -34,6 +35,8 @@ export function UserRoleManager() {
   const [loading, setLoading] = useState(true);
   const [selectedUserForPermissions, setSelectedUserForPermissions] = useState<UserForPermissions | null>(null);
   const [isPermissionsDialogOpen, setIsPermissionsDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -131,6 +134,11 @@ export function UserRoleManager() {
     return <Users className="w-3 h-3" />;
   };
 
+  const totalPages = Math.ceil(users.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedUsers = users.slice(startIndex, endIndex);
+
   if (loading) {
     return (
       <Card>
@@ -173,7 +181,7 @@ export function UserRoleManager() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {paginatedUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
@@ -221,6 +229,38 @@ export function UserRoleManager() {
               ))}
             </TableBody>
           </Table>
+
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(page)}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 

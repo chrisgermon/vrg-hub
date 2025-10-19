@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { RBACUserRolesManager } from './RBACUserRolesManager';
 import { RBACUserPermissionsManager } from './RBACUserPermissionsManager';
 import { RBACEffectivePermissions } from './RBACEffectivePermissions';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 
 interface User {
   id: string;
@@ -27,6 +28,8 @@ export function RBACUserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [viewMode, setViewMode] = useState<'roles' | 'overrides' | 'effective'>('roles');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -76,6 +79,15 @@ export function RBACUserManagement() {
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   return (
     <div className="space-y-6">
@@ -130,7 +142,7 @@ export function RBACUserManagement() {
                   <TableCell colSpan={5} className="text-center">No users found</TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user) => (
+                paginatedUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">
                       {user.full_name || 'Unknown'}
@@ -232,6 +244,38 @@ export function RBACUserManagement() {
               )}
             </TableBody>
           </Table>
+
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(page)}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
