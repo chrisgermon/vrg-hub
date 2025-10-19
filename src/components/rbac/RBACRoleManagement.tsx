@@ -26,8 +26,8 @@ export function RBACRoleManagement() {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isPermissionsDialogOpen, setIsPermissionsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
+  const [view, setView] = useState<'list' | 'permissions'>('list');
 
   useEffect(() => {
     fetchRoles();
@@ -137,10 +137,30 @@ export function RBACRoleManagement() {
     setIsEditDialogOpen(true);
   };
 
-  const openPermissionsDialog = (role: Role) => {
+  const openPermissionsView = (role: Role) => {
     setSelectedRole(role);
-    setIsPermissionsDialogOpen(true);
+    setView('permissions');
   };
+
+  if (view === 'permissions' && selectedRole) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => { setView('list'); setSelectedRole(null); }}>
+            ← Back to Roles
+          </Button>
+          <div>
+            <h2 className="text-2xl font-bold">{selectedRole.name} Permissions</h2>
+            <p className="text-muted-foreground">Configure permissions for this role</p>
+          </div>
+        </div>
+        <RBACRolePermissionsMatrix
+          roleId={selectedRole.id}
+          onUpdate={fetchRoles}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -232,7 +252,7 @@ export function RBACRoleManagement() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => openPermissionsDialog(role)}
+                          onClick={() => openPermissionsView(role)}
                         >
                           <Shield className="w-4 h-4 mr-2" />
                           Permissions
@@ -292,23 +312,6 @@ export function RBACRoleManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Permissions Matrix Dialog */}
-      <Dialog open={isPermissionsDialogOpen} onOpenChange={setIsPermissionsDialogOpen}>
-        <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Role Permissions: {selectedRole?.name}</DialogTitle>
-            <DialogDescription>
-              Configure which permissions this role grants
-            </DialogDescription>
-          </DialogHeader>
-          {selectedRole && (
-            <RBACRolePermissionsMatrix
-              roleId={selectedRole.id}
-              onUpdate={fetchRoles}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
