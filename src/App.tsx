@@ -71,6 +71,7 @@ const Reminders = lazy(() => import("./pages/Reminders"));
 const NewReminder = lazy(() => import("./pages/NewReminder"));
 const ReminderDetail = lazy(() => import("./pages/ReminderDetail"));
 const ReminderEdit = lazy(() => import("./pages/ReminderEdit"));
+const SiteMaps = lazy(() => import("./pages/SiteMaps"));
 
 const protectedLayoutRoutes: Array<{
   path: string;
@@ -134,8 +135,9 @@ const protectedLayoutRoutes: Array<{
   { path: "/reminders/new", element: <NewReminder /> },
   { path: "/reminders/edit/:id", element: <ReminderEdit /> },
   { path: "/reminders/:id", element: <ReminderDetail /> },
+  { path: "/site-maps", element: <SiteMaps /> },
   { path: "/dashboard", element: <Dashboard /> },
-    { path: "/install", element: <Install /> },
+  { path: "/install", element: <Install /> },
   ];
 
 const queryClient = new QueryClient();
