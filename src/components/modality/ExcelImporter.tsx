@@ -85,20 +85,16 @@ export function ExcelImporter({ onSuccess }: ExcelImporterProps) {
           variant: errors.length === aiResult.sites.length ? 'destructive' : 'default',
         });
         
-        // Only close if all succeeded
+        // Only refresh selection; keep dialog open to review
         if (successCount === aiResult.sites.length) {
-          setIsOpen(false);
           setExcelFile(null);
-          onSuccess();
         }
       } else {
         toast({
           title: 'Success',
           description: `Successfully imported ${successCount} site${successCount > 1 ? 's' : ''}`,
         });
-        setIsOpen(false);
         setExcelFile(null);
-        onSuccess();
       }
     } catch (error: any) {
       console.error('Error importing Excel:', error);
