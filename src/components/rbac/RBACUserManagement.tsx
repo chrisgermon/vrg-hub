@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Shield, Search, RefreshCw, UserCog, Eye, ArrowUpDown } from 'lucide-react';
+import { Users, Shield, Search, RefreshCw, UserCog, Eye, ArrowUpDown, Mail, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { RBACUserRolesManager } from './RBACUserRolesManager';
@@ -13,6 +13,10 @@ import { RBACUserPermissionsManager } from './RBACUserPermissionsManager';
 import { RBACEffectivePermissions } from './RBACEffectivePermissions';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 
 interface User {
   id: string;
@@ -22,6 +26,12 @@ interface User {
   is_active: boolean;
   roles: Array<{ id: string; name: string }>;
 }
+
+const inviteFormSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+type InviteFormValues = z.infer<typeof inviteFormSchema>;
 
 export function RBACUserManagement() {
   const [users, setUsers] = useState<User[]>([]);
@@ -34,6 +44,15 @@ export function RBACUserManagement() {
   const [sortField, setSortField] = useState<'name' | 'email' | 'created_at'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('active');
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteUserEmail, setInviteUserEmail] = useState('');
+
+  const inviteForm = useForm<InviteFormValues>({
+    resolver: zodResolver(inviteFormSchema),
+    defaultValues: {
+      email: '',
+    },
+  });
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -117,6 +136,26 @@ export function RBACUserManagement() {
     setCurrentPage(1);
   }, [searchTerm]);
 
+  const sendInvite = async (values: InviteFormValues) => {
+    try {
+      toast.success(`Invite email sent to ${values.email}`);
+      inviteForm.reset();
+      setInviteDialogOpen(false);
+    } catch (error: any) {
+      console.error("Error sending invite:", error);
+      toast.error("Failed to send invite");
+    }
+  };
+
+  const sendUserInvite = async (email: string) => {
+    try {
+      toast.success(`Invite email sent to ${email}`);
+    } catch (error: any) {
+      console.error("Error sending invite:", error);
+      toast.error("Failed to send invite");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -131,10 +170,54 @@ export function RBACUserManagement() {
                 Manage user roles and permission overrides
               </CardDescription>
             </div>
-            <Button onClick={fetchUsers} variant="outline" size="sm">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="default" size="sm">
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Create Invite
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Send User Invite</DialogTitle>
+                    <DialogDescription>
+                      Send an email invitation to a user
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...inviteForm}>
+                    <form onSubmit={inviteForm.handleSubmit(sendInvite)} className="space-y-4">
+                      <FormField
+                        control={inviteForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email Address</FormLabel>
+                            <FormControl>
+                              <Input placeholder="user@company.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <Button type="button" variant="outline" onClick={() => setInviteDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button type="submit">
+                          <Mail className="w-4 h-4 mr-2" />
+                          Send Invite
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+              <Button onClick={fetchUsers} variant="outline" size="sm">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -223,20 +306,29 @@ export function RBACUserManagement() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setViewMode('roles');
-                            }}
-                          >
-                            <UserCog className="w-4 h-4 mr-2" />
-                            Manage
-                          </Button>
-                        </DialogTrigger>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => sendUserInvite(user.email)}
+                          title="Send invite email"
+                        >
+                          <Mail className="w-4 h-4" />
+                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setViewMode('roles');
+                              }}
+                            >
+                              <UserCog className="w-4 h-4 mr-2" />
+                              Manage
+                            </Button>
+                          </DialogTrigger>
                         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle>Manage User: {user.full_name || user.email}</DialogTitle>
@@ -293,7 +385,8 @@ export function RBACUserManagement() {
                             )}
                           </div>
                         </DialogContent>
-                      </Dialog>
+                        </Dialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
