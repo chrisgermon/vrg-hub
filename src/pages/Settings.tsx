@@ -19,6 +19,7 @@ import { CompanyFeaturesManager } from '@/components/settings/CompanyFeaturesMan
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Edit } from 'lucide-react';
+import { APP_VERSION, BUILD_DATE } from '@/lib/version';
 
 export default function Settings() {
   const { userRole } = useAuth();
@@ -70,7 +71,11 @@ export default function Settings() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Version</span>
-                  <span className="font-medium">1.0.0</span>
+                  <span className="font-medium">{APP_VERSION}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Build Date</span>
+                  <span className="font-medium">{BUILD_DATE}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Environment</span>

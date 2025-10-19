@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useCompanyFeatures } from '@/hooks/useCompanyFeatures';
+import { APP_VERSION } from '@/lib/version';
 
 const Help = () => {
   const [showIndex, setShowIndex] = useState(true);
@@ -98,10 +99,13 @@ const Help = () => {
         {/* Main Content */}
         <div className="flex-1 space-y-8 max-w-4xl">
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold flex items-center gap-3">
-              <BookOpen className="w-10 h-10 text-primary" />
-              Complete Help Guide
-            </h1>
+            <div className="flex items-center justify-between">
+              <h1 className="text-4xl font-bold flex items-center gap-3">
+                <BookOpen className="w-10 h-10 text-primary" />
+                Complete Help Guide
+              </h1>
+              <Badge variant="outline" className="text-xs">v{APP_VERSION}</Badge>
+            </div>
             <p className="text-muted-foreground text-lg">
               Comprehensive documentation for all features in the Request Management System
             </p>
