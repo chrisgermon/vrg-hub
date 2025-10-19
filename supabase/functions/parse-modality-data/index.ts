@@ -20,6 +20,7 @@ serve(async (req) => {
 
     const systemPrompt = `You are a data extraction assistant specializing in DICOM modality configurations. 
 Extract network configuration, DICOM servers, and modalities from the provided data.
+Try to identify the brand and location from context clues (clinic name, address, facility name, etc.).
 
 Return the data in this exact JSON structure:
 {
@@ -28,6 +29,8 @@ Return the data in this exact JSON structure:
     "ip_range": "string or null",
     "gateway": "string or null"
   },
+  "detected_brand": "string or null (brand name if identifiable from context)",
+  "detected_location": "string or null (location/facility name if identifiable)",
   "servers": [
     {
       "name": "string",
@@ -45,7 +48,8 @@ Return the data in this exact JSON structure:
       "port": "number or null",
       "worklist_ip_address": "string or null",
       "worklist_ae_title": "string or null",
-      "worklist_port": "number or null"
+      "worklist_port": "number or null",
+      "modality_type": "string or null (CT, MR, XA, US, CR, DX, MG, NM, PT)"
     }
   ]
 }
@@ -82,6 +86,8 @@ Extract all available information. If a field is not present, use null.`;
                     },
                     required: ["location_name"]
                   },
+                  detected_brand: { type: ["string", "null"], description: "Brand name if identifiable from context" },
+                  detected_location: { type: ["string", "null"], description: "Location/facility name if identifiable" },
                   servers: {
                     type: "array",
                     items: {
@@ -107,7 +113,8 @@ Extract all available information. If a field is not present, use null.`;
                         port: { type: ["number", "null"] },
                         worklist_ip_address: { type: ["string", "null"] },
                         worklist_ae_title: { type: ["string", "null"] },
-                        worklist_port: { type: ["number", "null"] }
+                        worklist_port: { type: ["number", "null"] },
+                        modality_type: { type: ["string", "null"], description: "CT, MR, XA, US, CR, DX, MG, NM, PT" }
                       },
                       required: ["name", "ip_address"]
                     }

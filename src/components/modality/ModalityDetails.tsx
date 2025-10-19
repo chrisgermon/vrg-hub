@@ -102,6 +102,10 @@ export function ModalityDetails() {
   const [isImporting, setIsImporting] = useState(false);
   const [importData, setImportData] = useState('');
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showLocationSelector, setShowLocationSelector] = useState(false);
+  const [parsedImportData, setParsedImportData] = useState<any>(null);
+  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [showClinicDialog, setShowClinicDialog] = useState(false);
   const [showModalityDialog, setShowModalityDialog] = useState(false);
   const [editingClinic, setEditingClinic] = useState<Clinic | null>(null);
@@ -206,6 +210,51 @@ export function ModalityDetails() {
 
       if (error) throw error;
 
+      // Check if we can detect brand/location
+      let detectedBrand = null;
+      let detectedLocation = null;
+
+      if (parsedData.detected_brand) {
+        detectedBrand = brands.find(b => 
+          b.name.toLowerCase().includes(parsedData.detected_brand.toLowerCase()) ||
+          b.display_name.toLowerCase().includes(parsedData.detected_brand.toLowerCase())
+        );
+      }
+
+      if (parsedData.detected_location) {
+        detectedLocation = locations.find(l => 
+          l.name.toLowerCase().includes(parsedData.detected_location.toLowerCase())
+        );
+      }
+
+      // If we couldn't detect, prompt user to select
+      if (!detectedBrand || !detectedLocation) {
+        setParsedImportData(parsedData);
+        setSelectedBrandId(detectedBrand?.id || null);
+        setSelectedLocationId(detectedLocation?.id || null);
+        setShowImportDialog(false);
+        setShowLocationSelector(true);
+        setIsImporting(false);
+        return;
+      }
+
+      // Auto-detected, proceed with import
+      await completeImport(parsedData, detectedBrand.id, detectedLocation.id);
+    } catch (error: any) {
+      console.error('Error importing data:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to import configuration',
+        variant: 'destructive',
+      });
+      setIsImporting(false);
+    }
+  };
+
+  const completeImport = async (parsedData: any, brandId: string, locationId: string) => {
+    setIsImporting(true);
+
+    try {
       // Create clinic
       const { data: clinic, error: clinicError } = await supabase
         .from('clinics')
@@ -237,7 +286,7 @@ export function ModalityDetails() {
         if (serversError) throw serversError;
       }
 
-      // Create modalities
+      // Create modalities with brand and location
       if (parsedData.modalities && parsedData.modalities.length > 0) {
         const modalitiesToInsert = parsedData.modalities.map((m: any) => ({
           clinic_id: clinic.id,
@@ -248,6 +297,9 @@ export function ModalityDetails() {
           worklist_ip_address: m.worklist_ip_address,
           worklist_ae_title: m.worklist_ae_title,
           worklist_port: m.worklist_port,
+          modality_type: m.modality_type,
+          brand_id: brandId,
+          location_id: locationId,
         }));
 
         const { error: modalitiesError } = await supabase
@@ -259,23 +311,38 @@ export function ModalityDetails() {
 
       toast({
         title: 'Success',
-        description: 'Configuration imported successfully',
+        description: `Configuration imported successfully with ${parsedData.modalities?.length || 0} modalities`,
       });
 
       setShowImportDialog(false);
+      setShowLocationSelector(false);
       setImportData('');
+      setParsedImportData(null);
       loadClinics();
       setSelectedClinic(clinic.id);
     } catch (error: any) {
-      console.error('Error importing data:', error);
+      console.error('Error completing import:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to import configuration',
+        description: error.message || 'Failed to complete import',
         variant: 'destructive',
       });
     } finally {
       setIsImporting(false);
     }
+  };
+
+  const handleConfirmLocationSelection = () => {
+    if (!selectedBrandId || !selectedLocationId) {
+      toast({
+        title: 'Error',
+        description: 'Please select both brand and location',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    completeImport(parsedImportData, selectedBrandId, selectedLocationId);
   };
 
   const handleSaveClinic = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -515,6 +582,82 @@ export function ModalityDetails() {
                           <FileUp className="w-4 h-4 mr-2" />
                           Import
                         </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={showLocationSelector} onOpenChange={setShowLocationSelector}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Select Brand and Location</DialogTitle>
+                  <DialogDescription>
+                    Please select the brand and location for this modality configuration
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Brand *</Label>
+                    <Select value={selectedBrandId || undefined} onValueChange={setSelectedBrandId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select brand" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {brands.map((brand) => (
+                          <SelectItem key={brand.id} value={brand.id}>
+                            {brand.display_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Location *</Label>
+                    <Select 
+                      value={selectedLocationId || undefined} 
+                      onValueChange={setSelectedLocationId}
+                      disabled={!selectedBrandId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locations
+                          .filter(l => !selectedBrandId || l.brand_id === selectedBrandId)
+                          .map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowLocationSelector(false);
+                        setParsedImportData(null);
+                        setSelectedBrandId(null);
+                        setSelectedLocationId(null);
+                      }}
+                      disabled={isImporting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleConfirmLocationSelection}
+                      disabled={isImporting || !selectedBrandId || !selectedLocationId}
+                    >
+                      {isImporting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Importing...
+                        </>
+                      ) : (
+                        'Confirm & Import'
                       )}
                     </Button>
                   </div>
