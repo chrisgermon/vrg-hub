@@ -121,6 +121,25 @@ export default function Settings() {
         {isAdmin && (
           <TabsContent value="users" className="space-y-6">
             <UsersSection />
+            <Card>
+              <CardHeader>
+                <CardTitle>Advanced Role Management</CardTitle>
+                <CardDescription>
+                  Configure granular permissions with RBAC system
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Manage roles, permissions, and user access with advanced role-based access control.
+                  </p>
+                  <Button onClick={() => navigate('/user-roles')}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Open RBAC Manager
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         )}
 

@@ -122,6 +122,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/audit-log", element: <AuditLog />, requiredRole: ["super_admin"] },
   { path: "/users", element: <Admin />, requiredRole: ["tenant_admin", "super_admin"] },
   { path: "/permissions", element: <PermissionManager />, requiredRole: ["super_admin", "tenant_admin"] },
+  { path: "/user-roles", element: <UserRoles />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/notifications/advanced", element: <AdvancedNotifications />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/content-editor", element: <ContentEditor />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/form-templates", element: <FormTemplates />, requiredRole: ["super_admin", "tenant_admin"] },
