@@ -72,6 +72,7 @@ const NewReminder = lazy(() => import("./pages/NewReminder"));
 const ReminderDetail = lazy(() => import("./pages/ReminderDetail"));
 const ReminderEdit = lazy(() => import("./pages/ReminderEdit"));
 const SiteMaps = lazy(() => import("./pages/SiteMaps"));
+const SharedModality = lazy(() => import("./pages/SharedModality"));
 
 const protectedLayoutRoutes: Array<{
   path: string;
@@ -168,6 +169,7 @@ function App() {
                   />
                 ))}
                 <Route path="/shared/:token" element={<SharedClinic />} />
+                <Route path="/shared/modality/:token" element={<SharedModality />} />
                 <Route path="/confirm-order/:token" element={<ConfirmOrder />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

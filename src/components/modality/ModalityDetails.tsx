@@ -39,7 +39,12 @@ import {
   FileUp, 
   Network,
   Server,
-  MonitorDot
+  MonitorDot,
+  Share2,
+  Link as LinkIcon,
+  Mail,
+  Copy,
+  Check
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ExcelImporter } from './ExcelImporter';
@@ -111,6 +116,13 @@ export function ModalityDetails() {
   const [showModalityDialog, setShowModalityDialog] = useState(false);
   const [editingClinic, setEditingClinic] = useState<Clinic | null>(null);
   const [editingModality, setEditingModality] = useState<Modality | null>(null);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [sharingModality, setSharingModality] = useState<Modality | null>(null);
+  const [shareUrl, setShareUrl] = useState<string>('');
+  const [recipientEmail, setRecipientEmail] = useState<string>('');
+  const [isCopied, setIsCopied] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   
   const { toast } = useToast();
   const { userRole } = useAuth();
@@ -513,6 +525,128 @@ export function ModalityDetails() {
         description: 'Failed to delete modality',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleCreateShareLink = async () => {
+    if (!sharingModality) return;
+
+    setIsSharing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-modality-share-link', {
+        body: {
+          modalityId: sharingModality.id,
+          expiresInDays: 30, // 30 day expiration
+        },
+      });
+
+      if (error) throw error;
+
+      setShareUrl(data.shareUrl);
+      toast({
+        title: 'Success',
+        description: 'Share link created successfully',
+      });
+    } catch (error: any) {
+      console.error('Error creating share link:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create share link',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!shareUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setIsCopied(true);
+      toast({
+        title: 'Copied!',
+        description: 'Link copied to clipboard',
+      });
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to copy link',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!sharingModality || !shareUrl || !recipientEmail.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please provide a recipient email',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSharing(true);
+    try {
+      const clinic = clinics.find(c => c.id === sharingModality.clinic_id);
+
+      const { error } = await supabase.functions.invoke('share-modality-email', {
+        body: {
+          recipientEmail: recipientEmail.trim(),
+          shareUrl,
+          modalityName: sharingModality.name,
+          clinicName: clinic?.location_name,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `Email sent to ${recipientEmail}`,
+      });
+      setShowEmailDialog(false);
+      setRecipientEmail('');
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send email',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleOpenShareDialog = async (modality: Modality) => {
+    setSharingModality(modality);
+    setShareUrl('');
+    setShowShareDialog(true);
+    // Auto-generate link
+    setIsSharing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-modality-share-link', {
+        body: {
+          modalityId: modality.id,
+          expiresInDays: 30,
+        },
+      });
+
+      if (error) throw error;
+      setShareUrl(data.shareUrl);
+    } catch (error: any) {
+      console.error('Error creating share link:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create share link',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -1020,6 +1154,14 @@ export function ModalityDetails() {
                                         <Button
                                           variant="ghost"
                                           size="sm"
+                                          onClick={() => handleOpenShareDialog(modality)}
+                                          title="Share modality"
+                                        >
+                                          <Share2 className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
                                           onClick={() => {
                                             setEditingModality(modality);
                                             setShowModalityDialog(true);
@@ -1091,6 +1233,98 @@ export function ModalityDetails() {
           )}
         </>
       )}
+
+      {/* Share Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share Modality: {sharingModality?.name}</DialogTitle>
+            <DialogDescription>
+              Share this modality's configuration via encrypted link
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {isSharing ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : shareUrl ? (
+              <>
+                <div className="space-y-2">
+                  <Label>Shareable Link</Label>
+                  <div className="flex gap-2">
+                    <Input value={shareUrl} readOnly className="font-mono text-sm" />
+                    <Button onClick={handleCopyLink} variant="outline" size="icon">
+                      {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This link expires in 30 days and can be accessed publicly
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => {
+                      setShowShareDialog(false);
+                      setShowEmailDialog(true);
+                    }}
+                    className="flex-1"
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Email Link
+                  </Button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Dialog */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Email Modality Details</DialogTitle>
+            <DialogDescription>
+              Send configuration details to a recipient
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="recipient">Recipient Email</Label>
+              <Input
+                id="recipient"
+                type="email"
+                placeholder="recipient@example.com"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Share Link</Label>
+              <Input value={shareUrl} readOnly className="font-mono text-sm" />
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowEmailDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendEmail} disabled={isSharing || !recipientEmail.trim()}>
+              {isSharing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Email
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

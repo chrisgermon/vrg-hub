@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.parse-modality-excel]
 verify_jwt = true
+
+[functions.get-shared-modality]
+verify_jwt = false

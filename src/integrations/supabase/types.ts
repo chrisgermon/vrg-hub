@@ -2287,6 +2287,47 @@ export type Database = {
         }
         Relationships: []
       }
+      shareable_modality_links: {
+        Row: {
+          access_count: number | null
+          created_at: string | null
+          created_by: string | null
+          encrypted_token: string
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          modality_id: string
+        }
+        Insert: {
+          access_count?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          encrypted_token: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          modality_id: string
+        }
+        Update: {
+          access_count?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          encrypted_token?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          modality_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shareable_modality_links_modality_id_fkey"
+            columns: ["modality_id"]
+            isOneToOne: false
+            referencedRelation: "modalities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sharepoint_configurations: {
         Row: {
           company_id: string
