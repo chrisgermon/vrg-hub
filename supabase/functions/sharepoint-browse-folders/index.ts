@@ -63,20 +63,35 @@ serve(async (req) => {
 
     const { folder_path } = await req.json();
 
-    // Fetch active SharePoint configuration
-    const { data: config } = await supabaseAdmin
-      .from('sharepoint_configurations')
-      .select('site_id, folder_path, company_id')
-      .eq('is_active', true)
+    // Determine user's company
+    const { data: userConn } = await supabaseAdmin
+      .from('office365_connections')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
       .maybeSingle();
+
+    if (!userConn?.company_id) {
+      return new Response(
+        JSON.stringify({ configured: false, folders: [], files: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch active SharePoint configuration for this company (prefer the most recent)
+    const { data: configs } = await supabaseAdmin
+      .from('sharepoint_configurations')
+      .select('site_id, folder_path, company_id, updated_at')
+      .eq('company_id', userConn.company_id)
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+
+    const config = configs?.[0];
 
     if (!config) {
       return new Response(
-        JSON.stringify({ 
-          configured: false,
-          folders: [],
-          files: [],
-        }),
+        JSON.stringify({ configured: false, folders: [], files: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

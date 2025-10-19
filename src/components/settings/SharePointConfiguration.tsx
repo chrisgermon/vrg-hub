@@ -180,25 +180,47 @@ export function SharePointConfiguration() {
         folder_path: folderPath
       });
 
-      // Upsert config (update if exists, insert if not)
-      const { error: upsertError } = await (supabase as any)
+      // Save config: update existing company record if present, else insert
+      // This avoids ON CONFLICT issues and ensures a single active config per company
+      const { data: existingConfig } = await (supabase as any)
         .from('sharepoint_configurations')
-        .upsert({
-          company_id: connection.company_id,
-          site_id: site.id,
-          site_name: site.name,
-          site_url: site.webUrl,
-          folder_path: folderPath || '/',
-          configured_by: user.id,
-          is_active: true
-        }, {
-          onConflict: 'company_id',
-          ignoreDuplicates: false
-        });
+        .select('id')
+        .eq('company_id', connection.company_id)
+        .maybeSingle();
 
-      if (upsertError) {
-        console.error('Upsert error:', upsertError);
-        throw new Error(`Failed to save configuration: ${upsertError.message}`);
+      let saveError: any = null;
+
+      if (existingConfig?.id) {
+        const { error } = await (supabase as any)
+          .from('sharepoint_configurations')
+          .update({
+            site_id: site.id,
+            site_name: site.name,
+            site_url: site.webUrl,
+            folder_path: folderPath || '/',
+            configured_by: user.id,
+            is_active: true,
+          })
+          .eq('id', existingConfig.id);
+        saveError = error;
+      } else {
+        const { error } = await (supabase as any)
+          .from('sharepoint_configurations')
+          .insert({
+            company_id: connection.company_id,
+            site_id: site.id,
+            site_name: site.name,
+            site_url: site.webUrl,
+            folder_path: folderPath || '/',
+            configured_by: user.id,
+            is_active: true,
+          });
+        saveError = error;
+      }
+
+      if (saveError) {
+        console.error('Save error:', saveError);
+        throw new Error(`Failed to save configuration: ${saveError.message}`);
       }
 
       toast({
