@@ -85,28 +85,51 @@ export function SharePointConfiguration() {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.error('No authenticated user');
+        return;
+      }
 
-      const { data: connection } = await supabase
+      // Get company_id from the office365_connections table
+      const { data: connection } = await (supabase as any)
         .from('office365_connections')
         .select('company_id')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (!connection) return;
+      if (!connection?.company_id) {
+        console.error('No Office 365 connection found');
+        toast({
+          title: 'Error',
+          description: 'Please connect to Office 365 first',
+          variant: 'destructive'
+        });
+        return;
+      }
 
       const { data, error } = await supabase.functions.invoke('sharepoint-get-sites', {
         body: { company_id: connection.company_id }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('SharePoint sites error:', error);
+        throw error;
+      }
 
       setSites(data?.sites || []);
+      
+      if (!data?.sites || data.sites.length === 0) {
+        toast({
+          title: 'No sites found',
+          description: 'No SharePoint sites are accessible with the current connection',
+          variant: 'default'
+        });
+      }
     } catch (error: any) {
       console.error('Error loading sites:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load SharePoint sites',
+        description: error.message || 'Failed to load SharePoint sites',
         variant: 'destructive'
       });
     } finally {

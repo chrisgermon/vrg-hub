@@ -94,44 +94,70 @@ export function Office365UserSync() {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('office365-oauth-user-initiate', {
+      // Use a default company_id or get it from the user context
+      // For now, we'll pass it in the state and retrieve it later
+      const company_id = 'default'; // This will be stored in the oauth state
+
+      const { data, error } = await supabase.functions.invoke('office365-oauth-initiate', {
+        body: { company_id },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      if (error) throw error;
+      
+      if (error) {
+        console.error('OAuth initiate error:', error);
+        throw error;
+      }
 
-      if (data?.authUrl) {
+      if (data?.authorization_url) {
         const width = 600;
         const height = 700;
         const left = window.screenX + (window.outerWidth - width) / 2;
         const top = window.screenY + (window.outerHeight - height) / 2;
 
         const popup = window.open(
-          data.authUrl,
+          data.authorization_url,
           'office365-auth',
           `width=${width},height=${height},left=${left},top=${top}`
         );
 
-        const handleMessage = (event: MessageEvent) => {
-          if (event.data?.type === 'office365-connected') {
+        if (!popup) {
+          toast.error('Please allow popups for this site to connect Office 365');
+          return;
+        }
+
+        let connectionCheckInterval: NodeJS.Timeout | null = null;
+        
+        const checkConnectionStatus = async () => {
+          const { data: conn } = await supabase
+            .from('office365_connections')
+            .select('id, updated_at')
+            .eq('user_id', user?.id || '')
+            .order('updated_at', { ascending: false })
+            .maybeSingle();
+
+          if (conn) {
             toast.success('Office 365 connected successfully');
-            window.removeEventListener('message', handleMessage);
+            if (connectionCheckInterval) clearInterval(connectionCheckInterval);
             try { popup?.close(); } catch {}
             checkConnection();
           }
         };
 
-        window.addEventListener('message', handleMessage);
+        // Poll for connection status
+        connectionCheckInterval = setInterval(checkConnectionStatus, 2000);
 
         const poll = setInterval(() => {
           if (!popup || popup.closed) {
             clearInterval(poll);
-            window.removeEventListener('message', handleMessage);
+            if (connectionCheckInterval) clearInterval(connectionCheckInterval);
+            // Check one final time in case connection was made
+            setTimeout(checkConnectionStatus, 1000);
           }
         }, 500);
       }
     } catch (error) {
       console.error('Error connecting Office 365:', error);
-      toast.error('Failed to connect Office 365');
+      toast.error(error instanceof Error ? error.message : 'Failed to connect Office 365');
     }
   };
 
