@@ -63,10 +63,10 @@ serve(async (req) => {
 
     const { folder_path } = await req.json();
 
-    // Fetch active SharePoint configuration (single-tenant friendly)
+    // Fetch active SharePoint configuration
     const { data: config } = await supabaseAdmin
       .from('sharepoint_configurations')
-      .select('site_id, folder_path')
+      .select('site_id, folder_path, company_id')
       .eq('is_active', true)
       .maybeSingle();
 
@@ -81,38 +81,24 @@ serve(async (req) => {
       );
     }
 
-    // Prefer company-level Office 365 token (admin-managed), fallback to user-level
-    let connection: { access_token: string } | null = null;
+    console.log('SharePoint config found for company:', config.company_id);
 
-    const { data: companyConnection } = await supabaseAdmin
+    // Get Office 365 connection for the company
+    const { data: connection } = await supabaseAdmin
       .from('office365_connections')
       .select('access_token')
-      .is('user_id', null)
+      .eq('company_id', config.company_id)
       .order('updated_at', { ascending: false })
       .maybeSingle();
 
-    if (companyConnection?.access_token) {
-      connection = companyConnection;
-      console.log('Using company-level Office 365 token');
-    } else {
-      const { data: userConnection } = await supabaseAdmin
-        .from('office365_connections')
-        .select('access_token')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false })
-        .maybeSingle();
-      if (userConnection?.access_token) {
-        connection = userConnection;
-        console.log('Using user-level Office 365 token');
-      }
-    }
-
     if (!connection?.access_token) {
       return new Response(
-        JSON.stringify({ error: 'Office 365 not connected', configured: false }),
+        JSON.stringify({ error: 'Office 365 not connected for this company', configured: false }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('Using Office 365 token for company');
 
     // Determine the path to browse
     const basePath = config.folder_path || '/';

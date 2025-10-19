@@ -133,20 +133,14 @@ export function SharePointBrowser() {
   if (!configured) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Connect to SharePoint</CardTitle>
-          <CardDescription>
-            Connect your Office 365 account to access SharePoint documents with your personal permissions
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              You'll see only the files and folders you have permission to access in SharePoint
-            </AlertDescription>
-          </Alert>
-          <ConnectOffice365Button />
+        <CardContent className="flex flex-col items-center justify-center py-12 space-y-4">
+          <AlertCircle className="h-12 w-12 text-muted-foreground" />
+          <div className="text-center space-y-2">
+            <h3 className="text-lg font-semibold">SharePoint Not Configured</h3>
+            <p className="text-sm text-muted-foreground max-w-md">
+              A Super Admin needs to configure SharePoint access in the Integrations page before documents can be viewed.
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
