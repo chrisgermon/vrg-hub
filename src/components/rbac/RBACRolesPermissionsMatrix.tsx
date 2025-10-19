@@ -6,7 +6,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 
 // Types
 interface Role {
@@ -92,16 +91,11 @@ export function RBACRolesPermissionsMatrix() {
     setPending(updated);
   };
 
-  const onToggleAllow = (roleId: string, permId: string) => {
+  const onToggle = (roleId: string, permId: string) => {
     const cur = getEffective(roleId, permId);
-    if (cur === 'allow') setEffect(roleId, permId, null);
-    else setEffect(roleId, permId, 'allow');
-  };
-
-  const onToggleDeny = (roleId: string, permId: string) => {
-    const cur = getEffective(roleId, permId);
-    if (cur === 'deny') setEffect(roleId, permId, null);
-    else setEffect(roleId, permId, 'deny');
+    // Toggle: if 'allow', set to null (deny), otherwise set to 'allow'
+    const next: EffectType = cur === 'allow' ? null : 'allow';
+    setEffect(roleId, permId, next);
   };
 
   const hasChanges = pending.size > 0;
@@ -151,7 +145,7 @@ export function RBACRolesPermissionsMatrix() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <CardTitle>Permissions Matrix</CardTitle>
-              <CardDescription>Tick Allow or Deny per role and permission</CardDescription>
+              <CardDescription>Checked = Allow, Unchecked = Deny</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <Input
@@ -198,34 +192,21 @@ export function RBACRolesPermissionsMatrix() {
                       </TableCell>
                       {roles.map((r) => {
                         const val = getEffective(r.id, p.id);
-                        const allowChecked = val === 'allow';
-                        const denyChecked = val === 'deny';
+                        const isChecked = val === 'allow';
                         const key = `${r.id}:${p.id}` as RolePermKey;
                         const isModified = pending.has(key);
                         return (
                           <TableCell key={r.id + p.id} className="text-center">
-                            <div className="inline-flex items-center gap-4">
-                              <div className="flex items-center gap-2">
-                                <Checkbox
-                                  checked={allowChecked}
-                                  onCheckedChange={() => onToggleAllow(r.id, p.id)}
-                                  aria-label={`Allow ${r.name} to ${p.resource}:${p.action}`}
-                                />
-                                <span className="text-xs">Allow</span>
-                              </div>
-                              <Separator orientation="vertical" className="h-6" />
-                              <div className="flex items-center gap-2">
-                                <Checkbox
-                                  checked={denyChecked}
-                                  onCheckedChange={() => onToggleDeny(r.id, p.id)}
-                                  aria-label={`Deny ${r.name} to ${p.resource}:${p.action}`}
-                                />
-                                <span className="text-xs">Deny</span>
-                              </div>
+                            <div className="flex flex-col items-center gap-1">
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={() => onToggle(r.id, p.id)}
+                                aria-label={`${r.name} - ${p.resource}:${p.action}`}
+                              />
+                              {isModified && (
+                                <span className="text-[10px] text-primary font-medium">Modified</span>
+                              )}
                             </div>
-                            {isModified && (
-                              <div className="mt-1 text-[10px] text-primary">Modified</div>
-                            )}
                           </TableCell>
                         );
                       })}
