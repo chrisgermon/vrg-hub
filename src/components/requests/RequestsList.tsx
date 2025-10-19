@@ -18,8 +18,7 @@ interface Request {
   priority: string;
   created_at: string;
   user_id: string;
-  total_amount?: number;
-  currency: string;
+  assigned_to?: string;
 }
 
 interface RequestsListProps {
@@ -43,8 +42,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
         .from('hardware_requests')
         .select(`
           *,
-          brands:brand_id(display_name),
-          locations:location_id(name)
+          assigned_profile:assigned_to(full_name)
         `)
         .order('created_at', { ascending: false });
 
@@ -124,11 +122,9 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
                 <TableRow>
                   <TableHead>ID</TableHead>
                   <TableHead>Title</TableHead>
-                  <TableHead>Brand</TableHead>
-                  <TableHead>Location</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Priority</TableHead>
-                  <TableHead>Amount</TableHead>
+                  <TableHead>Assigned To</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -150,16 +146,9 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
                     >
                       <TableCell className="font-mono text-xs">{formatRequestIdShort(request.id)}</TableCell>
                     <TableCell className="font-medium">{request.title}</TableCell>
-                    <TableCell>{(request as any).brands?.display_name || '-'}</TableCell>
-                    <TableCell>{(request as any).locations?.name || '-'}</TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
                     <TableCell>{getPriorityBadge(request.priority)}</TableCell>
-                    <TableCell>
-                      {request.total_amount 
-                        ? `${request.currency} ${request.total_amount.toFixed(2)}`
-                        : '-'
-                      }
-                    </TableCell>
+                    <TableCell>{(request as any).assigned_profile?.full_name || '-'}</TableCell>
                     <TableCell>
                       {formatAUDate(request.created_at)}
                     </TableCell>
