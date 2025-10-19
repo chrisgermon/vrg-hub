@@ -296,81 +296,79 @@ export default function SiteMaps() {
             <div className="flex items-center justify-center h-[600px]">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
+          ) : !apiKey ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
           ) : (
-            {!apiKey ? (
-              <div className="flex items-center justify-center h-[600px]">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <div className="rounded-lg overflow-hidden border">
-                <MapsLoader apiKey={apiKey} onLoaded={() => setMapsLoaded(true)}>
-                  {() => (
-                    <GoogleMap
-                      mapContainerStyle={mapContainerStyle}
-                      center={defaultCenter}
-                      zoom={4}
-                      onLoad={onLoad}
-                      onUnmount={onUnmount}
-                      options={{
-                        streetViewControl: false,
-                        mapTypeControl: true,
-                        fullscreenControl: true,
-                      }}
-                    >
-                      {locations?.map((location) => {
-                        const coords = getCoordinatesForLocation(location);
-                        if (!coords) return null;
+            <div className="rounded-lg overflow-hidden border">
+              <MapsLoader apiKey={apiKey} onLoaded={() => setMapsLoaded(true)}>
+                {() => (
+                  <GoogleMap
+                    mapContainerStyle={mapContainerStyle}
+                    center={defaultCenter}
+                    zoom={4}
+                    onLoad={onLoad}
+                    onUnmount={onUnmount}
+                    options={{
+                      streetViewControl: false,
+                      mapTypeControl: true,
+                      fullscreenControl: true,
+                    }}
+                  >
+                    {locations?.map((location) => {
+                      const coords = getCoordinatesForLocation(location);
+                      if (!coords) return null;
 
-                        return (
-                          <Marker
-                            key={location.id}
-                            position={coords}
-                            onClick={() => setSelectedLocation(location)}
-                            title={location.name}
-                          />
-                        );
-                      })}
+                      return (
+                        <Marker
+                          key={location.id}
+                          position={coords}
+                          onClick={() => setSelectedLocation(location)}
+                          title={location.name}
+                        />
+                      );
+                    })}
 
-                      {selectedLocation && (
-                        <InfoWindow
-                          position={getCoordinatesForLocation(selectedLocation)!}
-                          onCloseClick={() => setSelectedLocation(null)}
-                        >
-                          <div className="p-2">
-                            <h3 className="font-semibold text-sm mb-1">{selectedLocation.name}</h3>
-                            {selectedLocation.brands && (
-                              <p className="text-xs text-muted-foreground mb-2">
-                                {selectedLocation.brands.display_name}
-                              </p>
-                            )}
-                            {selectedLocation.address && (
-                              <p className="text-xs">{selectedLocation.address}</p>
-                            )}
-                            {(selectedLocation.city || selectedLocation.state || selectedLocation.zip_code) && (
-                              <p className="text-xs">
-                                {[selectedLocation.city, selectedLocation.state, selectedLocation.zip_code]
-                                  .filter(Boolean)
-                                  .join(', ')}
-                              </p>
-                            )}
-                            {selectedLocation.phone && (
-                              <p className="text-xs mt-1">
-                                <strong>Phone:</strong> {selectedLocation.phone}
-                              </p>
-                            )}
-                            {selectedLocation.email && (
-                              <p className="text-xs">
-                                <strong>Email:</strong> {selectedLocation.email}
-                              </p>
-                            )}
-                          </div>
-                        </InfoWindow>
-                      )}
-                    </GoogleMap>
-                  )}
-                </MapsLoader>
-              </div>
-            )}
+                    {selectedLocation && (
+                      <InfoWindow
+                        position={getCoordinatesForLocation(selectedLocation)!}
+                        onCloseClick={() => setSelectedLocation(null)}
+                      >
+                        <div className="p-2">
+                          <h3 className="font-semibold text-sm mb-1">{selectedLocation.name}</h3>
+                          {selectedLocation.brands && (
+                            <p className="text-xs text-muted-foreground mb-2">
+                              {selectedLocation.brands.display_name}
+                            </p>
+                          )}
+                          {selectedLocation.address && (
+                            <p className="text-xs">{selectedLocation.address}</p>
+                          )}
+                          {(selectedLocation.city || selectedLocation.state || selectedLocation.zip_code) && (
+                            <p className="text-xs">
+                              {[selectedLocation.city, selectedLocation.state, selectedLocation.zip_code]
+                                .filter(Boolean)
+                                .join(', ')}
+                            </p>
+                          )}
+                          {selectedLocation.phone && (
+                            <p className="text-xs mt-1">
+                              <strong>Phone:</strong> {selectedLocation.phone}
+                            </p>
+                          )}
+                          {selectedLocation.email && (
+                            <p className="text-xs">
+                              <strong>Email:</strong> {selectedLocation.email}
+                            </p>
+                          )}
+                        </div>
+                      </InfoWindow>
+                    )}
+                  </GoogleMap>
+                )}
+              </MapsLoader>
+            </div>
           )}
         </CardContent>
       </Card>
