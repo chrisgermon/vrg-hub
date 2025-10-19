@@ -9,7 +9,7 @@ import { Loader2, Eye, Clock, CheckCircle, XCircle, Package } from 'lucide-react
 import { formatAUDate } from '@/lib/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { RequestStatus } from '@/types/request';
-import { formatRequestIdShort } from '@/lib/requestUtils';
+import { formatRequestIdShort, formatRequestId } from '@/lib/requestUtils';
 
 interface Request {
   id: string;
@@ -134,13 +134,21 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {requests.map((request) => (
-                  <TableRow 
-                    key={request.id}
-                    className={`cursor-pointer transition-colors ${selectedRequestId === request.id ? 'bg-muted' : 'hover:bg-muted/50'}`}
-                    onClick={() => onRequestSelect ? onRequestSelect(request.id) : navigate(`/requests/${request.id}`)}
-                  >
-                    <TableCell className="font-mono text-xs">{formatRequestIdShort(request.id)}</TableCell>
+                {requests.map((request) => {
+                  const requestNum = formatRequestId(request.id);
+                  return (
+                    <TableRow 
+                      key={request.id}
+                      className={`cursor-pointer transition-colors ${selectedRequestId === request.id ? 'bg-muted' : 'hover:bg-muted/50'}`}
+                      onClick={() => {
+                        if (onRequestSelect) {
+                          onRequestSelect(request.id);
+                        } else {
+                          navigate(`/request/${requestNum}`);
+                        }
+                      }}
+                    >
+                      <TableCell className="font-mono text-xs">{formatRequestIdShort(request.id)}</TableCell>
                     <TableCell className="font-medium">{request.title}</TableCell>
                     <TableCell>{(request as any).brands?.display_name || '-'}</TableCell>
                     <TableCell>{(request as any).locations?.name || '-'}</TableCell>
@@ -159,14 +167,15 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => navigate(`/requests/${request.id}`)}
+                        onClick={() => navigate(`/request/${requestNum}`)}
                       >
                         <Eye className="w-4 h-4 mr-2" />
                         View
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))}
+                );
+                })}
               </TableBody>
             </Table>
           </div>

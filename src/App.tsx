@@ -14,6 +14,7 @@ import SystemLogin from "./pages/SystemLogin";
 import CreateSystemAdmin from "./pages/CreateSystemAdmin";
 import Home from "./pages/Home";
 import Requests from "./pages/Requests";
+import RequestDetail from "./pages/RequestDetail";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -79,6 +80,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/home", element: <Home /> },
   { path: "/notifications", element: <Notifications /> },
   { path: "/requests", element: <Requests /> },
+  { path: "/request/:requestNumber", element: <RequestDetail /> },
   { path: "/requests/hardware/:id", element: <Requests /> },
   { path: "/requests/marketing/:id", element: <Requests /> },
   { path: "/requests/user-account/:id", element: <Requests /> },
