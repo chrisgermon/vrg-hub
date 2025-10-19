@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ export default function ReminderEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -94,6 +96,16 @@ export default function ReminderEdit() {
       setIsLoaded(true);
     }
   }, [reminder, isLoaded]);
+
+  // Auto-populate phone number when SMS is enabled
+  useEffect(() => {
+    if (formData.sms_enabled && !formData.phone_number && profile?.phone) {
+      setFormData(prev => ({
+        ...prev,
+        phone_number: profile.phone
+      }));
+    }
+  }, [formData.sms_enabled, profile?.phone]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 export default function NewReminder() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -98,6 +100,16 @@ export default function NewReminder() {
         : [...prev.advance_notice_days, day].sort((a, b) => b - a)
     }));
   };
+
+  // Auto-populate phone number when SMS is enabled
+  useEffect(() => {
+    if (formData.sms_enabled && !formData.phone_number && profile?.phone) {
+      setFormData(prev => ({
+        ...prev,
+        phone_number: profile.phone
+      }));
+    }
+  }, [formData.sms_enabled, profile?.phone]);
 
   return (
     <div className="container-responsive py-6 space-y-6">
