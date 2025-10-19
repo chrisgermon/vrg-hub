@@ -6,7 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { useRequestTypes, useRoutingRules, useTeams, useUpdateRoutingRule } from '@/hooks/useTicketingSystem';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 const STRATEGY_LABELS = {
   default_assignee: 'Default Assignee',
@@ -19,10 +24,19 @@ const STRATEGY_LABELS = {
 
 export function RoutingRulesManager() {
   const [selectedRequestType, setSelectedRequestType] = useState<string | null>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newRule, setNewRule] = useState({
+    strategy: 'default_assignee',
+    team_id: '',
+    priority: 1,
+  });
+  
   const { data: requestTypes } = useRequestTypes();
   const { data: routingRules } = useRoutingRules(selectedRequestType || undefined);
   const { data: teams } = useTeams();
   const updateRule = useUpdateRoutingRule();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const handleToggleActive = async (ruleId: string, isActive: boolean) => {
     await updateRule.mutateAsync({ id: ruleId, data: { is_active: !isActive } });
@@ -36,6 +50,56 @@ export function RoutingRulesManager() {
     await updateRule.mutateAsync({ id: ruleId, data: { priority: newPriority } });
   };
 
+  const handleCreateRule = async () => {
+    if (!selectedRequestType) {
+      toast({
+        title: "Error",
+        description: "Please select a request type first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newRule.team_id) {
+      toast({
+        title: "Error",
+        description: "Please select a team",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('routing_rules')
+        .insert({
+          request_type_id: selectedRequestType,
+          team_id: newRule.team_id,
+          strategy: newRule.strategy,
+          priority: newRule.priority,
+          is_active: true,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Routing rule created successfully",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['routing_rules'] });
+      setIsAddDialogOpen(false);
+      setNewRule({ strategy: 'default_assignee', team_id: '', priority: 1 });
+    } catch (error) {
+      console.error('Error creating routing rule:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create routing rule",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -43,6 +107,74 @@ export function RoutingRulesManager() {
           <h3 className="text-lg font-semibold">Routing Rules</h3>
           <p className="text-sm text-muted-foreground">Configure how requests are assigned to teams and users</p>
         </div>
+        {selectedRequestType && (
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Rule
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Routing Rule</DialogTitle>
+                <DialogDescription>
+                  Add a new rule to automatically route requests
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="team">Team</Label>
+                  <Select value={newRule.team_id} onValueChange={(v) => setNewRule({ ...newRule, team_id: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teams?.map((team) => (
+                        <SelectItem key={team.id} value={team.id}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="strategy">Strategy</Label>
+                  <Select value={newRule.strategy} onValueChange={(v) => setNewRule({ ...newRule, strategy: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(STRATEGY_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="priority">Priority</Label>
+                  <Input
+                    id="priority"
+                    type="number"
+                    min="1"
+                    value={newRule.priority}
+                    onChange={(e) => setNewRule({ ...newRule, priority: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateRule}>
+                  Create Rule
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="flex gap-4">
