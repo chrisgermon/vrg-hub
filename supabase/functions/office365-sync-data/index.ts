@@ -84,7 +84,10 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (!user) {
-      throw new Error('Not authenticated');
+      return new Response(
+        JSON.stringify({ error: 'Not authenticated' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const { company_id } = await req.json();
@@ -114,7 +117,10 @@ serve(async (req) => {
     }
 
     if (connError || !connection) {
-      throw new Error('No active Office 365 connection found');
+      return new Response(
+        JSON.stringify({ error: 'No active Office 365 connection found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     let accessToken = connection.access_token;

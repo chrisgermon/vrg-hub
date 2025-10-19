@@ -180,20 +180,10 @@ export function SharePointConfiguration() {
         folder_path: folderPath
       });
 
-      // Deactivate existing configs
-      const { error: deactivateError } = await supabase
+      // Upsert config (update if exists, insert if not)
+      const { error: upsertError } = await (supabase as any)
         .from('sharepoint_configurations')
-        .update({ is_active: false })
-        .eq('company_id', connection.company_id);
-
-      if (deactivateError) {
-        console.error('Error deactivating configs:', deactivateError);
-      }
-
-      // Create new config
-      const { error: insertError } = await supabase
-        .from('sharepoint_configurations')
-        .insert({
+        .upsert({
           company_id: connection.company_id,
           site_id: site.id,
           site_name: site.name,
@@ -201,11 +191,14 @@ export function SharePointConfiguration() {
           folder_path: folderPath || '/',
           configured_by: user.id,
           is_active: true
+        }, {
+          onConflict: 'company_id',
+          ignoreDuplicates: false
         });
 
-      if (insertError) {
-        console.error('Insert error:', insertError);
-        throw new Error(`Failed to save configuration: ${insertError.message}`);
+      if (upsertError) {
+        console.error('Upsert error:', upsertError);
+        throw new Error(`Failed to save configuration: ${upsertError.message}`);
       }
 
       toast({
