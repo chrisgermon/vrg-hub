@@ -168,7 +168,7 @@ const handler = async (req: Request): Promise<Response> => {
         await supabase.functions.invoke('send-notification-email', {
           body: {
             to: requesterProfile.email,
-            subject: `Order Confirmed: ${tokenData.request.title}`,
+            subject: `[VRG-${String(tokenData.request.request_number).padStart(5, '0')}] Order Confirmed: ${tokenData.request.title}`,
             template: 'request_ordered',
             data: emailData
           }
@@ -179,7 +179,7 @@ const handler = async (req: Request): Promise<Response> => {
           request_id: tokenData.request_id,
           recipient_email: requesterProfile.email,
           email_type: 'order_confirmation',
-          subject: `Order Confirmed: ${tokenData.request.title}`,
+          subject: `[VRG-${String(tokenData.request.request_number).padStart(5, '0')}] Order Confirmed: ${tokenData.request.title}`,
           status: 'sent',
           metadata: {
             confirmed_by: admin_email,

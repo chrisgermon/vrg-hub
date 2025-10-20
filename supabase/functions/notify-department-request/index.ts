@@ -117,7 +117,8 @@ const handler = async (req: Request): Promise<Response> => {
             console.log('[notify-department-request] Sending email to:', user.email);
             recipientEmail = user.email;
             const deptLabel = departmentInfo.department ? departmentInfo.department.replace('_', ' ') : 'Department';
-            subject = `New ${deptLabel} Request: ${requestData.title}`;
+            const requestNumber = `VRG-${String(requestData.request_number).padStart(5, '0')}`;
+            subject = `[${requestNumber}] New ${deptLabel} Request: ${requestData.title}`;
 
             emailData = {
               requestTitle: requestData.title,
@@ -213,7 +214,8 @@ const handler = async (req: Request): Promise<Response> => {
               for (const m of managerProfiles) {
                 recipientEmail = m.email;
                 const deptLabel = departmentInfo.department ? departmentInfo.department.replace('_', ' ') : 'Department';
-                subject = `New ${deptLabel} Request: ${requestData.title}`;
+                const requestNumber = `VRG-${String(requestData.request_number).padStart(5, '0')}`;
+                subject = `[${requestNumber}] New ${deptLabel} Request: ${requestData.title}`;
                 console.log('[notify-department-request] Sending email to admin:', recipientEmail);
                 emailData = {
                   requestTitle: requestData.title,

@@ -68,7 +68,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send email notification
     const recipientEmail = requesterProfile.email;
     const requestNumber = requestData.request_number ? `VRG-${String(requestData.request_number).padStart(5, '0')}` : requestId.substring(0, 8);
-    const subject = `Update on Request ${requestNumber}`;
+    const subject = `[${requestNumber}] Update on Request: ${requestData.title}`;
     
     const emailData = {
       requestTitle: requestData.title || 'Your Request',
