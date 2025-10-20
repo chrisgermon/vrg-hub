@@ -41,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const reminder of reminders || []) {
       const reminderDate = new Date(reminder.reminder_date);
-      const daysUntil = Math.ceil((reminderDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const daysUntil = Math.ceil((reminderDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
       console.log(`Reminder: ${reminder.title}, Days until: ${daysUntil}`);
 
