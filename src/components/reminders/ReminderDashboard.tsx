@@ -4,7 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, AlertTriangle, CheckCircle2, Bell, Archive, XCircle } from "lucide-react";
 
-export function ReminderDashboard() {
+interface ReminderDashboardProps {
+  onFilterClick: (filterType: 'all' | 'active' | 'completed') => void;
+}
+
+export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
   const { data: stats } = useQuery({
     queryKey: ['reminder-stats'],
     queryFn: async () => {
@@ -120,7 +124,10 @@ export function ReminderDashboard() {
     <div className="space-y-6">
       {/* Main Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-destructive">
+        <Card 
+          className="border-l-4 border-l-destructive cursor-pointer hover:bg-accent/50 transition-colors"
+          onClick={() => onFilterClick('active')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Expired Items</CardTitle>
             <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -130,7 +137,10 @@ export function ReminderDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-primary">
+        <Card 
+          className="border-l-4 border-l-primary cursor-pointer hover:bg-accent/50 transition-colors"
+          onClick={() => onFilterClick('completed')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completed</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -140,7 +150,10 @@ export function ReminderDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-muted-foreground">
+        <Card 
+          className="border-l-4 border-l-muted-foreground cursor-pointer hover:bg-accent/50 transition-colors"
+          onClick={() => onFilterClick('active')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />

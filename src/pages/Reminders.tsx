@@ -18,6 +18,7 @@ export default function Reminders() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('active');
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   // Fetch in-app notifications
   const { data: inAppNotifications } = useQuery({
@@ -136,41 +137,13 @@ export default function Reminders() {
     return `in ${daysUntil} days`;
   };
 
+  const handleFilterClick = (filterType: 'all' | 'active' | 'completed') => {
+    setFilter(filterType);
+    setActiveTab('list');
+  };
+
   return (
     <div className="container-responsive py-6 space-y-6">
-      {/* In-App Notifications */}
-      {inAppNotifications && inAppNotifications.length > 0 && (
-        <div className="space-y-2">
-          {inAppNotifications.slice(0, 3).map((notification) => {
-            const reminder = notification.reminders as any;
-            const reminderDate = new Date(reminder?.reminder_date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            reminderDate.setHours(0, 0, 0, 0);
-            const daysUntil = Math.round((reminderDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-            
-            return (
-              <Alert key={notification.id} className="border-l-4 border-l-primary">
-                <Bell className="h-4 w-4" />
-                <AlertDescription className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <strong>{reminder?.title}</strong> is {getDaysMessage(daysUntil)}
-                    {reminder?.description && <span className="text-muted-foreground"> - {reminder.description}</span>}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDismissNotification(notification.id)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            );
-          })}
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -191,7 +164,7 @@ export default function Reminders() {
       </div>
 
       {/* Tabs for Dashboard and List View */}
-      <Tabs defaultValue="dashboard" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -200,7 +173,7 @@ export default function Reminders() {
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-6">
-          <ReminderDashboard />
+          <ReminderDashboard onFilterClick={handleFilterClick} />
         </TabsContent>
 
         <TabsContent value="calendar">
