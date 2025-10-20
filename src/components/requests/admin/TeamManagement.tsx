@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, UserPlus, Calendar, Settings, X } from 'lucide-react';
+import { Plus, UserPlus, Calendar, Settings, X, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -10,7 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useTeams, useCreateTeam, useAddTeamMember, useRemoveTeamMember, useActiveUsers } from '@/hooks/useTicketingSystem';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useTeams, useCreateTeam, useUpdateTeam, useDeleteTeam, useAddTeamMember, useRemoveTeamMember, useActiveUsers } from '@/hooks/useTicketingSystem';
 
 export function TeamManagement() {
   const { data: teams, isLoading } = useTeams();
@@ -38,9 +39,13 @@ export function TeamManagement() {
                     <CardDescription className="mt-1">{team.description}</CardDescription>
                   )}
                 </div>
-                <Badge variant={team.is_active ? 'default' : 'secondary'}>
-                  {team.is_active ? 'Active' : 'Inactive'}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={team.is_active ? 'default' : 'secondary'}>
+                    {team.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
+                  <EditTeamDialog team={team} />
+                  <DeleteTeamDialog teamId={team.id} teamName={team.name} />
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -239,5 +244,80 @@ function TeamDialog() {
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function EditTeamDialog({ team }: { team: any }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(team.name);
+  const [description, setDescription] = useState(team.description || '');
+  const [isActive, setIsActive] = useState(team.is_active);
+  const updateTeam = useUpdateTeam();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateTeam.mutateAsync({
+      id: team.id,
+      data: { name, description, is_active: isActive },
+    });
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Edit className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Team</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="edit-team-name">Team Name</Label>
+            <Input id="edit-team-name" value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+          <div>
+            <Label htmlFor="edit-team-description">Description</Label>
+            <Textarea id="edit-team-description" value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="edit-team-active">Active</Label>
+            <Switch id="edit-team-active" checked={isActive} onCheckedChange={setIsActive} />
+          </div>
+          <Button type="submit" className="w-full">Update Team</Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteTeamDialog({ teamId, teamName }: { teamId: string; teamName: string }) {
+  const deleteTeam = useDeleteTeam();
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Team</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete "{teamName}"? This action cannot be undone and will remove all team members.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={() => deleteTeam.mutate(teamId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

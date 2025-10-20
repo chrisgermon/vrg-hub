@@ -240,6 +240,42 @@ export function useCreateTeam() {
   });
 }
 
+export function useUpdateTeam() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const { error } = await supabase.from('teams').update(data).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      toast({ title: 'Team updated successfully' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error updating team', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useDeleteTeam() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('teams').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      toast({ title: 'Team deleted successfully' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error deleting team', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
 export function useUpdateRoutingRule() {
   const queryClient = useQueryClient();
   
