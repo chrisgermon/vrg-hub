@@ -108,33 +108,6 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
 
-        // Fallback to department assignments if no template users
-        if (usersToNotify.length === 0) {
-          console.log('[notify-department-request] No template users, falling back to brand assignments...');
-          // Fallback to users in the same brand
-          if (requestData.brand_id) {
-            const { data: brandUsers, error: brandError } = await supabase
-              .from('profiles')
-              .select('id, full_name, email, sms_enabled, phone')
-              .eq('brand_id', requestData.brand_id)
-              .eq('is_active', true);
-            
-            if (brandError) {
-              console.error('[notify-department-request] Brand users error:', brandError);
-            } else {
-              usersToNotify = (brandUsers || []).map((u: any) => ({
-                user_id: u.id,
-                name: u.full_name,
-                email: u.email,
-                receive_notifications: true,
-                sms_enabled: u.sms_enabled,
-                phone: u.phone,
-              }));
-            }
-          }
-          console.log('[notify-department-request] Brand users count:', usersToNotify.length);
-        }
-
         if (usersToNotify.length > 0) {
           // Filter users who should receive notifications
           const notificationUsers = usersToNotify.filter((u: any) => u.receive_notifications);
