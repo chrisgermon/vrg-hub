@@ -102,7 +102,14 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error(`Mailgun error: ${JSON.stringify(mailgunData)}`);
     }
 
-    // Log the notification
+    // Log the notification with days_before to avoid duplicate sends
+    const now = new Date();
+    let days_before: number | null = null;
+    try {
+      const rDate = new Date(reminderDate);
+      days_before = Math.ceil((rDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    } catch (_) { /* ignore */ }
+
     const { error: logError } = await supabase
       .from('reminder_notifications')
       .insert({
@@ -110,6 +117,7 @@ const handler = async (req: Request): Promise<Response> => {
         notification_type: 'email',
         status: 'sent',
         recipient: email,
+        days_before,
         metadata: { mailgun_response: mailgunData },
       });
 
@@ -137,7 +145,15 @@ const handler = async (req: Request): Promise<Response> => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
       );
 
-      const { reminderId, email } = await req.json();
+      const { reminderId, email, reminderDate } = await req.json();
+
+      // compute days_before for failed email log
+      let days_before: number | null = null;
+      try {
+        const rDate = new Date(reminderDate);
+        const now = new Date();
+        days_before = Math.ceil((rDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      } catch (_) { /* ignore */ }
 
       await supabase
         .from('reminder_notifications')
@@ -147,6 +163,7 @@ const handler = async (req: Request): Promise<Response> => {
           status: 'failed',
           recipient: email,
           error_message: error.message,
+          days_before,
         });
     } catch (logError) {
       console.error('Error logging failed notification:', logError);

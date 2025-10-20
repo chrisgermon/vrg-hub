@@ -35,6 +35,21 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Sending SMS reminder:', { reminderId, phoneNumber });
 
+    // Compute days_before for de-duplication based on reminder date
+    let daysBefore: number | null = null;
+    try {
+      const { data: reminder } = await supabase
+        .from('reminders')
+        .select('reminder_date')
+        .eq('id', reminderId)
+        .maybeSingle();
+      if (reminder?.reminder_date) {
+        const now = new Date();
+        const rDate = new Date(reminder.reminder_date);
+        daysBefore = Math.ceil((rDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      }
+    } catch (_) {/* non-blocking */}
+
     // Get Notifyre API key from secrets
     const notifyreApiKey = Deno.env.get('NOTIFYRE_API_KEY');
     
@@ -137,6 +152,7 @@ const handler = async (req: Request): Promise<Response> => {
           notification_type: 'sms',
           status: 'sent',
           recipient: phoneNumber,
+          days_before: daysBefore,
           metadata: { notifyre_response: smsResult, source: 'send-sms-reminder' },
         });
       if (logError) {
@@ -164,11 +180,28 @@ const handler = async (req: Request): Promise<Response> => {
         );
 
         const isUuid = typeof requestBody.reminderId === 'string' && /^[0-9a-fA-F-]{36}$/.test(requestBody.reminderId);
+        
+        // Re-compute days_before for failure log
+        let daysBefore: number | null = null;
+        try {
+          const { data: reminder } = await supabase
+            .from('reminders')
+            .select('reminder_date')
+            .eq('id', requestBody.reminderId)
+            .maybeSingle();
+          if (reminder?.reminder_date) {
+            const now = new Date();
+            const rDate = new Date(reminder.reminder_date);
+            daysBefore = Math.ceil((rDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          }
+        } catch (_) {/* ignore */}
+
         const failurePayload: any = {
           notification_type: 'sms',
           status: 'failed',
           recipient: requestBody.phoneNumber,
           error_message: error.message,
+          days_before: daysBefore,
           metadata: { source: 'send-sms-reminder' },
         };
         if (isUuid) failurePayload.reminder_id = requestBody.reminderId;
