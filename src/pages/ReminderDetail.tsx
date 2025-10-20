@@ -17,13 +17,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  } from "@/components/ui/alert-dialog";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function ReminderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const { userRole } = useAuth();
+  const isSuperAdmin = userRole === 'super_admin';
 
   const { data: reminder, isLoading } = useQuery({
     queryKey: ['reminder', id],
@@ -93,6 +97,27 @@ export default function ReminderDetail() {
     }
   };
 
+  const handleSendNow = async () => {
+    if (!id) return;
+    setIsSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-reminder-now', {
+        body: { reminderId: id },
+      });
+      if (error) {
+        toast.error('Send now failed: ' + error.message);
+      } else {
+        console.log('send-reminder-now result:', data);
+        toast.success('Reminder sent now');
+        queryClient.invalidateQueries({ queryKey: ['reminder-notifications', id] });
+      }
+    } catch (e: any) {
+      toast.error('Send now failed: ' + e.message);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container-responsive py-6">
@@ -146,21 +171,27 @@ export default function ReminderDetail() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          {reminder.status === 'active' && (
-            <Button variant="outline" onClick={handleMarkCompleted}>
-              Mark Completed
+          <div className="flex gap-2">
+            {reminder.status === 'active' && (
+              <Button variant="outline" onClick={handleMarkCompleted}>
+                Mark Completed
+              </Button>
+            )}
+            {isSuperAdmin && (
+              <Button variant="default" onClick={handleSendNow} disabled={isSending}>
+                <Bell className="h-4 w-4 mr-2" />
+                {isSending ? 'Sending...' : 'Send now'}
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => navigate(`/reminders/edit/${id}`)}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
             </Button>
-          )}
-          <Button variant="outline" onClick={() => navigate(`/reminders/edit/${id}`)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
-        </div>
+            <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </div>
       </div>
 
       {/* Main Info Card */}

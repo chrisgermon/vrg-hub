@@ -93,12 +93,13 @@ export default function NewReminder() {
 
       if (isSuperAdmin && sendNow && inserted?.id) {
         try {
-          const { error: sendError } = await supabase.functions.invoke('send-reminder-now', {
+          const { data: sendData, error: sendError } = await supabase.functions.invoke('send-reminder-now', {
             body: { reminderId: inserted.id },
           });
           if (sendError) {
             toast.error('Failed to send now: ' + sendError.message);
           } else {
+            console.log('send-reminder-now result:', sendData);
             toast.success('Reminder sent now');
           }
         } catch (e: any) {
