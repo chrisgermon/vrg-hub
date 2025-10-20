@@ -332,7 +332,45 @@ export default function RequestDetail() {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Business Justification</p>
-                <p>{request.business_justification}</p>
+                {(() => {
+                  try {
+                    // Try to parse as JSON
+                    const parsed = JSON.parse(request.business_justification || '{}');
+                    
+                    // If it has form_data, display that
+                    if (parsed.form_data) {
+                      return (
+                        <div className="space-y-3">
+                          {Object.entries(parsed.form_data as Record<string, any>).map(([key, value]) => (
+                            <div key={key} className="pl-4 border-l-2 border-muted">
+                              <p className="text-xs text-muted-foreground capitalize mb-1">
+                                {key.replace(/_/g, ' ')}
+                              </p>
+                              <p className="text-sm">{String(value)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                    
+                    // Otherwise display all key-value pairs
+                    return (
+                      <div className="space-y-3">
+                        {Object.entries(parsed).map(([key, value]) => (
+                          <div key={key} className="pl-4 border-l-2 border-muted">
+                            <p className="text-xs text-muted-foreground capitalize mb-1">
+                              {key.replace(/_/g, ' ')}
+                            </p>
+                            <p className="text-sm">{String(value)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  } catch {
+                    // If not JSON, display as plain text
+                    return <p>{request.business_justification}</p>;
+                  }
+                })()}
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Clinic Name</p>
