@@ -91,20 +91,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
-      // Fetch user role and profile when session changes
-      if (session?.user) {
-        setTimeout(() => {
-          fetchUserRole(session.user.id);
-          fetchProfile(session.user.id);
-        }, 0);
-      } else {
-        setUserRole(null);
-        setProfile(null);
-      }
+        // Log login for SIGNED_IN events
+        if (event === 'SIGNED_IN' && session?.user) {
+          try {
+            await supabase.functions.invoke('log-login');
+          } catch (logError) {
+            console.error('Error logging login:', logError);
+          }
+        }
+        
+        // Fetch user role and profile when session changes
+        if (session?.user) {
+          setTimeout(() => {
+            fetchUserRole(session.user.id);
+            fetchProfile(session.user.id);
+          }, 0);
+        } else {
+          setUserRole(null);
+          setProfile(null);
+        }
       }
     );
 
