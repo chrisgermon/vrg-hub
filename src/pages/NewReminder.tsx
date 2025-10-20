@@ -13,12 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { ArrowLeft, Bell, Mail, Smartphone } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useRBACRole } from "@/hooks/useRBACRole";
+
 
 export default function NewReminder() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
-  const { isSuperAdmin } = useRBACRole();
+  const { profile, userRole } = useAuth();
+  const isSuperAdmin = userRole === 'super_admin';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sendNow, setSendNow] = useState(false);
 
