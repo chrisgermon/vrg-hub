@@ -69,7 +69,7 @@ serve(async (req) => {
     // First, check if the user has connected their Office 365 account
     const { data: userO365 } = await supabaseAdmin
       .from('office365_connections')
-      .select('company_id, access_token, expires_at')
+      .select('*')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
       .limit(1);
@@ -99,6 +99,86 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Check if token is expired and refresh if needed
+    let connection = userConnection;
+    const now = new Date();
+    const expiresAt = new Date(connection.expires_at);
+    
+    if (now >= expiresAt) {
+      console.log('Access token expired, refreshing...');
+      
+      if (!connection.refresh_token) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Your Office 365 connection expired and cannot be refreshed. Please reconnect in Integrations.', 
+            configured: true,
+            needsO365: true,
+            folders: [],
+            files: []
+          }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Refresh the token
+      const clientId = Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID');
+      const clientSecret = Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET');
+      
+      const tokenResponse = await fetch(
+        'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: clientId!,
+            client_secret: clientSecret!,
+            refresh_token: connection.refresh_token,
+            grant_type: 'refresh_token',
+          }),
+        }
+      );
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        console.error('Token refresh failed:', errorText);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to refresh Office 365 token. Please reconnect in Integrations.', 
+            configured: true,
+            needsO365: true,
+            folders: [],
+            files: []
+          }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const tokens = await tokenResponse.json();
+      const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+
+      // Update the connection with new tokens
+      const updateData: Record<string, any> = {
+        access_token: tokens.access_token,
+        expires_at: newExpiresAt.toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      if (tokens.refresh_token) {
+        updateData.refresh_token = tokens.refresh_token;
+      }
+
+      const { error: updateError } = await supabaseAdmin
+        .from('office365_connections')
+        .update(updateData)
+        .eq('id', connection.id);
+
+      if (updateError) {
+        console.error('Failed to update refreshed token:', updateError);
+      } else {
+        console.log('Token refreshed successfully');
+        connection = { ...connection, ...updateData };
+      }
     }
 
     const companyId = userConnection.company_id;
@@ -131,10 +211,9 @@ serve(async (req) => {
     configAvailable = true;
 
     console.log('SharePoint config found for company:', config.company_id);
-    console.log('User has Office 365 connection');
+    console.log('User has Office 365 connection with valid token');
 
     // Use the user's own Office 365 token to respect their permissions
-    const connection = userConnection;
     
     if (!connection?.access_token) {
       console.error('No valid Office 365 token found for user:', user.email);
