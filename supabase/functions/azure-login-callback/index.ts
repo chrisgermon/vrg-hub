@@ -108,17 +108,28 @@ serve(async (req) => {
       });
     }
 
-    // Check if user exists in auth.users
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const existingUser = existingUsers?.users.find(u => u.email === email);
+    // Check if user exists by querying profiles table first (more reliable)
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
 
     let userId: string;
 
-    if (existingUser) {
-      userId = existingUser.id;
-      console.log('Existing user found:', userId);
+    if (existingProfile) {
+      userId = existingProfile.id;
+      console.log('Existing user found via profile:', userId);
+      
+      // Update user metadata to mark as azure login
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        user_metadata: {
+          full_name: fullName,
+          azure_login: true
+        }
+      });
     } else {
-      // Create new user with a random password (they'll use Azure login)
+      // Try to create new user
       const randomPassword = crypto.randomUUID();
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
@@ -130,13 +141,30 @@ serve(async (req) => {
         }
       });
 
-      if (createError || !newUser.user) {
-        console.error('Error creating user:', createError);
+      if (createError) {
+        // If user exists error, try to find them via profiles
+        if (createError.message?.includes('already been registered')) {
+          console.log('User exists but not found in profiles, searching...');
+          const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+          const existingUser = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+          
+          if (existingUser) {
+            userId = existingUser.id;
+            console.log('Found existing user:', userId);
+          } else {
+            console.error('User exists but cannot be found:', createError);
+            throw new Error('Failed to locate existing user account');
+          }
+        } else {
+          console.error('Error creating user:', createError);
+          throw new Error('Failed to create user account');
+        }
+      } else if (!newUser.user) {
         throw new Error('Failed to create user account');
+      } else {
+        userId = newUser.user.id;
+        console.log('New user created:', userId);
       }
-
-      userId = newUser.user.id;
-      console.log('New user created:', userId);
     }
 
     // Store Office 365 connection tokens for SharePoint access
