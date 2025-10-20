@@ -23,14 +23,30 @@ serve(async (req) => {
     const statePayload = { n: crypto.randomUUID(), r: origin };
     const state = btoa(JSON.stringify(statePayload));
     
+    // Include comprehensive Office 365 scopes to enable SharePoint access
+    const scopes = [
+      'offline_access',
+      'openid',
+      'profile',
+      'email',
+      'User.Read',
+      'User.Read.All',
+      'Group.Read.All',
+      'Mail.Read',
+      'Files.Read.All',
+      'Sites.Read.All',
+      'Directory.Read.All'
+    ].join(' ');
+    
     // Build the Microsoft authorization URL
     const authUrl = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
     authUrl.searchParams.set('client_id', clientId);
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('redirect_uri', redirectUri);
-    authUrl.searchParams.set('scope', 'openid email profile User.Read');
+    authUrl.searchParams.set('scope', scopes);
     authUrl.searchParams.set('state', state);
     authUrl.searchParams.set('response_mode', 'query');
+    authUrl.searchParams.set('prompt', 'consent'); // Force consent to get refresh token
 
     console.log('Azure login initiated:', { redirectUri, state });
 

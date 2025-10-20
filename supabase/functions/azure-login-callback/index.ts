@@ -47,7 +47,8 @@ serve(async (req) => {
       throw new Error('Failed to exchange authorization code');
     }
 
-    const { access_token } = await tokenResponse.json();
+    const tokens = await tokenResponse.json();
+    const { access_token, refresh_token, expires_in } = tokens;
 
     // Get user info from Microsoft Graph
     const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
@@ -69,6 +70,11 @@ serve(async (req) => {
     }
 
     console.log('User authenticated via Azure:', { email, fullName });
+
+    // Get tenant ID from access token for Office 365 connection
+    const tokenParts = access_token.split('.');
+    const payload = JSON.parse(atob(tokenParts[1]));
+    const tenantId = payload.tid;
 
     // Extract domain from email
     const emailDomain = email.split('@')[1];
@@ -131,6 +137,49 @@ serve(async (req) => {
 
       userId = newUser.user.id;
       console.log('New user created:', userId);
+    }
+
+    // Store Office 365 connection tokens for SharePoint access
+    if (refresh_token && expires_in) {
+      const expiresAt = new Date(Date.now() + expires_in * 1000);
+      
+      // Check if Office 365 connection already exists for this user
+      const { data: existingConnection } = await supabaseAdmin
+        .from('office365_connections')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existingConnection) {
+        // Update existing connection
+        await supabaseAdmin
+          .from('office365_connections')
+          .update({
+            access_token,
+            refresh_token,
+            expires_at: expiresAt.toISOString(),
+            tenant_id: tenantId,
+            company_id: tenantId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingConnection.id);
+        console.log('Updated Office 365 connection for user:', userId);
+      } else {
+        // Create new Office 365 connection
+        await supabaseAdmin
+          .from('office365_connections')
+          .insert({
+            user_id: userId,
+            tenant_id: tenantId,
+            company_id: tenantId,
+            access_token,
+            refresh_token,
+            expires_at: expiresAt.toISOString(),
+          });
+        console.log('Created Office 365 connection for user:', userId);
+      }
+    } else {
+      console.warn('No refresh token received - user will need to reconnect Office 365 manually');
     }
 
     // Always redirect to custom domain, never to lovable.app

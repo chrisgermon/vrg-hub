@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatAUDateTimeFull } from "@/lib/dateUtils";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { ConnectOffice365Button } from "./ConnectOffice365Button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface SharePointFolder {
   id: string;
@@ -152,10 +153,6 @@ export function SharePointBrowser() {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const getFileIcon = (fileType: string) => {
-    return <FileText className="h-8 w-8 text-primary" />;
-  };
-
   const getBreadcrumbs = () => {
     if (currentPath === '/') return [];
     const parts = currentPath.split('/').filter(Boolean);
@@ -243,92 +240,108 @@ export function SharePointBrowser() {
         </div>
       </div>
 
-      {/* Folders Section */}
-      {folders.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold mb-3">Folders</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {folders.map((folder) => (
-              <Card 
-                key={folder.id} 
-                className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => navigateToFolder(folder.name)}
-              >
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <Folder className="h-8 w-8 text-primary" />
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base truncate">{folder.name}</CardTitle>
-                      <CardDescription>
-                        {folder.childCount} {folder.childCount === 1 ? 'item' : 'items'}
-                      </CardDescription>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                  </div>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Files Section */}
-      {files.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold mb-3">Files</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {files.map((doc) => (
-              <Card key={doc.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    {getFileIcon(doc.fileType)}
-                    <span className="text-xs font-mono bg-muted px-2 py-1 rounded">
-                      {doc.fileType}
-                    </span>
-                  </div>
-                  <CardTitle className="text-lg mt-2 break-words">
-                    {doc.name}
-                  </CardTitle>
-                  <CardDescription>
-                    {formatFileSize(doc.size)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="text-sm space-y-1">
-                    <p className="text-muted-foreground">
-                      Last modified: {formatAUDateTimeFull(doc.lastModifiedDateTime)}
-                    </p>
-                    {doc.lastModifiedBy && (
-                      <p className="text-muted-foreground">
-                        By: {doc.lastModifiedBy}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => window.open(doc.webUrl, '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Open
-                    </Button>
-                    {doc.downloadUrl && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(doc.downloadUrl, '_blank')}
-                      >
-                        <Download className="h-4 w-4" />
+      {/* Combined Table View */}
+      {(folders.length > 0 || files.length > 0) && (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12"></TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead className="hidden md:table-cell">Modified</TableHead>
+                  <TableHead className="hidden lg:table-cell">Modified By</TableHead>
+                  <TableHead className="hidden sm:table-cell">Size</TableHead>
+                  <TableHead className="w-32">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {/* Folders */}
+                {folders.map((folder) => (
+                  <TableRow 
+                    key={folder.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigateToFolder(folder.name)}
+                  >
+                    <TableCell>
+                      <Folder className="h-5 w-5 text-primary" />
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {folder.name}
+                        <span className="text-xs text-muted-foreground">
+                          ({folder.childCount} {folder.childCount === 1 ? 'item' : 'items'})
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                      {formatAUDateTimeFull(folder.lastModifiedDateTime)}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                      —
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                      —
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm">
+                        <ChevronRight className="h-4 w-4" />
                       </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                
+                {/* Files */}
+                {files.map((doc) => (
+                  <TableRow key={doc.id} className="hover:bg-muted/50">
+                    <TableCell>
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate max-w-xs">{doc.name}</span>
+                        <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded flex-shrink-0">
+                          {doc.fileType}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                      {formatAUDateTimeFull(doc.lastModifiedDateTime)}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground truncate max-w-xs">
+                      {doc.lastModifiedBy || '—'}
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                      {formatFileSize(doc.size)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(doc.webUrl, '_blank')}
+                          title="Open in SharePoint"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                        {doc.downloadUrl && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(doc.downloadUrl, '_blank')}
+                            title="Download"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
 
       {/* Empty State */}
