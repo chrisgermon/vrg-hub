@@ -13,11 +13,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { ArrowLeft, Bell, Mail, Smartphone } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useRBACRole } from "@/hooks/useRBACRole";
 
 export default function NewReminder() {
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const { isSuperAdmin } = useRBACRole();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sendNow, setSendNow] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -67,7 +70,7 @@ export default function NewReminder() {
       const localDate = new Date(formData.reminder_date);
       const utcDateString = localDate.toISOString();
 
-      const { error } = await supabase.from('reminders').insert({
+      const { data: inserted, error } = await supabase.from('reminders').insert({
         user_id: user.id,
         title: formData.title,
         description: formData.description,
@@ -84,9 +87,24 @@ export default function NewReminder() {
         phone_number: formData.phone_number || null,
         email: formData.email || null,
         advance_notice_days: formData.advance_notice_days,
-      });
+      }).select('*').single();
 
       if (error) throw error;
+
+      if (isSuperAdmin && sendNow && inserted?.id) {
+        try {
+          const { error: sendError } = await supabase.functions.invoke('send-reminder-now', {
+            body: { reminderId: inserted.id },
+          });
+          if (sendError) {
+            toast.error('Failed to send now: ' + sendError.message);
+          } else {
+            toast.success('Reminder sent now');
+          }
+        } catch (e: any) {
+          toast.error('Failed to send now: ' + e.message);
+        }
+      }
 
       toast.success('Reminder created successfully');
       navigate('/reminders');
@@ -340,6 +358,21 @@ export default function NewReminder() {
                 ))}
               </CardContent>
             </Card>
+
+            {isSuperAdmin && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Testing</CardTitle>
+                  <CardDescription>Super admins can trigger a send immediately</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="send_now">Send now after saving</Label>
+                    <Switch id="send_now" checked={sendNow} onCheckedChange={setSendNow} />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="flex gap-2">
               <Button type="submit" className="flex-1" disabled={isSubmitting}>
