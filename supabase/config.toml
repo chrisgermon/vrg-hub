@@ -26,3 +26,6 @@ verify_jwt = true
 
 [functions.ai-content-suggestions]
 verify_jwt = true
+
+[functions.sharepoint-browse-folders-cached]
+verify_jwt = true

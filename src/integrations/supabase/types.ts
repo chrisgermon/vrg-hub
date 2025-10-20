@@ -2328,6 +2328,78 @@ export type Database = {
           },
         ]
       }
+      sharepoint_cache: {
+        Row: {
+          cached_at: string
+          child_count: number | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          created_datetime: string | null
+          download_url: string | null
+          expires_at: string
+          file_type: string | null
+          id: string
+          item_id: string
+          item_type: string
+          last_modified_by: string | null
+          last_modified_datetime: string | null
+          metadata: Json | null
+          name: string
+          parent_path: string
+          permissions: Json | null
+          size: number | null
+          updated_at: string
+          web_url: string | null
+        }
+        Insert: {
+          cached_at?: string
+          child_count?: number | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          created_datetime?: string | null
+          download_url?: string | null
+          expires_at?: string
+          file_type?: string | null
+          id?: string
+          item_id: string
+          item_type: string
+          last_modified_by?: string | null
+          last_modified_datetime?: string | null
+          metadata?: Json | null
+          name: string
+          parent_path: string
+          permissions?: Json | null
+          size?: number | null
+          updated_at?: string
+          web_url?: string | null
+        }
+        Update: {
+          cached_at?: string
+          child_count?: number | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          created_datetime?: string | null
+          download_url?: string | null
+          expires_at?: string
+          file_type?: string | null
+          id?: string
+          item_id?: string
+          item_type?: string
+          last_modified_by?: string | null
+          last_modified_datetime?: string | null
+          metadata?: Json | null
+          name?: string
+          parent_path?: string
+          permissions?: Json | null
+          size?: number | null
+          updated_at?: string
+          web_url?: string | null
+        }
+        Relationships: []
+      }
       sharepoint_configurations: {
         Row: {
           company_id: string
@@ -2923,6 +2995,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      clean_expired_sharepoint_cache: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       has_rbac_role: {
         Args: { _role_name: string; _user_id: string }
         Returns: boolean

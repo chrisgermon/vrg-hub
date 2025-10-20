@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Download, ExternalLink, Loader2, AlertCircle, Folder, ChevronRight, Home } from "lucide-react";
+import { FileText, Download, ExternalLink, Loader2, AlertCircle, Folder, ChevronRight, Home, Users, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatAUDateTimeFull } from "@/lib/dateUtils";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { ConnectOffice365Button } from "./ConnectOffice365Button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PermissionsDialog } from "./PermissionsDialog";
 
 interface SharePointFolder {
   id: string;
@@ -16,6 +17,7 @@ interface SharePointFolder {
   webUrl: string;
   childCount: number;
   lastModifiedDateTime: string;
+  permissions?: Permission[];
 }
 
 interface SharePointFile {
@@ -29,6 +31,21 @@ interface SharePointFile {
   lastModifiedBy?: string;
   fileType: string;
   downloadUrl?: string;
+  permissions?: Permission[];
+}
+
+interface Permission {
+  id: string;
+  roles: string[];
+  grantedTo?: Array<{
+    displayName: string;
+    email?: string;
+    type: 'user' | 'group';
+  }>;
+  link?: {
+    type: string;
+    scope: string;
+  };
 }
 
 export function SharePointBrowser() {
@@ -39,16 +56,18 @@ export function SharePointBrowser() {
   const [needsO365, setNeedsO365] = useState(false);
   const [currentPath, setCurrentPath] = useState("/");
   const [pathHistory, setPathHistory] = useState<string[]>([]);
+  const [fromCache, setFromCache] = useState(false);
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<SharePointFile | SharePointFolder | null>(null);
 
   useEffect(() => {
     loadItems(currentPath);
   }, [currentPath]);
 
-  const loadItems = async (path: string) => {
+  const loadItems = async (path: string, forceRefresh = false) => {
     try {
       setLoading(true);
       
-      // Get current session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !session) {
@@ -57,10 +76,10 @@ export function SharePointBrowser() {
         return;
       }
       
-      console.log('Invoking sharepoint-browse-folders with session:', !!session);
+      console.log('Invoking sharepoint-browse-folders-cached with session:', !!session);
       
-      const { data, error } = await supabase.functions.invoke('sharepoint-browse-folders', {
-        body: { folder_path: path },
+      const { data, error } = await supabase.functions.invoke('sharepoint-browse-folders-cached', {
+        body: { folder_path: path, force_refresh: forceRefresh },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
@@ -86,6 +105,12 @@ export function SharePointBrowser() {
       setFiles(data.files || []);
       setConfigured(!!data.configured);
       setNeedsO365(!!data.needsO365);
+      setFromCache(!!data.fromCache);
+      setCachedAt(data.cachedAt || null);
+      
+      if (data.fromCache) {
+        toast.success('Loaded from cache (faster!)', { duration: 2000 });
+      }
     } catch (error: any) {
       console.error('Error loading SharePoint items:', error);
       // Fallback: detect whether SharePoint is actually configured for this company
@@ -157,6 +182,29 @@ export function SharePointBrowser() {
     if (currentPath === '/') return [];
     const parts = currentPath.split('/').filter(Boolean);
     return parts;
+  };
+
+  const getPermissionsSummary = (permissions?: Permission[]) => {
+    if (!permissions || permissions.length === 0) return 'No permissions info';
+    
+    const users = new Set<string>();
+    const groups = new Set<string>();
+    
+    permissions.forEach(perm => {
+      perm.grantedTo?.forEach(identity => {
+        if (identity.type === 'user') {
+          users.add(identity.displayName);
+        } else {
+          groups.add(identity.displayName);
+        }
+      });
+    });
+    
+    const parts = [];
+    if (users.size > 0) parts.push(`${users.size} user${users.size > 1 ? 's' : ''}`);
+    if (groups.size > 0) parts.push(`${groups.size} group${groups.size > 1 ? 's' : ''}`);
+    
+    return parts.length > 0 ? parts.join(', ') : 'Shared with link';
   };
 
   if (loading && folders.length === 0 && files.length === 0) {
@@ -234,9 +282,19 @@ export function SharePointBrowser() {
               Back
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => loadItems(currentPath)}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => loadItems(currentPath, true)}
+            title="Force refresh from SharePoint"
+          >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Refresh'}
           </Button>
+          {fromCache && cachedAt && (
+            <span className="text-xs text-muted-foreground flex items-center">
+              Cached {new Date(cachedAt).toLocaleTimeString()}
+            </span>
+          )}
         </div>
       </div>
 
@@ -251,6 +309,7 @@ export function SharePointBrowser() {
                   <TableHead>Name</TableHead>
                   <TableHead className="hidden md:table-cell">Modified</TableHead>
                   <TableHead className="hidden lg:table-cell">Modified By</TableHead>
+                  <TableHead className="hidden xl:table-cell">Permissions</TableHead>
                   <TableHead className="hidden sm:table-cell">Size</TableHead>
                   <TableHead className="w-32">Actions</TableHead>
                 </TableRow>
@@ -279,6 +338,20 @@ export function SharePointBrowser() {
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                       —
+                    </TableCell>
+                    <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedItem(folder);
+                        }}
+                        className="h-auto p-1"
+                      >
+                        <Lock className="h-3 w-3 mr-1" />
+                        {getPermissionsSummary(folder.permissions)}
+                      </Button>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                       —
@@ -310,6 +383,20 @@ export function SharePointBrowser() {
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground truncate max-w-xs">
                       {doc.lastModifiedBy || '—'}
+                    </TableCell>
+                    <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedItem(doc);
+                        }}
+                        className="h-auto p-1"
+                      >
+                        <Lock className="h-3 w-3 mr-1" />
+                        {getPermissionsSummary(doc.permissions)}
+                      </Button>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                       {formatFileSize(doc.size)}
@@ -355,6 +442,16 @@ export function SharePointBrowser() {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Permissions Dialog */}
+      {selectedItem && (
+        <PermissionsDialog
+          open={!!selectedItem}
+          onOpenChange={(open) => !open && setSelectedItem(null)}
+          itemName={selectedItem.name}
+          permissions={selectedItem.permissions}
+        />
       )}
     </div>
   );
