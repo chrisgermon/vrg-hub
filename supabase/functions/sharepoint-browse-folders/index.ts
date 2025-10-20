@@ -98,18 +98,35 @@ serve(async (req) => {
 
     console.log('SharePoint config found for company:', config.company_id);
 
-    // Get Office 365 connection for the company
-    const { data: connection } = await supabaseAdmin
+    // Get Office 365 connection for the company (get the most recent valid one)
+    const { data: connections, error: connError } = await supabaseAdmin
       .from('office365_connections')
-      .select('access_token')
+      .select('access_token, expires_at')
       .eq('company_id', config.company_id)
       .order('updated_at', { ascending: false })
-      .maybeSingle();
+      .limit(1);
+    
+    const connection = connections?.[0];
+    
+    if (connError) {
+      console.error('Error fetching Office 365 connection:', connError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Error fetching Office 365 connection', 
+          configured: false 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (!connection?.access_token) {
+      console.error('No valid Office 365 token found for company:', config.company_id);
       return new Response(
-        JSON.stringify({ error: 'Office 365 not connected for this company', configured: false }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: 'Office 365 connection expired or not found. Please reconnect Office 365 in Settings.', 
+          configured: false 
+        }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
