@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
 import crowdITLogo from "@/assets/crowdit-logo.png";
 import { useAuth } from "@/hooks/useAuth";
-import { BetaFeedbackDialog } from "./BetaFeedbackDialog";
 import { NewsletterBanner } from "./newsletter/NewsletterBanner";
 import { SystemStatusIndicator } from "./SystemStatusIndicator";
 import { CompanySelector } from "./CompanySelector";
@@ -23,7 +22,6 @@ import { GlobalSearch } from "./GlobalSearch";
 import { SystemBanners } from "./banners/SystemBanners";
 import { ProfileDialog } from "./ProfileDialog";
 import { FirstTimeSetupDialog } from "./FirstTimeSetupDialog";
-import { LiveClock } from "./LiveClock";
 
 interface LayoutProps {
   children: ReactNode;
@@ -112,8 +110,6 @@ export function Layout({ children }: LayoutProps) {
                   </div>
                 </>
               )}
-              <BetaFeedbackDialog />
-              <LiveClock />
               <div className="hidden sm:block text-right">
                 <p className="text-xs md:text-sm font-medium truncate max-w-[150px] md:max-w-none">
                   {user?.user_metadata?.full_name || user?.email}
