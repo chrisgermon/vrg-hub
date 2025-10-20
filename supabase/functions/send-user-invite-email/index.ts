@@ -55,7 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("MAILGUN_API_KEY is not configured");
     }
 
-    const appUrl = 'https://crowdhub.app';
+    const appUrl = 'https://hub.visionradiology.com.au';
     const signupUrl = `${appUrl}/auth`;
     
     const subject = `You're invited to join ${inviteData.companies.name} on CrowdHub`;
@@ -116,7 +116,7 @@ CrowdHub Team
     `;
 
     const formData = new FormData();
-    formData.append("from", "CrowdHub <noreply@crowdhub.app>");
+    formData.append("from", "Vision Radiology Hub <hub@visionradiology.com.au>");
     formData.append("to", inviteData.email);
     formData.append("subject", subject);
     formData.append("html", html);

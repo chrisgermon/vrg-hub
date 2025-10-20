@@ -24,7 +24,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     const mailgunApiKey = Deno.env.get("MAILGUN_API_KEY");
     const mailgunDomain = Deno.env.get("MAILGUN_DOMAIN") || "mg.crowdhub.app";
-    const appUrl = "https://crowdhub.app";
+    const appUrl = "https://hub.visionradiology.com.au";
     
     console.log('Sending clinic details email via Mailgun...');
     console.log('Recipient:', to);
@@ -69,7 +69,7 @@ const handler = async (req: Request): Promise<Response> => {
     const text = `Clinic Network Configuration Details\n\nHello,\n\nPlease find attached the network configuration details for ${clinicName}.\n\nYou can also view these details online at: ${shareUrl}\n\nBest regards,\nCrowdHub Team`;
     
     const formData = new FormData();
-    formData.append("from", "CrowdHub <noreply@crowdhub.app>");
+    formData.append("from", "Vision Radiology Hub <hub@visionradiology.com.au>");
     formData.append("to", to);
     formData.append("subject", `Network Configuration - ${clinicName}`);
     formData.append("html", html);

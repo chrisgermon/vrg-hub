@@ -118,9 +118,8 @@ serve(async (req) => {
       console.log('Using user notifications:', recipientEmails);
     }
 
-    // Fallback to orders@crowdhub.app if no user notifications configured
     if (recipientEmails.length === 0) {
-      recipientEmails = ['orders@crowdhub.app'];
+      recipientEmails = ['hub@visionradiology.com.au'];
       console.log('No user notifications configured, using fallback:', recipientEmails);
     }
 

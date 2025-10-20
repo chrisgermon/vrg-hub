@@ -117,7 +117,7 @@ serve(async (req) => {
         <p>Your request is now being processed and you'll receive updates on the delivery status.</p>
         
         <p style="text-align: center; margin: 30px 0;">
-          <a href="https://crowdhub.app/requests/sample-hw-456" 
+          <a href="https://hub.visionradiology.com.au/requests/sample-hw-456" 
              style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
             View Request Details
           </a>
@@ -189,7 +189,7 @@ serve(async (req) => {
         <p>To accept this invitation and set up your account, click the button below:</p>
 
         <p style="text-align: center; margin: 30px 0;">
-          <a href="https://crowdhub.app/auth" 
+          <a href="https://hub.visionradiology.com.au/auth" 
              style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
             Accept Invitation & Sign Up
           </a>

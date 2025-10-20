@@ -100,7 +100,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       const emailData = {
         requestId: requestData.id,
-        requestUrl: `https://crowdhub.app/user-accounts?request=${requestData.id}`,
+        requestUrl: `https://hub.visionradiology.com.au/admin`,
         firstName: requestData.first_name,
         lastName: requestData.last_name,
         email: requestData.email,

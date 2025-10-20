@@ -126,7 +126,7 @@ const handler = async (req: Request): Promise<Response> => {
               emailData = {
                 requestTitle: requestData.title,
                 requestId: requestData.id,
-                requestUrl: `https://crowdhub.app/requests?request=${requestData.id}`,
+                requestUrl: `https://hub.visionradiology.com.au/request/VRG-${String(requestData.request_number).padStart(5, '0')}`,
                 requesterName: requesterProfile.name,
                 totalAmount: requestData.total_amount,
                 currency: requestData.currency,
@@ -177,7 +177,7 @@ const handler = async (req: Request): Promise<Response> => {
             emailData = {
               requestTitle: requestData.title,
               requestId: requestData.id,
-              requestUrl: `https://crowdhub.app/requests?request=${requestData.id}`,
+              requestUrl: `https://hub.visionradiology.com.au/request/VRG-${String(requestData.request_number).padStart(5, '0')}`,
               requesterName: requesterProfile.name,
               totalAmount: requestData.total_amount,
               currency: requestData.currency,
@@ -233,7 +233,7 @@ const handler = async (req: Request): Promise<Response> => {
           emailData = {
             requestTitle: requestData.title,
             requestId: requestData.id,
-            requestUrl: `https://crowdhub.app/requests?request=${requestData.id}`,
+            requestUrl: `https://hub.visionradiology.com.au/request/VRG-${String(requestData.request_number).padStart(5, '0')}`,
             requesterName: requesterProfile.name,
             totalAmount: requestData.total_amount,
             currency: requestData.currency,
@@ -273,7 +273,7 @@ const handler = async (req: Request): Promise<Response> => {
         emailData = {
           requestTitle: requestData.title,
           requestId: requestData.id,
-          requestUrl: `https://crowdhub.app/requests?request=${requestData.id}`,
+          requestUrl: `https://hub.visionradiology.com.au/request/VRG-${String(requestData.request_number).padStart(5, '0')}`,
           requesterName: requesterProfile.name,
           managerName: approverData?.name,
           totalAmount: requestData.total_amount,
@@ -305,8 +305,8 @@ const handler = async (req: Request): Promise<Response> => {
             }
           });
 
-        // Also notify orders team
-        const ordersEmail = 'orders@crowdhub.app';
+        // Also notify IT/orders team
+        const ordersEmail = 'hub@visionradiology.com.au';
         const ordersSubject = `[${requestData.request_number || requestId}] Hardware Order Approved: ${requestData.title}`;
         
         // Fetch request items for the orders team
@@ -333,7 +333,7 @@ const handler = async (req: Request): Promise<Response> => {
         const ordersEmailData = {
           requestTitle: requestData.title,
           requestId: requestData.id,
-          requestUrl: `https://crowdhub.app/requests?request=${requestData.id}`,
+          requestUrl: `https://hub.visionradiology.com.au/request/VRG-${String(requestData.request_number).padStart(5, '0')}`,
           requesterName: requesterProfile.name,
           managerName: approverData?.name,
           totalAmount: requestData.total_amount,
@@ -378,7 +378,7 @@ const handler = async (req: Request): Promise<Response> => {
         emailData = {
           requestTitle: requestData.title,
           requestId: requestData.id,
-          requestUrl: `https://crowdhub.app/requests?request=${requestData.id}`,
+          requestUrl: `https://hub.visionradiology.com.au/request/VRG-${String(requestData.request_number).padStart(5, '0')}`,
           requesterName: requesterProfile.name,
           managerName: approverData?.name,
           declineReason: requestData.decline_reason || notes,
@@ -421,7 +421,7 @@ const handler = async (req: Request): Promise<Response> => {
         emailData = {
           requestTitle: requestData.title,
           requestId: requestData.id,
-          requestUrl: `https://crowdhub.app/requests?request=${requestData.id}`,
+          requestUrl: `https://hub.visionradiology.com.au/request/VRG-${String(requestData.request_number).padStart(5, '0')}`,
           requesterName: requesterProfile.name,
           totalAmount: requestData.total_amount,
           currency: requestData.currency

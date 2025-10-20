@@ -74,7 +74,7 @@ const handler = async (req: Request): Promise<Response> => {
       requestTitle: requestData.title || 'Your Request',
       requestId: requestId,
       requestNumber: requestNumber,
-      requestUrl: `https://crowdhub.app/request/${requestNumber}`,
+      requestUrl: `https://hub.visionradiology.com.au/request/${requestNumber}`,
       requesterName: requesterProfile.full_name || requesterProfile.email,
       commenterName: comment.author_name,
       commentText: comment.content,

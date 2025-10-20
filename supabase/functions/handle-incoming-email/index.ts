@@ -122,7 +122,7 @@ const handler = async (req: Request): Promise<Response> => {
                 requesterName: ownerProfile.full_name || ownerProfile.email,
                 commenterName: emailData.sender || 'External User',
                 commentText: content.substring(0, 500),
-                requestUrl: `https://crowdhub.app/request/VRG-${String(request.request_number).padStart(5, '0')}`,
+                requestUrl: `https://hub.visionradiology.com.au/request/VRG-${String(request.request_number).padStart(5, '0')}`,
               },
             },
           });

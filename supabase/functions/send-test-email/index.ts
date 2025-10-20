@@ -57,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
     };
     
     const formData = new FormData();
-    formData.append("from", "CrowdHub System <orders@crowdhub.app>");
+    formData.append("from", "Vision Radiology Hub <hub@visionradiology.com.au>");
     formData.append("to", recipientEmail);
     formData.append("subject", "Test Email - CrowdHub System");
     formData.append("html", emailContent.html);

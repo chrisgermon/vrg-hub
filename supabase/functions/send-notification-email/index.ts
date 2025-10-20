@@ -58,7 +58,7 @@ const generateApprovalToken = async (requestId: string, managerEmail: string): P
 };
 
 const getEmailTemplate = (template: string, data: any): { html: string; text: string } => {
-  const appUrl = 'https://crowdhub.app';
+  const appUrl = 'https://hub.visionradiology.com.au';
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://znpjdrmvjfmneotdhwdo.supabase.co';
   const logoUrl = 'https://znpjdrmvjfmneotdhwdo.supabase.co/storage/v1/object/public/company-assets/crowdhub-logo.png';
   
@@ -507,7 +507,7 @@ const handler = async (req: Request): Promise<Response> => {
     let html = emailContent.html;
     try {
       const storageLogoUrl = 'https://znpjdrmvjfmneotdhwdo.supabase.co/storage/v1/object/public/company-assets/crowdhub-logo.png';
-      const appLogoUrl = 'https://crowdhub.app/crowdhub-logo.png';
+      const appLogoUrl = 'https://hub.visionradiology.com.au/crowdhub-logo.png';
 
       let logoResp = await fetch(storageLogoUrl);
       if (logoResp.ok) {
@@ -526,7 +526,7 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
     } catch (e) {
-      const appLogoUrl = 'https://crowdhub.app/crowdhub-logo.png';
+      const appLogoUrl = 'https://hub.visionradiology.com.au/crowdhub-logo.png';
       html = html.replace('cid:crowdhub-logo.png', appLogoUrl);
       console.warn('Inline logo fetch failed, using URL fallback');
     }

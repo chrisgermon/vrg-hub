@@ -85,7 +85,7 @@ serve(async (req) => {
     const protocol = Deno.env.get('SUPABASE_URL')?.includes('localhost') ? 'http' : 'https';
     const baseDomain = Deno.env.get('SUPABASE_URL')?.includes('localhost') 
       ? 'localhost:8080' 
-      : 'crowdhub.app';
+      : 'hub.visionradiology.com.au';
     
     const subdomain = companyData?.subdomain;
     const host = subdomain ? `${subdomain}.${baseDomain}` : baseDomain;
@@ -103,7 +103,7 @@ serve(async (req) => {
     // Get the default redirect URL from the state if available
     const url = new URL(req.url);
     const stateStr = url.searchParams.get('state');
-    let redirectUrl = 'https://crowdhub.app/settings?tab=integrations';
+    let redirectUrl = 'https://hub.visionradiology.com.au/settings?tab=integrations';
     
     if (stateStr) {
       try {
@@ -124,7 +124,7 @@ serve(async (req) => {
         const protocol = Deno.env.get('SUPABASE_URL')?.includes('localhost') ? 'http' : 'https';
         const baseDomain = Deno.env.get('SUPABASE_URL')?.includes('localhost') 
           ? 'localhost:8080' 
-          : 'crowdhub.app';
+          : 'hub.visionradiology.com.au';
         
         const subdomain = companyData?.subdomain;
         const host = subdomain ? `${subdomain}.${baseDomain}` : baseDomain;
