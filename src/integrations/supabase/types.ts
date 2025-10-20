@@ -2098,6 +2098,48 @@ export type Database = {
           },
         ]
       }
+      request_comments: {
+        Row: {
+          author_email: string
+          author_name: string
+          content: string
+          content_html: string | null
+          created_at: string
+          email_message_id: string | null
+          id: string
+          is_internal: boolean | null
+          request_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          author_email: string
+          author_name: string
+          content: string
+          content_html?: string | null
+          created_at?: string
+          email_message_id?: string | null
+          id?: string
+          is_internal?: boolean | null
+          request_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          author_email?: string
+          author_name?: string
+          content?: string
+          content_html?: string | null
+          created_at?: string
+          email_message_id?: string | null
+          id?: string
+          is_internal?: boolean | null
+          request_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       request_items: {
         Row: {
           created_at: string | null

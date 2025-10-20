@@ -499,7 +499,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailContent = getEmailTemplate(template, data);
     
     const formData = new FormData();
-    formData.append("from", "CrowdHub <orders@crowdhub.app>");
+    formData.append("from", "Vision Radiology Hub <hub@visionradiology.com.au>");
     formData.append("to", to);
     formData.append("subject", subject);
 
