@@ -35,6 +35,7 @@ export function SharePointBrowser() {
   const [files, setFiles] = useState<SharePointFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(false);
+  const [needsO365, setNeedsO365] = useState(false);
   const [currentPath, setCurrentPath] = useState("/");
   const [pathHistory, setPathHistory] = useState<string[]>([]);
 
@@ -83,6 +84,7 @@ export function SharePointBrowser() {
       setFolders(data.folders || []);
       setFiles(data.files || []);
       setConfigured(!!data.configured);
+      setNeedsO365(!!data.needsO365);
     } catch (error: any) {
       console.error('Error loading SharePoint items:', error);
       // Fallback: detect whether SharePoint is actually configured for this company
@@ -179,6 +181,23 @@ export function SharePointBrowser() {
               A Super Admin needs to configure SharePoint access in the Integrations page before documents can be viewed.
             </p>
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (needsO365) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 space-y-4">
+          <AlertCircle className="h-12 w-12 text-primary" />
+          <div className="text-center space-y-2">
+            <h3 className="text-lg font-semibold">Connect Your Office 365 Account</h3>
+            <p className="text-sm text-muted-foreground max-w-md">
+              To access SharePoint documents, you need to connect your Office 365 account. This ensures you only see documents you have permission to access.
+            </p>
+          </div>
+          <ConnectOffice365Button />
         </CardContent>
       </Card>
     );

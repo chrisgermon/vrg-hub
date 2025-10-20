@@ -66,26 +66,48 @@ serve(async (req) => {
 
     const { folder_path } = await req.json();
 
-    // Determine user's company
-    const { data: userConn } = await supabaseAdmin
+    // First, check if the user has connected their Office 365 account
+    const { data: userO365 } = await supabaseAdmin
       .from('office365_connections')
-      .select('company_id')
+      .select('company_id, access_token, expires_at')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
-      .maybeSingle();
+      .limit(1);
 
-    if (!userConn?.company_id) {
+    const userConnection = userO365?.[0];
+
+    if (!userConnection?.company_id) {
+      // User hasn't connected their Office 365 account yet
+      // Check if ANY SharePoint config exists to provide better error messaging
+      const { data: anyConfigs } = await supabaseAdmin
+        .from('sharepoint_configurations')
+        .select('id')
+        .eq('is_active', true)
+        .limit(1);
+      
+      const sharepointConfigured = anyConfigs && anyConfigs.length > 0;
+      
       return new Response(
-        JSON.stringify({ configured: false, folders: [], files: [] }),
+        JSON.stringify({ 
+          configured: sharepointConfigured, 
+          needsO365: true,
+          error: sharepointConfigured 
+            ? 'Connect your Office 365 account to access SharePoint documents' 
+            : 'SharePoint is not configured yet',
+          folders: [], 
+          files: [] 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Fetch active SharePoint configuration for this company (prefer the most recent)
+    const companyId = userConnection.company_id;
+
+    // Check if SharePoint is configured for this user's company
     const { data: configs } = await supabaseAdmin
       .from('sharepoint_configurations')
       .select('site_id, folder_path, company_id, updated_at')
-      .eq('company_id', userConn.company_id)
+      .eq('company_id', companyId)
       .eq('is_active', true)
       .order('updated_at', { ascending: false })
       .limit(1);
@@ -94,43 +116,35 @@ serve(async (req) => {
 
     if (!config) {
       return new Response(
-        JSON.stringify({ configured: false, folders: [], files: [] }),
+        JSON.stringify({ 
+          configured: false, 
+          needsO365: false,
+          error: 'SharePoint not configured for your company',
+          folders: [], 
+          files: [] 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Mark that a config exists for better client error handling
+    // Mark that a config exists
     configAvailable = true;
 
     console.log('SharePoint config found for company:', config.company_id);
+    console.log('User has Office 365 connection');
 
-    // Get Office 365 connection for the company (get the most recent valid one)
-    const { data: connections, error: connError } = await supabaseAdmin
-      .from('office365_connections')
-      .select('access_token, expires_at')
-      .eq('company_id', config.company_id)
-      .order('updated_at', { ascending: false })
-      .limit(1);
+    // Use the user's own Office 365 token to respect their permissions
+    const connection = userConnection;
     
-    const connection = connections?.[0];
-    
-    if (connError) {
-      console.error('Error fetching Office 365 connection:', connError);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Error fetching Office 365 connection', 
-          configured: false 
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     if (!connection?.access_token) {
-      console.error('No valid Office 365 token found for company:', config.company_id);
+      console.error('No valid Office 365 token found for user:', user.email);
       return new Response(
         JSON.stringify({ 
-          error: 'Office 365 connection expired or not found. Please reconnect Office 365 in Settings.', 
-          configured: false 
+          error: 'Your Office 365 connection expired. Please reconnect in Integrations.', 
+          configured: true,
+          needsO365: true,
+          folders: [],
+          files: []
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
