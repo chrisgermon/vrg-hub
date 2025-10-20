@@ -46,8 +46,16 @@ const handler = async (req: Request): Promise<Response> => {
     const smsUrl = `https://api.notifyre.com/sms/send`;
     const fromNumber = Deno.env.get('NOTIFYRE_SMS_FROM') || undefined;
 
-    // Ensure E.164 with leading +
-    const e164 = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
+    // Ensure E.164 format - handle Australian numbers starting with 0
+    let e164 = phoneNumber;
+    if (!e164.startsWith('+')) {
+      // If it starts with 0, assume Australian number and convert to +61
+      if (e164.startsWith('0')) {
+        e164 = '+61' + e164.substring(1);
+      } else {
+        e164 = '+' + e164;
+      }
+    }
 
     let smsResult: any = null;
 
