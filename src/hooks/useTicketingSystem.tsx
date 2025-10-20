@@ -257,3 +257,58 @@ export function useUpdateRoutingRule() {
     },
   });
 }
+
+export function useAddTeamMember() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: { team_id: string; user_id: string; role_in_team?: string }) => {
+      const { error } = await supabase.from('team_members').insert({
+        team_id: data.team_id,
+        user_id: data.user_id,
+        role_in_team: data.role_in_team || 'member',
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      toast({ title: 'Team member added successfully' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error adding team member', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useRemoveTeamMember() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('team_members').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      toast({ title: 'Team member removed successfully' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error removing team member', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useActiveUsers() {
+  return useQuery({
+    queryKey: ['active_users'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .eq('is_active', true)
+        .order('full_name');
+      if (error) throw error;
+      return data;
+    },
+  });
+}

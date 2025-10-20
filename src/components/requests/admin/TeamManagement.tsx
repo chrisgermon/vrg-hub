@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, UserPlus, Calendar, Settings } from 'lucide-react';
+import { Plus, UserPlus, Calendar, Settings, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { useTeams, useCreateTeam } from '@/hooks/useTicketingSystem';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTeams, useCreateTeam, useAddTeamMember, useRemoveTeamMember, useActiveUsers } from '@/hooks/useTicketingSystem';
 
 export function TeamManagement() {
   const { data: teams, isLoading } = useTeams();
@@ -46,41 +47,21 @@ export function TeamManagement() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Team Members</span>
-                  <Badge variant="outline">{team.team_members?.length || 0}</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{team.team_members?.length || 0}</Badge>
+                    <AddMemberDialog teamId={team.id} />
+                  </div>
                 </div>
                 
                 <div className="space-y-2">
                   {team.team_members?.map((member: any) => (
-                    <div key={member.id} className="flex items-center justify-between rounded-md border p-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs">
-                            {member.user?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="text-sm font-medium">{member.user?.full_name || 'Unknown'}</div>
-                          <div className="text-xs text-muted-foreground">{member.user?.email}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={member.role_in_team === 'lead' ? 'default' : 'outline'} className="text-xs">
-                          {member.role_in_team}
-                        </Badge>
-                        {member.out_of_office_from && member.out_of_office_to && (
-                          <Badge variant="secondary" className="text-xs">
-                            <Calendar className="mr-1 h-3 w-3" />
-                            OOO
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
+                    <TeamMemberRow key={member.id} member={member} />
                   ))}
                 </div>
 
                 {(!team.team_members || team.team_members.length === 0) && (
                   <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-                    No team members yet
+                    No team members yet. Click the + button to add members.
                   </div>
                 )}
               </div>
@@ -103,6 +84,114 @@ export function TeamManagement() {
         </Card>
       )}
     </div>
+  );
+}
+
+function TeamMemberRow({ member }: { member: any }) {
+  const removeMember = useRemoveTeamMember();
+  
+  return (
+    <div className="flex items-center justify-between rounded-md border p-3">
+      <div className="flex items-center gap-3">
+        <Avatar className="h-8 w-8">
+          <AvatarFallback className="text-xs">
+            {member.user?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+          </AvatarFallback>
+        </Avatar>
+        <div>
+          <div className="text-sm font-medium">{member.user?.full_name || 'Unknown'}</div>
+          <div className="text-xs text-muted-foreground">{member.user?.email}</div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Badge variant={member.role_in_team === 'lead' ? 'default' : 'outline'} className="text-xs">
+          {member.role_in_team}
+        </Badge>
+        {member.out_of_office_from && member.out_of_office_to && (
+          <Badge variant="secondary" className="text-xs">
+            <Calendar className="mr-1 h-3 w-3" />
+            OOO
+          </Badge>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => removeMember.mutate(member.id)}
+          className="h-8 w-8 p-0"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function AddMemberDialog({ teamId }: { teamId: string }) {
+  const [open, setOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState('');
+  const [roleInTeam, setRoleInTeam] = useState('member');
+  const { data: users } = useActiveUsers();
+  const addMember = useAddTeamMember();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    
+    await addMember.mutateAsync({
+      team_id: teamId,
+      user_id: selectedUser,
+      role_in_team: roleInTeam,
+    });
+    setOpen(false);
+    setSelectedUser('');
+    setRoleInTeam('member');
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <UserPlus className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Team Member</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="user">Select User</Label>
+            <Select value={selectedUser} onValueChange={setSelectedUser} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a user" />
+              </SelectTrigger>
+              <SelectContent>
+                {users?.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.full_name} ({user.email})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="role">Role</Label>
+            <Select value={roleInTeam} onValueChange={setRoleInTeam}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="lead">Lead</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button type="submit" className="w-full" disabled={!selectedUser}>
+            Add Member
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
