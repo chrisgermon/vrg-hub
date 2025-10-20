@@ -37,6 +37,14 @@ interface FaxLog {
   failed_at: string | null;
 }
 
+interface SyncHistory {
+  id: string;
+  created_at: string;
+  status: string;
+  campaigns_synced: number;
+  faxes_synced: number;
+}
+
 export const NotifyreFaxCampaigns = () => {
   const [campaigns, setCampaigns] = useState<FaxCampaign[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState<FaxCampaign | null>(null);
@@ -44,10 +52,28 @@ export const NotifyreFaxCampaigns = () => {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [lastSync, setLastSync] = useState<SyncHistory | null>(null);
 
   useEffect(() => {
     loadCampaigns();
+    loadLastSyncTime();
   }, []);
+
+  const loadLastSyncTime = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('notifyre_sync_history')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setLastSync(data);
+    } catch (error) {
+      console.error('Error loading last sync time:', error);
+    }
+  };
 
   const loadCampaigns = async () => {
     try {
@@ -100,6 +126,7 @@ export const NotifyreFaxCampaigns = () => {
       if (data?.success) {
         toast.success(`Synced ${data.campaigns} campaigns with ${data.faxes} faxes`);
         await loadCampaigns();
+        await loadLastSyncTime();
       } else {
         toast.error(data?.message || 'Failed to sync faxes');
       }
@@ -235,7 +262,14 @@ export const NotifyreFaxCampaigns = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Fax Campaigns</h1>
-          <p className="text-muted-foreground">View and manage Notifyre fax campaigns</p>
+          <p className="text-muted-foreground">
+            View and manage Notifyre fax campaigns
+            {lastSync && (
+              <span className="ml-2">
+                • Last synced: {formatAUDateTimeFull(lastSync.created_at)}
+              </span>
+            )}
+          </p>
         </div>
         <Button onClick={handleSyncFaxes} disabled={syncing}>
           {syncing ? (
