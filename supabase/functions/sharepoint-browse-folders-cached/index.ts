@@ -179,13 +179,13 @@ serve(async (req) => {
       );
     }
 
-    // Construct Graph API URL
+    // Construct Graph API URL (without permissions expansion as it's not supported on all SharePoint types)
     let graphUrl: string;
     if (browsePath === '/' || browsePath === '') {
-      graphUrl = `https://graph.microsoft.com/v1.0/sites/${config.site_id}/drive/root/children?$expand=permissions`;
+      graphUrl = `https://graph.microsoft.com/v1.0/sites/${config.site_id}/drive/root/children`;
     } else {
       const cleanPath = browsePath.replace(/^\/+/, '').replace(/\/+$/, '');
-      graphUrl = `https://graph.microsoft.com/v1.0/sites/${config.site_id}/drive/root:/${cleanPath}:/children?$expand=permissions`;
+      graphUrl = `https://graph.microsoft.com/v1.0/sites/${config.site_id}/drive/root:/${cleanPath}:/children`;
     }
 
     console.log('Fetching from Graph API:', graphUrl);
@@ -200,6 +200,21 @@ serve(async (req) => {
     if (!graphResponse.ok) {
       const errorText = await graphResponse.text();
       console.error('Graph API error:', errorText);
+      
+      // Check if token expired
+      if (graphResponse.status === 401) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Office 365 token expired. Please reconnect your Office 365 account.', 
+            configured: true,
+            needsO365: true,
+            folders: [],
+            files: []
+          }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       throw new Error(`Graph API error: ${graphResponse.status}`);
     }
 
@@ -211,19 +226,8 @@ serve(async (req) => {
     const cacheInserts = [];
 
     for (const item of items) {
-      const permissions = (item.permissions || []).map((perm: any) => ({
-        id: perm.id,
-        roles: perm.roles,
-        grantedTo: perm.grantedToIdentitiesV2?.map((identity: any) => ({
-          displayName: identity.user?.displayName || identity.group?.displayName,
-          email: identity.user?.email,
-          type: identity.user ? 'user' : 'group',
-        })) || [],
-        link: perm.link ? {
-          type: perm.link.type,
-          scope: perm.link.scope,
-        } : null,
-      }));
+      // Permissions are not available without $expand, store empty array
+      const permissions: any[] = [];
 
       const cacheItem = {
         company_id: companyId,
@@ -268,15 +272,7 @@ serve(async (req) => {
         webUrl: item.webUrl,
         childCount: item.folder?.childCount || 0,
         lastModifiedDateTime: item.lastModifiedDateTime,
-        permissions: (item.permissions || []).map((perm: any) => ({
-          id: perm.id,
-          roles: perm.roles,
-          grantedTo: perm.grantedToIdentitiesV2?.map((identity: any) => ({
-            displayName: identity.user?.displayName || identity.group?.displayName,
-            email: identity.user?.email,
-            type: identity.user ? 'user' : 'group',
-          })) || [],
-        })),
+        permissions: [], // Permissions not available without separate API call
       }));
 
     const files = items
@@ -292,15 +288,7 @@ serve(async (req) => {
         lastModifiedBy: item.lastModifiedBy?.user?.displayName,
         fileType: item.name.split('.').pop()?.toUpperCase() || 'FILE',
         downloadUrl: item['@microsoft.graph.downloadUrl'],
-        permissions: (item.permissions || []).map((perm: any) => ({
-          id: perm.id,
-          roles: perm.roles,
-          grantedTo: perm.grantedToIdentitiesV2?.map((identity: any) => ({
-            displayName: identity.user?.displayName || identity.group?.displayName,
-            email: identity.user?.email,
-            type: identity.user ? 'user' : 'group',
-          })) || [],
-        })),
+        permissions: [], // Permissions not available without separate API call
       }));
 
     return new Response(

@@ -309,7 +309,6 @@ export function SharePointBrowser() {
                   <TableHead>Name</TableHead>
                   <TableHead className="hidden md:table-cell">Modified</TableHead>
                   <TableHead className="hidden lg:table-cell">Modified By</TableHead>
-                  <TableHead className="hidden xl:table-cell">Permissions</TableHead>
                   <TableHead className="hidden sm:table-cell">Size</TableHead>
                   <TableHead className="w-32">Actions</TableHead>
                 </TableRow>
@@ -338,20 +337,6 @@ export function SharePointBrowser() {
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                       —
-                    </TableCell>
-                    <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedItem(folder);
-                        }}
-                        className="h-auto p-1"
-                      >
-                        <Lock className="h-3 w-3 mr-1" />
-                        {getPermissionsSummary(folder.permissions)}
-                      </Button>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                       —
@@ -383,20 +368,6 @@ export function SharePointBrowser() {
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground truncate max-w-xs">
                       {doc.lastModifiedBy || '—'}
-                    </TableCell>
-                    <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedItem(doc);
-                        }}
-                        className="h-auto p-1"
-                      >
-                        <Lock className="h-3 w-3 mr-1" />
-                        {getPermissionsSummary(doc.permissions)}
-                      </Button>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                       {formatFileSize(doc.size)}
@@ -444,15 +415,6 @@ export function SharePointBrowser() {
         </Card>
       )}
 
-      {/* Permissions Dialog */}
-      {selectedItem && (
-        <PermissionsDialog
-          open={!!selectedItem}
-          onOpenChange={(open) => !open && setSelectedItem(null)}
-          itemName={selectedItem.name}
-          permissions={selectedItem.permissions}
-        />
-      )}
     </div>
   );
 }
