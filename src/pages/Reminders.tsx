@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Plus, Bell, Calendar, Clock, Mail, Phone, Smartphone, X, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { formatAUDate, formatAUDateLong } from "@/lib/dateUtils";
+import { formatAUDate, formatAUDateLong, formatAUDateTimeFull } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import { SmsLogsViewer } from "@/components/reminders/SmsLogsViewer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -256,7 +256,7 @@ export default function Reminders() {
                           {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil} days`}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
-                          {formatAUDateLong(reminder.reminder_date)}
+                          {formatAUDateTimeFull(reminder.reminder_date)}
                         </span>
                       </div>
                     </div>
@@ -347,7 +347,7 @@ export default function Reminders() {
                         <p className="text-sm text-muted-foreground">{reminder.description}</p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-sm text-muted-foreground">
-                            📅 {formatAUDate(reminder.reminder_date)}
+                            📅 {formatAUDateTimeFull(reminder.reminder_date)}
                           </span>
                           {reminder.status === 'active' && daysUntil >= 0 && (
                             <Badge variant={daysUntil === 0 ? 'destructive' : daysUntil <= 3 ? 'default' : 'secondary'}>

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Calendar, Clock, Mail, Phone, Bell, Edit, Trash2 } from "lucide-react";
-import { formatAUDateLong } from "@/lib/dateUtils";
+import { formatAUDateLong, formatAUDateTimeFull } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import { useState } from "react";
 import {
@@ -190,8 +190,8 @@ export default function ReminderDetail() {
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-sm text-muted-foreground">Reminder Date</p>
-                <p className="font-medium">{formatAUDateLong(reminder.reminder_date)}</p>
+                <p className="text-sm text-muted-foreground">Reminder Date & Time</p>
+                <p className="font-medium">{formatAUDateTimeFull(reminder.reminder_date)}</p>
               </div>
             </div>
 
