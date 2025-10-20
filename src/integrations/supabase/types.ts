@@ -378,6 +378,51 @@ export type Database = {
           },
         ]
       }
+      email_logs: {
+        Row: {
+          created_at: string | null
+          email_type: string
+          error_message: string | null
+          id: string
+          marketing_request_id: string | null
+          metadata: Json | null
+          recipient_email: string
+          request_id: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          user_account_request_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_type: string
+          error_message?: string | null
+          id?: string
+          marketing_request_id?: string | null
+          metadata?: Json | null
+          recipient_email: string
+          request_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          user_account_request_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email_type?: string
+          error_message?: string | null
+          id?: string
+          marketing_request_id?: string | null
+          metadata?: Json | null
+          recipient_email?: string
+          request_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          user_account_request_id?: string | null
+        }
+        Relationships: []
+      }
       email_notifications: {
         Row: {
           body_html: string | null

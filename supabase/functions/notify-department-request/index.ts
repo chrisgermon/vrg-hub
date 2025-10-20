@@ -143,6 +143,28 @@ const handler = async (req: Request): Promise<Response> => {
             
             console.log('[notify-department-request] Email result:', emailResult.error ? 'FAILED' : 'SUCCESS');
 
+            // Log to email_logs table
+            const { error: emailLogError } = await supabase
+              .from('email_logs')
+              .insert({
+                request_id: requestData.id,
+                recipient_email: recipientEmail,
+                email_type: 'department_request_submitted',
+                subject: subject,
+                status: (emailResult as any).error ? 'failed' : 'sent',
+                error_message: (emailResult as any).error?.message || null,
+                metadata: {
+                  request_title: requestData.title,
+                  assignee_name: user.name,
+                  requester_name: requesterProfile.full_name,
+                  department: deptLabel
+                }
+              });
+
+            if (emailLogError) {
+              console.error('[notify-department-request] Failed to insert email_logs:', emailLogError);
+            }
+
             // Log to audit_logs
             const { error: auditError } = await supabase
               .from('audit_logs')
@@ -214,6 +236,28 @@ const handler = async (req: Request): Promise<Response> => {
                     data: emailData,
                   },
                 });
+
+                // Log to email_logs table
+                const { error: emailLogError } = await supabase
+                  .from('email_logs')
+                  .insert({
+                    request_id: requestData.id,
+                    recipient_email: recipientEmail,
+                    email_type: 'department_request_submitted',
+                    subject: subject,
+                    status: (emailResult as any).error ? 'failed' : 'sent',
+                    error_message: (emailResult as any).error?.message || null,
+                    metadata: {
+                      request_title: requestData.title,
+                      manager_name: m.full_name,
+                      requester_name: requesterProfile.full_name,
+                      department: deptLabel
+                    }
+                  });
+
+                if (emailLogError) {
+                  console.error('[notify-department-request] Failed to insert email_logs (admin):', emailLogError);
+                }
 
                 // Log to audit_logs
                 const { error: auditError2 } = await supabase
