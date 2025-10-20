@@ -10,6 +10,9 @@ import { formatAUDate, formatAUDateLong, formatAUDateTimeFull } from "@/lib/date
 import { toast } from "sonner";
 import { SmsLogsViewer } from "@/components/reminders/SmsLogsViewer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ReminderDashboard } from "@/components/reminders/ReminderDashboard";
+import { ReminderCalendar } from "@/components/reminders/ReminderCalendar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Reminders() {
   const navigate = useNavigate();
@@ -187,6 +190,24 @@ export default function Reminders() {
         </div>
       </div>
 
+      {/* Tabs for Dashboard and List View */}
+      <Tabs defaultValue="dashboard" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="calendar">Calendar</TabsTrigger>
+          <TabsTrigger value="list">List</TabsTrigger>
+          <TabsTrigger value="logs">Logs</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="dashboard" className="space-y-6">
+          <ReminderDashboard />
+        </TabsContent>
+
+        <TabsContent value="calendar">
+          <ReminderCalendar />
+        </TabsContent>
+
+        <TabsContent value="list" className="space-y-6">
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -298,8 +319,6 @@ export default function Reminders() {
         </Button>
       </div>
 
-      {/* SMS & Email Logs */}
-      <SmsLogsViewer />
 
       {/* All Reminders List */}
       <Card>
@@ -369,6 +388,12 @@ export default function Reminders() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="logs">
+          <SmsLogsViewer />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

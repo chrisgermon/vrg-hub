@@ -110,12 +110,37 @@ const handler = async (req: Request): Promise<Response> => {
 
             if (emailResponse.error) {
               console.error('Error sending email:', emailResponse.error);
+              // Still log as sent count to track attempts
+              await supabase
+                .from('reminder_notifications')
+                .insert({
+                  reminder_id: reminder.id,
+                  notification_type: 'email',
+                  status: 'failed',
+                  days_before: daysUntil,
+                  recipient: emailTo,
+                  error_message: emailResponse.error.message || 'Unknown error',
+                });
             } else {
+              console.log('Email sent successfully');
               sentCount++;
             }
           } catch (error) {
             console.error('Error invoking email function:', error);
+            // Log failed attempt
+            await supabase
+              .from('reminder_notifications')
+              .insert({
+                reminder_id: reminder.id,
+                notification_type: 'email',
+                status: 'failed',
+                days_before: daysUntil,
+                recipient: emailTo,
+                error_message: error instanceof Error ? error.message : 'Unknown error',
+              });
           }
+        } else {
+          console.log('No email address available for reminder:', reminder.id);
         }
       }
 
@@ -138,11 +163,14 @@ const handler = async (req: Request): Promise<Response> => {
             if (smsResponse.error) {
               console.error('Error sending SMS:', smsResponse.error);
             } else {
+              console.log('SMS sent successfully');
               sentCount++;
             }
           } catch (error) {
             console.error('Error invoking SMS function:', error);
           }
+        } else {
+          console.log('No phone number available for reminder:', reminder.id);
         }
       }
 
