@@ -64,13 +64,20 @@ export function SharePointBrowser() {
 
       if (error) {
         console.error('SharePoint function error:', error);
-        // Surface clearer auth error if present
-        if ((error as any)?.status === 401) {
-          toast.error('Your session expired. Please sign in again.');
-          setConfigured(false);
-          return;
-        }
-        throw error;
+        // Try to parse the function response body for a better message/status
+        let status = (error as any)?.status;
+        let fnMessage: string | undefined;
+        try {
+          const res = (error as any)?.context?.response as Response | undefined;
+          if (res) {
+            status = res.status || status;
+            const bodyAny = await res.clone().json().catch(async () => await res.text());
+            if (typeof bodyAny === 'string') fnMessage = bodyAny;
+            else fnMessage = bodyAny?.error;
+          }
+        } catch {}
+        // Bubble up a normalized error for unified catch handling
+        throw new Error(fnMessage || (error as any)?.message || 'SharePoint request failed');
       }
 
       setFolders(data.folders || []);
@@ -78,8 +85,39 @@ export function SharePointBrowser() {
       setConfigured(!!data.configured);
     } catch (error: any) {
       console.error('Error loading SharePoint items:', error);
-      toast.error(error?.message || 'Failed to load SharePoint content. Please refresh the page.');
-      setConfigured(false);
+      // Fallback: detect whether SharePoint is actually configured for this company
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+        let isConfigured = false;
+        if (userId) {
+          const { data: o365 } = await supabase
+            .from('office365_connections')
+            .select('company_id')
+            .eq('user_id', userId)
+            .order('updated_at', { ascending: false })
+            .limit(1);
+          const companyId = o365?.[0]?.company_id;
+          if (companyId) {
+            const { data: configs } = await supabase
+              .from('sharepoint_configurations')
+              .select('id')
+              .eq('company_id', companyId)
+              .eq('is_active', true)
+              .limit(1);
+            isConfigured = Array.isArray(configs) && configs.length > 0;
+          }
+        }
+        setConfigured(isConfigured);
+        if (isConfigured) {
+          toast.error('Unable to fetch SharePoint items. Please check SharePoint permissions or try again.');
+        } else {
+          toast.error('SharePoint is not configured. A Super Admin must configure it in Integrations.');
+        }
+      } catch {
+        setConfigured(false);
+        toast.error(error?.message || 'Failed to load SharePoint content. Please refresh the page.');
+      }
     } finally {
       setLoading(false);
     }

@@ -11,6 +11,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Track whether a SharePoint config exists to help the client show accurate messaging
+  let configAvailable = false;
+
   try {
     console.log('SharePoint browse-folders request received');
     
@@ -95,6 +98,9 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Mark that a config exists for better client error handling
+    configAvailable = true;
 
     console.log('SharePoint config found for company:', config.company_id);
 
@@ -203,7 +209,7 @@ serve(async (req) => {
     console.error('Error browsing SharePoint:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: errorMessage, configured: configAvailable }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
