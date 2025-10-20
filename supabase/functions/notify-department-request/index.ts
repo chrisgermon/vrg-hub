@@ -11,6 +11,7 @@ interface NotificationRequest {
   action: 'submitted' | 'updated' | 'completed' | 'cancelled';
   userId?: string;
   notes?: string;
+  notificationUserIds?: string[];
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -20,8 +21,8 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     console.log('[notify-department-request] Function invoked');
-    const { requestId, action, userId, notes }: NotificationRequest = await req.json();
-    console.log('[notify-department-request] Payload:', { requestId, action, userId });
+    const { requestId, action, userId, notes, notificationUserIds }: NotificationRequest = await req.json();
+    console.log('[notify-department-request] Payload:', { requestId, action, userId, notificationUserIds });
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -69,23 +70,54 @@ const handler = async (req: Request): Promise<Response> => {
     switch (action) {
       case 'submitted': {
         console.log('[notify-department-request] Action: submitted');
-        // Get assigned users for this department who should receive notifications
-        console.log('[notify-department-request] Calling get_assigned_users_for_department RPC...');
-        const { data: assignedUsers, error: rpcError } = await supabase
-          .rpc('get_assigned_users_for_department', {
-            p_company_id: requestData.company_id,
-            p_department: requestData.department,
-            p_sub_department: requestData.sub_department
-          });
         
-        if (rpcError) {
-          console.error('[notify-department-request] RPC error:', rpcError);
-        }
-        console.log('[notify-department-request] Assigned users count:', assignedUsers?.length || 0);
+        let usersToNotify: any[] = [];
 
-        if (assignedUsers && assignedUsers.length > 0) {
+        // Check if form template has specific notification users
+        if (notificationUserIds && notificationUserIds.length > 0) {
+          console.log('[notify-department-request] Using template notification users:', notificationUserIds);
+          const { data: templateUsers, error: templateUsersError } = await supabase
+            .from('profiles')
+            .select('id, full_name, email, sms_enabled, phone')
+            .in('id', notificationUserIds)
+            .eq('is_active', true);
+          
+          if (templateUsersError) {
+            console.error('[notify-department-request] Error fetching template users:', templateUsersError);
+          } else {
+            usersToNotify = (templateUsers || []).map((u: any) => ({
+              user_id: u.id,
+              name: u.full_name,
+              email: u.email,
+              receive_notifications: true,
+              sms_enabled: u.sms_enabled,
+              phone: u.phone,
+            }));
+            console.log('[notify-department-request] Template users to notify:', usersToNotify.length);
+          }
+        }
+
+        // Fallback to department assignments if no template users
+        if (usersToNotify.length === 0) {
+          console.log('[notify-department-request] No template users, falling back to department assignments...');
+          console.log('[notify-department-request] Calling get_assigned_users_for_department RPC...');
+          const { data: assignedUsers, error: rpcError } = await supabase
+            .rpc('get_assigned_users_for_department', {
+              p_company_id: requestData.company_id,
+              p_department: requestData.department,
+              p_sub_department: requestData.sub_department
+            });
+          
+          if (rpcError) {
+            console.error('[notify-department-request] RPC error:', rpcError);
+          }
+          console.log('[notify-department-request] Assigned users count:', assignedUsers?.length || 0);
+          usersToNotify = assignedUsers || [];
+        }
+
+        if (usersToNotify.length > 0) {
           // Filter users who should receive notifications
-          const notificationUsers = assignedUsers.filter((u: any) => u.receive_notifications);
+          const notificationUsers = usersToNotify.filter((u: any) => u.receive_notifications);
           console.log('[notify-department-request] Users to notify:', notificationUsers.length);
 
           for (const user of notificationUsers) {

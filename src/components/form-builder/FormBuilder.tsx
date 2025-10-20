@@ -11,7 +11,9 @@ import { FormField, FormBuilderProps, FieldType } from '@/types/form-builder';
 import { FieldPalette } from './FieldPalette';
 import { SortableField } from './SortableField';
 import { FieldEditor } from './FieldEditor';
-import { Save, X } from 'lucide-react';
+import { NotificationSettings } from './NotificationSettings';
+import { Save, X, Bell } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
   const [name, setName] = useState(template?.name || '');
@@ -21,6 +23,15 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
   const [fields, setFields] = useState<FormField[]>(template?.fields || []);
   const [selectedField, setSelectedField] = useState<FormField | null>(null);
   const [isActive, setIsActive] = useState(template?.is_active ?? true);
+  const [notificationUserIds, setNotificationUserIds] = useState<string[]>(
+    template?.settings?.notification_user_ids || []
+  );
+  const [notificationLevel, setNotificationLevel] = useState<'all' | 'new_only' | 'updates_only'>(
+    template?.settings?.notification_level || 'all'
+  );
+  const [enableSmsNotifications, setEnableSmsNotifications] = useState(
+    template?.settings?.enable_sms_notifications ?? false
+  );
 
   const handleAddField = (type: FieldType) => {
     const newField: FormField = {
@@ -74,6 +85,11 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
       sub_department: subDepartment || undefined,
       fields: fields.map((field, index) => ({ ...field, order: index })),
       is_active: isActive,
+      settings: {
+        notification_user_ids: notificationUserIds,
+        notification_level: notificationLevel,
+        enable_sms_notifications: enableSmsNotifications,
+      },
     });
   };
 
@@ -137,7 +153,26 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
           </div>
         </div>
 
-        <div className="pt-4 border-t">
+        <Separator />
+
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Bell className="w-4 h-4" />
+            <h3 className="text-lg font-semibold">Notification Settings</h3>
+          </div>
+          <NotificationSettings
+            notificationUserIds={notificationUserIds}
+            notificationLevel={notificationLevel}
+            enableSmsNotifications={enableSmsNotifications}
+            onNotificationUserIdsChange={setNotificationUserIds}
+            onNotificationLevelChange={setNotificationLevel}
+            onEnableSmsNotificationsChange={setEnableSmsNotifications}
+          />
+        </div>
+
+        <Separator />
+
+        <div>
           <h4 className="font-medium mb-3">Add Field</h4>
           <FieldPalette onAddField={handleAddField} />
         </div>

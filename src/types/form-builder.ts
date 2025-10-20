@@ -54,6 +54,9 @@ export interface FormTemplate {
   fields: FormField[];
   settings?: {
     notification_emails?: string[];
+    notification_user_ids?: string[];
+    notification_level?: 'all' | 'new_only' | 'updates_only';
+    enable_sms_notifications?: boolean;
     auto_assign?: boolean;
     require_approval?: boolean;
   };

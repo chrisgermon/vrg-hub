@@ -34,6 +34,11 @@ interface FormTemplate {
   sub_department?: string;
   fields: Field[];
   description?: string;
+  settings?: {
+    notification_user_ids?: string[];
+    notification_level?: 'all' | 'new_only' | 'updates_only';
+    enable_sms_notifications?: boolean;
+  };
 }
 
 interface DynamicDepartmentRequestFormProps {
@@ -91,6 +96,7 @@ export function DynamicDepartmentRequestForm({
       const templateData: FormTemplate = {
         ...data,
         fields: data.fields as unknown as Field[],
+        settings: data.settings as any,
       };
 
       setTemplate(templateData);
@@ -193,6 +199,19 @@ export function DynamicDepartmentRequestForm({
         });
 
         await Promise.all(uploadPromises);
+      }
+
+      // Send notifications using template settings if available
+      const notificationUserIds = template.settings?.notification_user_ids;
+      if (notificationUserIds && notificationUserIds.length > 0) {
+        console.log('Sending notifications to template recipients:', notificationUserIds);
+        await supabase.functions.invoke('notify-department-request', {
+          body: {
+            requestId: request.id,
+            action: 'submitted',
+            notificationUserIds,
+          },
+        });
       }
 
       toast.success('Your request has been submitted successfully');
