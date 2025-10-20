@@ -12,6 +12,7 @@ import { RequestStatus } from '@/types/request';
 
 interface Request {
   id: string;
+  request_number?: number;
   user_id: string;
   title: string;
   description?: string;
@@ -55,6 +56,7 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
         .from('hardware_requests')
         .select(`
           *,
+          request_number,
           brands:brand_id(display_name),
           locations:location_id(name)
         `)

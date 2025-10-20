@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 type UnifiedRequest = {
   id: string;
+  request_number?: number;
   title?: string;
   description?: string;
   status: string;
@@ -79,6 +80,7 @@ export default function RequestDetail() {
           .from('hardware_requests')
           .select(`
             *,
+            request_number,
             brands:brand_id(display_name),
             locations:location_id(name)
           `)
@@ -106,62 +108,30 @@ export default function RequestDetail() {
       const numericPart = requestParam.replace('VRG-', '');
       const targetNumber = parseInt(numericPart, 10);
       
-      // Try hardware requests
-      const { data: allHwRequests } = await supabase
+      // Try hardware requests by request_number
+      const { data: hwRequest } = await supabase
         .from('hardware_requests')
         .select(`
           *,
+          request_number,
           brands:brand_id(display_name),
           locations:location_id(name)
-        `);
+        `)
+        .eq('request_number', targetNumber)
+        .maybeSingle();
 
-      if (allHwRequests) {
-        const matchingRequest = allHwRequests.find(req => {
-          const hexPart = req.id.slice(0, 8);
-          const numericValue = parseInt(hexPart, 16) % 100000;
-          return numericValue === targetNumber;
-        });
-
-        if (matchingRequest) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, email')
-            .eq('id', matchingRequest.user_id)
-            .maybeSingle();
-          
-          return { 
-            ...matchingRequest, 
-            type: 'hardware' as const, 
-            profile: profile || undefined 
-          };
-        }
-      }
-
-      // Try department requests
-      const { data: allDeptRequests } = await supabase
-        .from('department_requests' as any)
-        .select('*');
-
-      if (allDeptRequests) {
-        const matchingRequest = (allDeptRequests as any[]).find(req => {
-          const hexPart = req.id.slice(0, 8);
-          const numericValue = parseInt(hexPart, 16) % 100000;
-          return numericValue === targetNumber;
-        });
-
-        if (matchingRequest) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, email')
-            .eq('id', matchingRequest.user_id)
-            .maybeSingle();
-          
-          return { 
-            ...matchingRequest, 
-            type: 'department' as const, 
-            profile: profile || undefined 
-          } as UnifiedRequest;
-        }
+      if (hwRequest) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, email')
+          .eq('id', hwRequest.user_id)
+          .maybeSingle();
+        
+        return { 
+          ...hwRequest, 
+          type: 'hardware' as const, 
+          profile: profile || undefined 
+        };
       }
 
       return null;
@@ -238,7 +208,9 @@ export default function RequestDetail() {
             {getStatusLabel(request.status)}
           </Badge>
         </div>
-        <p className="text-muted-foreground">Request {formatRequestId(request.id)}</p>
+        <p className="text-muted-foreground">
+          Request {request.request_number ? formatRequestId(request.request_number) : formatRequestId(request.id)}
+        </p>
       </div>
 
       <div className="space-y-6">
@@ -249,7 +221,9 @@ export default function RequestDetail() {
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground">Request ID</p>
-              <p className="font-mono">{formatRequestId(request.id)}</p>
+              <p className="font-mono">
+                {request.request_number ? formatRequestId(request.request_number) : formatRequestId(request.id)}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Title</p>

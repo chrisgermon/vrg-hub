@@ -620,6 +620,7 @@ export type Database = {
           manager_approved_at: string | null
           manager_id: string | null
           priority: string
+          request_number: number | null
           status: string
           title: string
           total_amount: number | null
@@ -646,6 +647,7 @@ export type Database = {
           manager_approved_at?: string | null
           manager_id?: string | null
           priority?: string
+          request_number?: number | null
           status?: string
           title: string
           total_amount?: number | null
@@ -672,6 +674,7 @@ export type Database = {
           manager_approved_at?: string | null
           manager_id?: string | null
           priority?: string
+          request_number?: number | null
           status?: string
           title?: string
           total_amount?: number | null

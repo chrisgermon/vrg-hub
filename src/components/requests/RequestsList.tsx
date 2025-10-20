@@ -13,6 +13,7 @@ import { formatRequestIdShort, formatRequestId } from '@/lib/requestUtils';
 
 interface Request {
   id: string;
+  request_number?: number;
   title: string;
   status: RequestStatus;
   priority: string;
@@ -40,7 +41,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
     try {
       const { data, error } = await supabase
         .from('hardware_requests')
-        .select('*')
+        .select('*, request_number')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -128,7 +129,9 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
               </TableHeader>
               <TableBody>
                 {requests.map((request) => {
-                  const requestNum = formatRequestId(request.id);
+                  const requestNum = request.request_number 
+                    ? formatRequestId(request.request_number)
+                    : `request-${request.id}`;
                   return (
                     <TableRow 
                       key={request.id}
@@ -141,7 +144,9 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
                         }
                       }}
                     >
-                      <TableCell className="font-mono text-xs">{formatRequestIdShort(request.id)}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {request.request_number ? formatRequestIdShort(request.request_number) : 'N/A'}
+                      </TableCell>
                     <TableCell className="font-medium">{request.title}</TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
                     <TableCell>{getPriorityBadge(request.priority)}</TableCell>

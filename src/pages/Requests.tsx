@@ -29,7 +29,7 @@ export default function Requests() {
       // Fetch request
       const { data: request, error: requestError } = await supabase
         .from('hardware_requests')
-        .select('*')
+        .select('*, request_number')
         .eq('id', selectedRequestId)
         .single();
       
@@ -123,7 +123,10 @@ export default function Requests() {
             </DetailsSection>
 
             <DetailsSection title="Information">
-              <DetailsField label="Request ID" value={formatRequestId(selectedRequest.id)} />
+              <DetailsField 
+                label="Request ID" 
+                value={(selectedRequest as any).request_number ? formatRequestId((selectedRequest as any).request_number) : 'N/A'} 
+              />
               <DetailsField label="Title" value={selectedRequest.title} />
               <DetailsField 
                 label="Priority" 

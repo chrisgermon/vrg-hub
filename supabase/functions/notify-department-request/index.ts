@@ -33,7 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('[notify-department-request] Fetching request details...');
     const { data: requestData, error: requestError } = await supabase
       .from('hardware_requests')
-      .select('*')
+      .select('*, request_number')
       .eq('id', requestId)
       .single();
 
@@ -121,7 +121,7 @@ const handler = async (req: Request): Promise<Response> => {
 
             emailData = {
               requestTitle: requestData.title,
-              requestNumber: `HW-${requestData.id.substring(0, 8)}`,
+              requestNumber: `VRG-${String(requestData.request_number).padStart(5, '0')}`,
               requestId: requestData.id,
               requestUrl: `https://crowdhub.app/requests/hardware/${requestData.id}`,
               requesterName: requesterProfile.full_name || requesterProfile.email,
@@ -195,7 +195,7 @@ const handler = async (req: Request): Promise<Response> => {
                 console.log('[notify-department-request] Sending email to admin:', recipientEmail);
                 emailData = {
                   requestTitle: requestData.title,
-                  requestNumber: `HW-${requestData.id.substring(0, 8)}`,
+                  requestNumber: `VRG-${String(requestData.request_number).padStart(5, '0')}`,
                   requestId: requestData.id,
                   requestUrl: `https://crowdhub.app/requests/hardware/${requestData.id}`,
                   requesterName: requesterProfile.full_name || requesterProfile.email,
