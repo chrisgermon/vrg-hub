@@ -24,6 +24,14 @@ const NewHardwareRequest = lazy(() => import("./pages/NewHardwareRequest"));
 const NewUserAccount = lazy(() => import("./pages/NewUserAccount"));
 const NewUserOffboarding = lazy(() => import("./pages/NewUserOffboarding"));
 const NewMarketingRequest = lazy(() => import("./pages/NewMarketingRequest"));
+const NewAccountsPayableRequest = lazy(() => import("./pages/NewAccountsPayableRequest"));
+const NewFacilityServicesRequest = lazy(() => import("./pages/NewFacilityServicesRequest"));
+const NewFinanceRequest = lazy(() => import("./pages/NewFinanceRequest"));
+const NewHRRequest = lazy(() => import("./pages/NewHRRequest"));
+const NewITServiceDeskRequest = lazy(() => import("./pages/NewITServiceDeskRequest"));
+const NewOfficeServicesRequest = lazy(() => import("./pages/NewOfficeServicesRequest"));
+const NewTechnologyTrainingRequest = lazy(() => import("./pages/NewTechnologyTrainingRequest"));
+const NewTonerRequest = lazy(() => import("./pages/NewTonerRequest"));
 const MonthlyNewsletter = lazy(() => import("./pages/MonthlyNewsletter"));
 const Approvals = lazy(() => import("./pages/Approvals"));
 const Admin = lazy(() => import("./pages/Admin"));
@@ -89,6 +97,14 @@ const protectedLayoutRoutes: Array<{
   { path: "/user-accounts/new", element: <NewUserAccount /> },
   { path: "/user-offboarding/new", element: <NewUserOffboarding /> },
   { path: "/marketing/new", element: <NewMarketingRequest /> },
+  { path: "/accounts-payable/new", element: <NewAccountsPayableRequest /> },
+  { path: "/facility-services/new", element: <NewFacilityServicesRequest /> },
+  { path: "/finance/new", element: <NewFinanceRequest /> },
+  { path: "/hr/new", element: <NewHRRequest /> },
+  { path: "/it-service-desk/new", element: <NewITServiceDeskRequest /> },
+  { path: "/office-services/new", element: <NewOfficeServicesRequest /> },
+  { path: "/technology-training/new", element: <NewTechnologyTrainingRequest /> },
+  { path: "/toner/new", element: <NewTonerRequest /> },
   { path: "/approvals", element: <Approvals /> },
   { path: "/settings", element: <Settings /> },
   { path: "/modality-management", element: <ModalityManagement /> },
