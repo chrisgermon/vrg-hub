@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.send-reminder-now]
 verify_jwt = true
+
+[functions.ai-content-suggestions]
+verify_jwt = true
