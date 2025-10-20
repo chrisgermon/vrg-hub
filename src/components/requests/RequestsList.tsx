@@ -40,10 +40,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
     try {
       const { data, error } = await supabase
         .from('hardware_requests')
-        .select(`
-          *,
-          assigned_profile:assigned_to(full_name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -148,7 +145,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
                     <TableCell className="font-medium">{request.title}</TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
                     <TableCell>{getPriorityBadge(request.priority)}</TableCell>
-                    <TableCell>{(request as any).assigned_profile?.full_name || '-'}</TableCell>
+                    <TableCell>{(request as any).manager_id || (request as any).admin_id ? 'Assigned' : '-'}</TableCell>
                     <TableCell>
                       {formatAUDate(request.created_at)}
                     </TableCell>
