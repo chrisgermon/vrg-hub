@@ -24,18 +24,15 @@ serve(async (req) => {
     const state = btoa(JSON.stringify(statePayload));
     
     // Include comprehensive Office 365 scopes to enable SharePoint access
+    // Note: Some scopes like Files.Read.All, Sites.Read.All require admin consent
     const scopes = [
       'offline_access',
       'openid',
       'profile',
       'email',
       'User.Read',
-      'User.Read.All',
-      'Group.Read.All',
-      'Mail.Read',
       'Files.Read.All',
-      'Sites.Read.All',
-      'Directory.Read.All'
+      'Sites.Read.All'
     ].join(' ');
     
     // Build the Microsoft authorization URL
@@ -46,7 +43,7 @@ serve(async (req) => {
     authUrl.searchParams.set('scope', scopes);
     authUrl.searchParams.set('state', state);
     authUrl.searchParams.set('response_mode', 'query');
-    authUrl.searchParams.set('prompt', 'consent'); // Force consent to get refresh token
+    authUrl.searchParams.set('prompt', 'select_account'); // Allow account selection
 
     console.log('Azure login initiated:', { redirectUri, state });
 
