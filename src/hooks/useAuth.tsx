@@ -146,6 +146,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .update({ is_active: true })
           .eq('id', data.user.id);
       }
+
+      // Log the login
+      try {
+        await supabase.functions.invoke('log-login');
+      } catch (logError) {
+        console.error('Error logging login:', logError);
+      }
     }
   };
 

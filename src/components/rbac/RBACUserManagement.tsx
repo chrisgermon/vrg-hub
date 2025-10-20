@@ -24,6 +24,7 @@ interface User {
   full_name: string | null;
   created_at: string;
   is_active: boolean;
+  last_login: string | null;
   roles: Array<{ id: string; name: string }>;
 }
 
@@ -59,7 +60,7 @@ export function RBACUserManagement() {
     try {
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, email, full_name, created_at')
+        .select('id, email, full_name, created_at, last_login, is_active')
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
@@ -79,7 +80,8 @@ export function RBACUserManagement() {
             email: profile.email || '',
             full_name: profile.full_name,
             created_at: profile.created_at || '',
-            is_active: true,
+            is_active: (profile as any).is_active ?? true,
+            last_login: (profile as any).last_login || null,
             roles: (userRoles || []).map(ur => ur.role).filter(Boolean) as Array<{ id: string; name: string }>
           };
         })
@@ -267,6 +269,7 @@ export function RBACUserManagement() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Roles</TableHead>
+                <TableHead>Last Login</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -274,11 +277,11 @@ export function RBACUserManagement() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={6} className="text-center">Loading...</TableCell>
                 </TableRow>
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">No users found</TableCell>
+                  <TableCell colSpan={6} className="text-center">No users found</TableCell>
                 </TableRow>
               ) : (
                 paginatedUsers.map((user) => (
@@ -299,6 +302,21 @@ export function RBACUserManagement() {
                           <Badge variant="outline">No roles</Badge>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {user.last_login ? (
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(user.last_login).toLocaleString('en-AU', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Never</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={user.is_active ? "default" : "destructive"}>

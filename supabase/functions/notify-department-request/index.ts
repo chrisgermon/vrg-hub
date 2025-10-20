@@ -29,10 +29,10 @@ const handler = async (req: Request): Promise<Response> => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get request details
+    // Get request details from hardware_requests (which stores all department requests)
     console.log('[notify-department-request] Fetching request details...');
     const { data: requestData, error: requestError } = await supabase
-      .from('department_requests')
+      .from('hardware_requests')
       .select('*')
       .eq('id', requestId)
       .single();
@@ -41,19 +41,30 @@ const handler = async (req: Request): Promise<Response> => {
       console.error('[notify-department-request] Failed to fetch request:', requestError);
       throw new Error(`Failed to fetch request: ${requestError?.message}`);
     }
+
+    // Parse department info from business_justification
+    let departmentInfo: any = {};
+    try {
+      departmentInfo = typeof requestData.business_justification === 'string' 
+        ? JSON.parse(requestData.business_justification)
+        : requestData.business_justification;
+    } catch (e) {
+      console.error('[notify-department-request] Failed to parse business_justification:', e);
+    }
     
     console.log('[notify-department-request] Request data:', {
-      request_number: requestData.request_number,
-      department: requestData.department,
-      company_id: requestData.company_id
+      id: requestData.id,
+      title: requestData.title,
+      department: departmentInfo.department,
+      brand_id: requestData.brand_id
     });
 
     // Get requester profile
     console.log('[notify-department-request] Fetching requester profile...');
     const { data: requesterProfile, error: requesterError } = await supabase
       .from('profiles')
-      .select('name, email')
-      .eq('user_id', requestData.user_id)
+      .select('full_name, email')
+      .eq('id', requestData.user_id)
       .single();
 
     if (requesterError || !requesterProfile) {
@@ -99,20 +110,29 @@ const handler = async (req: Request): Promise<Response> => {
 
         // Fallback to department assignments if no template users
         if (usersToNotify.length === 0) {
-          console.log('[notify-department-request] No template users, falling back to department assignments...');
-          console.log('[notify-department-request] Calling get_assigned_users_for_department RPC...');
-          const { data: assignedUsers, error: rpcError } = await supabase
-            .rpc('get_assigned_users_for_department', {
-              p_company_id: requestData.company_id,
-              p_department: requestData.department,
-              p_sub_department: requestData.sub_department
-            });
-          
-          if (rpcError) {
-            console.error('[notify-department-request] RPC error:', rpcError);
+          console.log('[notify-department-request] No template users, falling back to brand assignments...');
+          // Fallback to users in the same brand
+          if (requestData.brand_id) {
+            const { data: brandUsers, error: brandError } = await supabase
+              .from('profiles')
+              .select('id, full_name, email, sms_enabled, phone')
+              .eq('brand_id', requestData.brand_id)
+              .eq('is_active', true);
+            
+            if (brandError) {
+              console.error('[notify-department-request] Brand users error:', brandError);
+            } else {
+              usersToNotify = (brandUsers || []).map((u: any) => ({
+                user_id: u.id,
+                name: u.full_name,
+                email: u.email,
+                receive_notifications: true,
+                sms_enabled: u.sms_enabled,
+                phone: u.phone,
+              }));
+            }
           }
-          console.log('[notify-department-request] Assigned users count:', assignedUsers?.length || 0);
-          usersToNotify = assignedUsers || [];
+          console.log('[notify-department-request] Brand users count:', usersToNotify.length);
         }
 
         if (usersToNotify.length > 0) {
@@ -123,16 +143,17 @@ const handler = async (req: Request): Promise<Response> => {
           for (const user of notificationUsers) {
             console.log('[notify-department-request] Sending email to:', user.email);
             recipientEmail = user.email;
-            subject = `New ${requestData.department.replace('_', ' ')} Request: ${requestData.title}`;
+            const deptLabel = departmentInfo.department ? departmentInfo.department.replace('_', ' ') : 'Department';
+            subject = `New ${deptLabel} Request: ${requestData.title}`;
 
             emailData = {
               requestTitle: requestData.title,
-              requestNumber: requestData.request_number,
+              requestNumber: `HW-${requestData.id.substring(0, 8)}`,
               requestId: requestData.id,
-              requestUrl: `https://crowdhub.app/requests?request=${requestData.id}`,
-              requesterName: requesterProfile.name,
-              department: requestData.department.replace('_', ' '),
-              subDepartment: requestData.sub_department,
+              requestUrl: `https://crowdhub.app/requests/hardware/${requestData.id}`,
+              requesterName: requesterProfile.full_name || requesterProfile.email,
+              department: deptLabel,
+              subDepartment: departmentInfo.sub_department || '',
               priority: requestData.priority,
               description: requestData.description,
               assigneeName: user.name,
@@ -149,29 +170,6 @@ const handler = async (req: Request): Promise<Response> => {
             
             console.log('[notify-department-request] Email result:', emailResult.error ? 'FAILED' : 'SUCCESS');
 
-            // Log the email
-            const { error: logError } = await supabase
-              .from('email_logs')
-              .insert({
-                recipient_email: recipientEmail,
-                email_type: 'department_request_submitted',
-                subject: subject,
-                request_type: null,
-                department_request_id: requestData.id,
-                status: (emailResult as any).error ? 'failed' : 'sent',
-                error_message: (emailResult as any).error?.message || null,
-                metadata: {
-                  request_id: requestData.id,
-                  request_number: requestData.request_number,
-                  assignee_name: user.name,
-                  requester_name: requesterProfile.name,
-                  department: requestData.department,
-                },
-              });
-            if (logError) {
-              console.error('[notify-department-request] Failed to insert email_logs:', logError);
-            }
-
             // Log to audit_logs
             const { error: auditError } = await supabase
               .from('audit_logs')
@@ -179,13 +177,16 @@ const handler = async (req: Request): Promise<Response> => {
                 user_id: requestData.user_id,
                 user_email: recipientEmail,
                 action: 'email_sent',
-                table_name: 'email_logs',
+                table_name: 'hardware_requests',
                 record_id: requestData.id,
                 new_data: {
                   email_type: 'department_request_submitted',
                   subject: subject,
                   status: (emailResult as any).error ? 'failed' : 'sent',
-                  recipient: recipientEmail
+                  recipient: recipientEmail,
+                  request_title: requestData.title,
+                  assignee_name: user.name,
+                  requester_name: requesterProfile.full_name
                 }
               });
             if (auditError) {
@@ -193,38 +194,43 @@ const handler = async (req: Request): Promise<Response> => {
             }
           }
         } else {
-          console.log('[notify-department-request] No assigned users, falling back to managers...');
-          // Fallback: notify managers/admins if no specific assignments
-          const { data: managers } = await supabase
-            .from('user_roles')
-            .select('user_id, role')
-            .eq('company_id', requestData.company_id)
-            .in('role', ['manager', 'tenant_admin', 'super_admin']);
+          console.log('[notify-department-request] No assigned users, falling back to admin roles...');
+          // Fallback: notify users with admin roles
+          const { data: adminRoles } = await supabase
+            .from('rbac_user_roles')
+            .select('user_id')
+            .in('role_id', (
+              await supabase
+                .from('rbac_roles')
+                .select('id')
+                .in('name', ['manager', 'tenant_admin', 'super_admin'])
+            ).data?.map(r => r.id) || []);
 
-          if (managers && managers.length > 0) {
-            const managerIds = managers.map((m: any) => m.user_id).filter(Boolean);
+          if (adminRoles && adminRoles.length > 0) {
+            const adminIds = adminRoles.map((m: any) => m.user_id).filter(Boolean);
 
             const { data: managerProfiles } = await supabase
               .from('profiles')
-              .select('user_id, name, email')
-              .in('user_id', managerIds);
+              .select('id, full_name, email')
+              .in('id', adminIds);
 
             if (managerProfiles && managerProfiles.length > 0) {
               for (const m of managerProfiles) {
                 recipientEmail = m.email;
-                subject = `New ${requestData.department.replace('_', ' ')} Request: ${requestData.title}`;
-                console.log('[notify-department-request] Sending email to manager:', recipientEmail);
+                const deptLabel = departmentInfo.department ? departmentInfo.department.replace('_', ' ') : 'Department';
+                subject = `New ${deptLabel} Request: ${requestData.title}`;
+                console.log('[notify-department-request] Sending email to admin:', recipientEmail);
                 emailData = {
                   requestTitle: requestData.title,
-                  requestNumber: requestData.request_number,
+                  requestNumber: `HW-${requestData.id.substring(0, 8)}`,
                   requestId: requestData.id,
-                  requestUrl: `https://crowdhub.app/requests?request=${requestData.id}`,
-                  requesterName: requesterProfile.name,
-                  department: requestData.department.replace('_', ' '),
-                  subDepartment: requestData.sub_department,
+                  requestUrl: `https://crowdhub.app/requests/hardware/${requestData.id}`,
+                  requesterName: requesterProfile.full_name || requesterProfile.email,
+                  department: deptLabel,
+                  subDepartment: departmentInfo.sub_department || '',
                   priority: requestData.priority,
                   description: requestData.description,
-                  managerName: m.name,
+                  managerName: m.full_name,
                 };
 
                 const emailResult = await supabase.functions.invoke('send-notification-email', {
@@ -236,27 +242,27 @@ const handler = async (req: Request): Promise<Response> => {
                   },
                 });
 
-                // Log the email
-                const { error: logError2 } = await supabase
-                  .from('email_logs')
+                // Log to audit_logs
+                const { error: auditError2 } = await supabase
+                  .from('audit_logs')
                   .insert({
-                    recipient_email: recipientEmail,
-                    email_type: 'department_request_submitted',
-                    subject: subject,
-                    request_type: null,
-                    department_request_id: requestData.id,
-                    status: (emailResult as any).error ? 'failed' : 'sent',
-                    error_message: (emailResult as any).error?.message || null,
-                    metadata: {
-                      request_id: requestData.id,
-                      request_number: requestData.request_number,
-                      manager_name: m.name,
-                      requester_name: requesterProfile.name,
-                      department: requestData.department,
-                    },
+                    user_id: requestData.user_id,
+                    user_email: recipientEmail,
+                    action: 'email_sent',
+                    table_name: 'hardware_requests',
+                    record_id: requestData.id,
+                    new_data: {
+                      email_type: 'department_request_submitted',
+                      subject: subject,
+                      status: (emailResult as any).error ? 'failed' : 'sent',
+                      recipient: recipientEmail,
+                      request_title: requestData.title,
+                      manager_name: m.full_name,
+                      requester_name: requesterProfile.full_name
+                    }
                   });
-                if (logError2) {
-                  console.error('[notify-department-request] Failed to insert email_logs (manager fallback):', logError2);
+                if (auditError2) {
+                  console.error('[notify-department-request] Failed to insert audit_logs (admin fallback):', auditError2);
                 }
               }
             }

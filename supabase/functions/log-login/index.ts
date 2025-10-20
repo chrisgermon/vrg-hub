@@ -40,9 +40,19 @@ serve(async (req) => {
     // Get user profile for email
     const { data: profile } = await supabaseClient
       .from('profiles')
-      .select('email, name')
-      .eq('user_id', user.id)
+      .select('email, full_name')
+      .eq('id', user.id)
       .single()
+
+    // Update last_login in profiles
+    const { error: profileError } = await supabaseClient
+      .from('profiles')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', user.id)
+
+    if (profileError) {
+      console.error('Error updating last_login:', profileError)
+    }
 
     // Log login to audit_logs
     const { error: auditError } = await supabaseClient
@@ -57,7 +67,7 @@ serve(async (req) => {
         user_agent: userAgent,
         new_data: {
           login_time: new Date().toISOString(),
-          user_name: profile?.name
+          user_name: profile?.full_name
         }
       })
 

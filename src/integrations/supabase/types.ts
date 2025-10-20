@@ -1618,6 +1618,7 @@ export type Database = {
           id: string
           imported_from_o365: boolean | null
           is_active: boolean | null
+          last_login: string | null
           location: string | null
           location_id: string | null
           phone: string | null
@@ -1634,6 +1635,7 @@ export type Database = {
           id: string
           imported_from_o365?: boolean | null
           is_active?: boolean | null
+          last_login?: string | null
           location?: string | null
           location_id?: string | null
           phone?: string | null
@@ -1650,6 +1652,7 @@ export type Database = {
           id?: string
           imported_from_o365?: boolean | null
           is_active?: boolean | null
+          last_login?: string | null
           location?: string | null
           location_id?: string | null
           phone?: string | null
