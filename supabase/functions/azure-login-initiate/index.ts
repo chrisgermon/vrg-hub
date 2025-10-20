@@ -24,7 +24,7 @@ serve(async (req) => {
     const state = btoa(JSON.stringify(statePayload));
     
     // Include comprehensive Office 365 scopes to enable SharePoint access
-    // Note: Some scopes like Files.Read.All, Sites.Read.All require admin consent
+    // Admin consent has been granted for these scopes
     const scopes = [
       'offline_access',
       'openid',
@@ -32,7 +32,8 @@ serve(async (req) => {
       'email',
       'User.Read',
       'Files.Read.All',
-      'Sites.Read.All'
+      'Sites.Read.All',
+      'User.ReadBasic.All'
     ].join(' ');
     
     // Build the Microsoft authorization URL
