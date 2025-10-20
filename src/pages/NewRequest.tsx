@@ -161,17 +161,6 @@ export default function NewRequest() {
       bgColor: 'bg-rose-50 dark:bg-rose-950/30',
       hoverColor: 'hover:bg-rose-100 dark:hover:bg-rose-900/40'
     },
-    {
-      title: 'Marketing Service',
-      description: 'MLO and referrer requests',
-      icon: Megaphone,
-      path: '/marketing-service/new',
-      featureKey: 'department_requests',
-      permissionKey: 'create_department_request',
-      color: 'text-fuchsia-600',
-      bgColor: 'bg-fuchsia-50 dark:bg-fuchsia-950/30',
-      hoverColor: 'hover:bg-fuchsia-100 dark:hover:bg-fuchsia-900/40'
-    }
   ];
 
   const availableRequests = requestTypes.filter(request => 

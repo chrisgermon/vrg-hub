@@ -247,36 +247,19 @@ const Help = () => {
                       </AccordionTrigger>
                       <AccordionContent className="space-y-3">
                         <p className="text-muted-foreground">
-                          Request email campaigns, social media posts, or website updates.
+                          Request marketing campaigns, design services, website updates, and promotional materials.
                         </p>
                         <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                          <li>Schedule email campaigns with target audiences</li>
-                          <li>Upload recipient lists and email templates</li>
+                          <li>Create fax and email blast campaigns</li>
+                          <li>Request website updates and SEO services</li>
+                          <li>Order print materials and promotional items</li>
+                          <li>Get graphic design and creative support</li>
+                          <li>Plan social media and advertising campaigns</li>
+                          <li>Request content creation and copywriting</li>
+                          <li>Brand guideline consultations</li>
                           <li>Set up recurring communications</li>
                           <li>Track campaign performance and engagement</li>
                           <li>View marketing calendar for coordination</li>
-                        </ul>
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
-
-                  {shouldShowRequestType('department_requests') && (
-                    <AccordionItem value="marketing-service">
-                      <AccordionTrigger className="hover:no-underline">
-                        <div className="flex items-center gap-2">
-                          <Briefcase className="w-4 h-4 text-primary" />
-                          <span>Marketing Service Requests</span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="space-y-3">
-                        <p className="text-muted-foreground">
-                          Request marketing services like design, content creation, or branding support.
-                        </p>
-                        <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                          <li>Request graphic design and creative services</li>
-                          <li>Content writing and copyediting</li>
-                          <li>Brand guideline consultations</li>
-                          <li>Marketing strategy support</li>
                         </ul>
                       </AccordionContent>
                     </AccordionItem>

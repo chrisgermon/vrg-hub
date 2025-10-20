@@ -24,16 +24,6 @@ const NewHardwareRequest = lazy(() => import("./pages/NewHardwareRequest"));
 const NewUserAccount = lazy(() => import("./pages/NewUserAccount"));
 const NewUserOffboarding = lazy(() => import("./pages/NewUserOffboarding"));
 const NewMarketingRequest = lazy(() => import("./pages/NewMarketingRequest"));
-const MarketingCalendar = lazy(() => import("./pages/MarketingCalendar"));
-const NewTonerRequest = lazy(() => import("./pages/NewTonerRequest"));
-const NewFacilityServicesRequest = lazy(() => import("./pages/NewFacilityServicesRequest"));
-const NewOfficeServicesRequest = lazy(() => import("./pages/NewOfficeServicesRequest"));
-const NewAccountsPayableRequest = lazy(() => import("./pages/NewAccountsPayableRequest"));
-const NewFinanceRequest = lazy(() => import("./pages/NewFinanceRequest"));
-const NewTechnologyTrainingRequest = lazy(() => import("./pages/NewTechnologyTrainingRequest"));
-const NewITServiceDeskRequest = lazy(() => import("./pages/NewITServiceDeskRequest"));
-const NewHRRequest = lazy(() => import("./pages/NewHRRequest"));
-const NewMarketingServiceRequest = lazy(() => import("./pages/NewMarketingServiceRequest"));
 const MonthlyNewsletter = lazy(() => import("./pages/MonthlyNewsletter"));
 const Approvals = lazy(() => import("./pages/Approvals"));
 const Admin = lazy(() => import("./pages/Admin"));
@@ -99,19 +89,6 @@ const protectedLayoutRoutes: Array<{
   { path: "/user-accounts/new", element: <NewUserAccount /> },
   { path: "/user-offboarding/new", element: <NewUserOffboarding /> },
   { path: "/marketing/new", element: <NewMarketingRequest /> },
-  { path: "/marketing/calendar", element: <MarketingCalendar /> },
-  { path: "/marketing/print-orders", element: <PrintOrderingForms /> },
-  { path: "/newsletter", element: <MonthlyNewsletter /> },
-  { path: "/newsletter/submit/:department", element: <NewsletterSubmit /> },
-  { path: "/toner/new", element: <NewTonerRequest /> },
-  { path: "/facility-services/new", element: <NewFacilityServicesRequest /> },
-  { path: "/office-services/new", element: <NewOfficeServicesRequest /> },
-  { path: "/accounts-payable/new", element: <NewAccountsPayableRequest /> },
-  { path: "/finance/new", element: <NewFinanceRequest /> },
-  { path: "/technology-training/new", element: <NewTechnologyTrainingRequest /> },
-  { path: "/it-service-desk/new", element: <NewITServiceDeskRequest /> },
-  { path: "/hr/new", element: <NewHRRequest /> },
-  { path: "/marketing-service/new", element: <NewMarketingServiceRequest /> },
   { path: "/approvals", element: <Approvals /> },
   { path: "/settings", element: <Settings /> },
   { path: "/modality-management", element: <ModalityManagement /> },

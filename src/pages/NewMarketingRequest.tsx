@@ -14,7 +14,7 @@ export default function NewMarketingRequest() {
       <div>
         <h1 className="text-3xl font-bold">New Marketing Request</h1>
         <p className="text-muted-foreground">
-          Create a new fax blast, email blast, or website update request
+          Create a marketing request for campaigns, design work, website updates, and more
         </p>
       </div>
 

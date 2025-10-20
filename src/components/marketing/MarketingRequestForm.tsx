@@ -34,6 +34,10 @@ export function MarketingRequestForm({ onSuccess }: MarketingRequestFormProps) {
     priority: 'medium',
     brandId: profile?.brand_id || '',
     locationId: profile?.location_id || '',
+    // Additional service-specific fields
+    service_category: '',
+    estimated_budget: '',
+    approval_required: 'no',
   });
   
   const { toast } = useToast();
@@ -65,6 +69,13 @@ export function MarketingRequestForm({ onSuccess }: MarketingRequestFormProps) {
     setLoading(true);
 
     try {
+      // Build metadata with additional fields
+      const metadata = {
+        service_category: formData.service_category,
+        estimated_budget: formData.estimated_budget,
+        approval_required: formData.approval_required,
+      };
+
       const { data, error } = await supabase
         .from('marketing_requests')
         .insert({
@@ -78,6 +89,7 @@ export function MarketingRequestForm({ onSuccess }: MarketingRequestFormProps) {
           brand_id: formData.brandId || null,
           location_id: formData.locationId || null,
           status: 'submitted',
+          metadata: metadata,
         })
         .select()
         .single();
@@ -152,6 +164,13 @@ export function MarketingRequestForm({ onSuccess }: MarketingRequestFormProps) {
                 <SelectItem value="website_update">Website Update</SelectItem>
                 <SelectItem value="social_media">Social Media Campaign</SelectItem>
                 <SelectItem value="print_materials">Print Materials</SelectItem>
+                <SelectItem value="graphic_design">Graphic Design</SelectItem>
+                <SelectItem value="event_marketing">Event Marketing</SelectItem>
+                <SelectItem value="content_creation">Content Creation</SelectItem>
+                <SelectItem value="seo_services">SEO Services</SelectItem>
+                <SelectItem value="advertising">Advertising Campaign</SelectItem>
+                <SelectItem value="branding">Branding / Rebranding</SelectItem>
+                <SelectItem value="market_research">Market Research</SelectItem>
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
@@ -177,6 +196,51 @@ export function MarketingRequestForm({ onSuccess }: MarketingRequestFormProps) {
               onChange={(e) => handleChange('target_audience', e.target.value)}
               placeholder="e.g., Referring physicians, Patients, etc."
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="service_category">Service Category</Label>
+            <Select
+              value={formData.service_category}
+              onValueChange={(value) => handleChange('service_category', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select service category (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="creative">Creative Services</SelectItem>
+                <SelectItem value="digital">Digital Marketing</SelectItem>
+                <SelectItem value="traditional">Traditional Marketing</SelectItem>
+                <SelectItem value="analytics">Analytics & Research</SelectItem>
+                <SelectItem value="strategy">Strategy & Consulting</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="estimated_budget">Estimated Budget (optional)</Label>
+            <Input
+              id="estimated_budget"
+              value={formData.estimated_budget}
+              onChange={(e) => handleChange('estimated_budget', e.target.value)}
+              placeholder="e.g., $5,000 or TBD"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="approval_required">Manager Approval Required?</Label>
+            <Select
+              value={formData.approval_required}
+              onValueChange={(value) => handleChange('approval_required', value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="no">No</SelectItem>
+                <SelectItem value="yes">Yes</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
