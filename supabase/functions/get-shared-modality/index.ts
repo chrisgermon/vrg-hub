@@ -26,7 +26,7 @@ serve(async (req) => {
 
     // Get the share link
     const { data: shareLink, error: linkError } = await supabase
-      .from('shared_modality_links')
+      .from('shared_clinic_links')
       .select('*')
       .eq('share_token', token)
       .eq('is_active', true)
@@ -49,29 +49,38 @@ serve(async (req) => {
       );
     }
 
-    // Get modality details with clinic info
-    const { data: modality, error: modalityError } = await supabase
+    // Get clinic details
+    const { data: clinic, error: clinicError } = await supabase
+      .from('clinics')
+      .select('*')
+      .eq('id', shareLink.clinic_id)
+      .single();
+
+    if (clinicError) throw clinicError;
+
+    // Get all modalities for the clinic
+    const { data: modalities, error: modalitiesError } = await supabase
       .from('modalities')
       .select(`
         *,
-        clinic:clinics(id, location_name, ip_range, gateway, notes),
         brand:brands(id, name, display_name),
         location:locations(id, name)
       `)
-      .eq('id', shareLink.modality_id)
-      .single();
+      .eq('clinic_id', shareLink.clinic_id);
 
-    if (modalityError) throw modalityError;
+    if (modalitiesError) throw modalitiesError;
 
     // Get DICOM servers for the clinic
-    const { data: servers } = await supabase
+    const { data: servers, error: serversError } = await supabase
       .from('dicom_servers')
       .select('*')
-      .eq('clinic_id', modality.clinic.id);
+      .eq('clinic_id', shareLink.clinic_id);
+
+    if (serversError) throw serversError;
 
     // Increment access count and update last accessed
     await supabase
-      .from('shared_modality_links')
+      .from('shared_clinic_links')
       .update({ 
         access_count: shareLink.access_count + 1,
         last_accessed_at: new Date().toISOString()
@@ -81,7 +90,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        modality,
+        clinic,
+        modalities: modalities || [],
         servers: servers || [],
         accessCount: shareLink.access_count + 1,
       }),

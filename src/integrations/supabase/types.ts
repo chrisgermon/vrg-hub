@@ -2524,46 +2524,46 @@ export type Database = {
           },
         ]
       }
-      shared_modality_links: {
+      shared_clinic_links: {
         Row: {
           access_count: number | null
+          clinic_id: string
           created_at: string | null
           created_by: string
           expires_at: string | null
           id: string
           is_active: boolean | null
           last_accessed_at: string | null
-          modality_id: string
           share_token: string
         }
         Insert: {
           access_count?: number | null
+          clinic_id: string
           created_at?: string | null
           created_by: string
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
           last_accessed_at?: string | null
-          modality_id: string
           share_token: string
         }
         Update: {
           access_count?: number | null
+          clinic_id?: string
           created_at?: string | null
           created_by?: string
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
           last_accessed_at?: string | null
-          modality_id?: string
           share_token?: string
         }
         Relationships: [
           {
-            foreignKeyName: "shared_modality_links_modality_id_fkey"
-            columns: ["modality_id"]
+            foreignKeyName: "shared_clinic_links_clinic_id_fkey"
+            columns: ["clinic_id"]
             isOneToOne: false
-            referencedRelation: "modalities"
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]

@@ -118,7 +118,6 @@ export function ModalityDetails() {
   const [editingModality, setEditingModality] = useState<Modality | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
-  const [sharingModality, setSharingModality] = useState<Modality | null>(null);
   const [shareUrl, setShareUrl] = useState<string>('');
   const [recipientEmail, setRecipientEmail] = useState<string>('');
   const [isCopied, setIsCopied] = useState(false);
@@ -529,13 +528,13 @@ export function ModalityDetails() {
   };
 
   const handleCreateShareLink = async () => {
-    if (!sharingModality) return;
+    if (!selectedClinic) return;
 
     setIsSharing(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-modality-share-link', {
         body: {
-          modalityId: sharingModality.id,
+          clinicId: selectedClinic,
           expiresInDays: 30, // 30 day expiration
         },
       });
@@ -580,7 +579,7 @@ export function ModalityDetails() {
   };
 
   const handleSendEmail = async () => {
-    if (!sharingModality || !shareUrl || !recipientEmail.trim()) {
+    if (!selectedClinic || !shareUrl || !recipientEmail.trim()) {
       toast({
         title: 'Error',
         description: 'Please provide a recipient email',
@@ -591,13 +590,12 @@ export function ModalityDetails() {
 
     setIsSharing(true);
     try {
-      const clinic = clinics.find(c => c.id === sharingModality.clinic_id);
+      const clinic = clinics.find(c => c.id === selectedClinic);
 
       const { error } = await supabase.functions.invoke('share-modality-email', {
         body: {
           recipientEmail: recipientEmail.trim(),
           shareUrl,
-          modalityName: sharingModality.name,
           clinicName: clinic?.location_name,
         },
       });
@@ -622,8 +620,9 @@ export function ModalityDetails() {
     }
   };
 
-  const handleOpenShareDialog = async (modality: Modality) => {
-    setSharingModality(modality);
+  const handleOpenShareDialog = async () => {
+    if (!selectedClinic) return;
+    
     setShareUrl('');
     setShowShareDialog(true);
     // Auto-generate link
@@ -631,7 +630,7 @@ export function ModalityDetails() {
     try {
       const { data, error } = await supabase.functions.invoke('create-modality-share-link', {
         body: {
-          modalityId: modality.id,
+          clinicId: selectedClinic,
           expiresInDays: 30,
         },
       });
@@ -917,6 +916,14 @@ export function ModalityDetails() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={handleOpenShareDialog}
+                          title="Share clinic configuration"
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
                             setEditingClinic(selectedClinicData);
                             setShowClinicDialog(true);
@@ -1154,14 +1161,6 @@ export function ModalityDetails() {
                                         <Button
                                           variant="ghost"
                                           size="sm"
-                                          onClick={() => handleOpenShareDialog(modality)}
-                                          title="Share modality"
-                                        >
-                                          <Share2 className="w-4 h-4" />
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
                                           onClick={() => {
                                             setEditingModality(modality);
                                             setShowModalityDialog(true);
@@ -1238,9 +1237,9 @@ export function ModalityDetails() {
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Share Modality: {sharingModality?.name}</DialogTitle>
+            <DialogTitle>Share Clinic: {selectedClinicData?.location_name}</DialogTitle>
             <DialogDescription>
-              Share this modality's configuration via encrypted link
+              Share all modalities and DICOM servers for this clinic via encrypted link
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

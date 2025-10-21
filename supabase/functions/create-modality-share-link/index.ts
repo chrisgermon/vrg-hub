@@ -27,10 +27,10 @@ serve(async (req) => {
       throw new Error('Not authenticated');
     }
 
-    const { modalityId, expiresInDays } = await req.json();
+    const { clinicId, expiresInDays } = await req.json();
 
-    if (!modalityId) {
-      throw new Error('Modality ID is required');
+    if (!clinicId) {
+      throw new Error('Clinic ID is required');
     }
 
     // Generate a secure random token
@@ -47,9 +47,9 @@ serve(async (req) => {
 
     // Create shareable link record
     const { data: shareLink, error: insertError } = await supabaseClient
-      .from('shared_modality_links')
+      .from('shared_clinic_links')
       .insert({
-        modality_id: modalityId,
+        clinic_id: clinicId,
         share_token: token,
         created_by: user.id,
         expires_at: expiresAt,
@@ -60,7 +60,7 @@ serve(async (req) => {
 
     if (insertError) throw insertError;
 
-    const shareUrl = `https://hub.visionradiology.com.au/shared-modality/${token}`;
+    const shareUrl = `https://hub.visionradiology.com.au/shared-clinic/${token}`;
 
     return new Response(
       JSON.stringify({ 

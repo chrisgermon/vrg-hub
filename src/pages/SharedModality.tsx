@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, AlertCircle, Network, Server, MonitorDot } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -14,11 +15,11 @@ export default function SharedModality() {
 
   useEffect(() => {
     if (token) {
-      fetchSharedModality();
+      fetchSharedClinic();
     }
   }, [token]);
 
-  const fetchSharedModality = async () => {
+  const fetchSharedClinic = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -35,14 +36,14 @@ export default function SharedModality() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to load shared modality');
+        throw new Error(errorData.error || 'Failed to load shared clinic');
       }
 
       const responseData = await response.json();
       setData(responseData);
     } catch (err: any) {
-      console.error('Error fetching shared modality:', err);
-      setError(err.message || 'Failed to load modality');
+      console.error('Error fetching shared clinic:', err);
+      setError(err.message || 'Failed to load clinic');
     } finally {
       setLoading(false);
     }
@@ -53,7 +54,7 @@ export default function SharedModality() {
       <div className="container mx-auto p-6 flex items-center justify-center min-h-screen">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading modality details...</p>
+          <p className="text-muted-foreground">Loading clinic details...</p>
         </div>
       </div>
     );
@@ -70,31 +71,28 @@ export default function SharedModality() {
     );
   }
 
-  if (!data || !data.modality) {
+  if (!data || !data.clinic) {
     return (
       <div className="container mx-auto p-6 flex items-center justify-center min-h-screen">
         <Alert className="max-w-md">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Modality not found</AlertDescription>
+          <AlertDescription>Clinic not found</AlertDescription>
         </Alert>
       </div>
     );
   }
 
-  const { modality, servers } = data;
-  const clinic = modality.clinic;
-  const brand = modality.brand;
-  const location = modality.location;
+  const { clinic, modalities, servers } = data;
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
           <Network className="w-8 h-8" />
-          <h1 className="text-3xl font-bold">Shared Modality Configuration</h1>
+          <h1 className="text-3xl font-bold">Shared Clinic Configuration</h1>
         </div>
         <p className="text-muted-foreground">
-          View-only access to modality details and DICOM configuration
+          View-only access to clinic modalities and DICOM configuration
         </p>
       </div>
 
@@ -120,18 +118,6 @@ export default function SharedModality() {
                 <p className="font-medium">{clinic.gateway}</p>
               </div>
             )}
-            {brand && (
-              <div>
-                <p className="text-sm text-muted-foreground">Brand</p>
-                <p className="font-medium">{brand.display_name}</p>
-              </div>
-            )}
-            {location && (
-              <div>
-                <p className="text-sm text-muted-foreground">Location</p>
-                <p className="font-medium">{location.name}</p>
-              </div>
-            )}
           </div>
           {clinic.notes && (
             <div className="mt-4 pt-4 border-t">
@@ -142,122 +128,125 @@ export default function SharedModality() {
         </CardContent>
       </Card>
 
-      {/* Modality Details */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Modality Configuration</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>IP Address</TableHead>
-                  <TableHead>AE Title</TableHead>
-                  <TableHead>Port</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell className="font-medium">{modality.name}</TableCell>
-                  <TableCell>
-                    {modality.modality_type ? (
-                      <Badge>{modality.modality_type}</Badge>
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">{modality.ip_address}</TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {modality.ae_title || '-'}
-                  </TableCell>
-                  <TableCell>{modality.port || '-'}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
+      <Tabs defaultValue="modalities" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="modalities">
+            <MonitorDot className="w-4 h-4 mr-2" />
+            Modalities ({modalities?.length || 0})
+          </TabsTrigger>
+          <TabsTrigger value="servers">
+            <Server className="w-4 h-4 mr-2" />
+            DICOM Servers ({servers?.length || 0})
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Worklist Configuration */}
-          {(modality.worklist_ip_address || modality.worklist_ae_title || modality.worklist_port) && (
-            <div className="mt-6">
-              <h3 className="font-semibold mb-3">Worklist Configuration</h3>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Worklist IP</TableHead>
-                      <TableHead>Worklist AE Title</TableHead>
-                      <TableHead>Worklist Port</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell className="font-mono text-sm">
-                        {modality.worklist_ip_address || '-'}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {modality.worklist_ae_title || '-'}
-                      </TableCell>
-                      <TableCell>{modality.worklist_port || '-'}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
+        <TabsContent value="modalities">
+          <Card>
+            <CardHeader>
+              <CardTitle>Modalities</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!modalities || modalities.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No modalities configured for this clinic
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Brand</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>IP Address</TableHead>
+                        <TableHead>AE Title</TableHead>
+                        <TableHead>Port</TableHead>
+                        <TableHead>Worklist</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {modalities.map((modality: any) => (
+                        <TableRow key={modality.id}>
+                          <TableCell className="font-medium">{modality.name}</TableCell>
+                          <TableCell>
+                            {modality.modality_type ? (
+                              <Badge>{modality.modality_type}</Badge>
+                            ) : (
+                              '-'
+                            )}
+                          </TableCell>
+                          <TableCell>{modality.brand?.display_name || '-'}</TableCell>
+                          <TableCell>{modality.location?.name || '-'}</TableCell>
+                          <TableCell className="font-mono text-sm">{modality.ip_address}</TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {modality.ae_title || '-'}
+                          </TableCell>
+                          <TableCell>{modality.port || '-'}</TableCell>
+                          <TableCell>
+                            {modality.worklist_ae_title ? (
+                              <span className="font-mono text-xs">{modality.worklist_ae_title}</span>
+                            ) : (
+                              <Badge variant="secondary">None</Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          {modality.notes && (
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-sm text-muted-foreground mb-1">Notes</p>
-              <p className="text-sm">{modality.notes}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* DICOM Servers */}
-      {servers && servers.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Server className="w-5 h-5" />
-              DICOM Servers ({servers.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>IP Address</TableHead>
-                    <TableHead>AE Title</TableHead>
-                    <TableHead>Port</TableHead>
-                    <TableHead>Function</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {servers.map((server: any) => (
-                    <TableRow key={server.id}>
-                      <TableCell className="font-medium">{server.name}</TableCell>
-                      <TableCell className="font-mono text-sm">{server.ip_address}</TableCell>
-                      <TableCell className="font-mono text-sm">{server.ae_title || '-'}</TableCell>
-                      <TableCell>{server.port || '-'}</TableCell>
-                      <TableCell>{server.function || '-'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        <TabsContent value="servers">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Server className="w-5 h-5" />
+                DICOM Servers
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!servers || servers.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No DICOM servers configured for this clinic
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>IP Address</TableHead>
+                        <TableHead>AE Title</TableHead>
+                        <TableHead>Port</TableHead>
+                        <TableHead>Function</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {servers.map((server: any) => (
+                        <TableRow key={server.id}>
+                          <TableCell className="font-medium">{server.name}</TableCell>
+                          <TableCell className="font-mono text-sm">{server.ip_address}</TableCell>
+                          <TableCell className="font-mono text-sm">{server.ae_title || '-'}</TableCell>
+                          <TableCell>{server.port || '-'}</TableCell>
+                          <TableCell>{server.function || '-'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Footer */}
       <div className="mt-8 text-center text-sm text-muted-foreground">
-        <p>This is a read-only view of the modality configuration</p>
+        <p>This is a read-only view of the clinic configuration</p>
         <p>Shared via Vision Radiology Hub</p>
       </div>
     </div>
