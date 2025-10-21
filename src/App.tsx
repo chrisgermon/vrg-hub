@@ -1,4 +1,4 @@
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { InlineEditProvider } from "@/contexts/InlineEditContext";
 import { ProtectedLayoutRoute } from "@/components/ProtectedLayoutRoute";
+import { RouteLoading } from "@/components/RouteLoading";
 import { ThemeApplier } from "./components/ThemeApplier";
 
 // Eager imports for high-traffic pages
@@ -148,27 +149,29 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Navigate to="/home" replace />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/system-login" element={<SystemLogin />} />
-                <Route path="/create-system-admin" element={<CreateSystemAdmin />} />
-                {protectedLayoutRoutes.map(({ path, element, requiredRole }) => (
-                  <Route
-                    key={path}
-                    path={path}
-                    element={
-                      <ProtectedLayoutRoute requiredRole={requiredRole}>
-                        {element}
-                      </ProtectedLayoutRoute>
-                    }
-                  />
-                ))}
-                <Route path="/shared/:token" element={<SharedClinic />} />
-                <Route path="/shared/modality/:token" element={<SharedModality />} />
-                <Route path="/confirm-order/:token" element={<ConfirmOrder />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <Suspense fallback={<RouteLoading />}>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/home" replace />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/system-login" element={<SystemLogin />} />
+                  <Route path="/create-system-admin" element={<CreateSystemAdmin />} />
+                  {protectedLayoutRoutes.map(({ path, element, requiredRole }) => (
+                    <Route
+                      key={path}
+                      path={path}
+                      element={
+                        <ProtectedLayoutRoute requiredRole={requiredRole}>
+                          {element}
+                        </ProtectedLayoutRoute>
+                      }
+                    />
+                  ))}
+                  <Route path="/shared/:token" element={<SharedClinic />} />
+                  <Route path="/shared/modality/:token" element={<SharedModality />} />
+                  <Route path="/confirm-order/:token" element={<ConfirmOrder />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
             </BrowserRouter>
           </TooltipProvider>
         </InlineEditProvider>
