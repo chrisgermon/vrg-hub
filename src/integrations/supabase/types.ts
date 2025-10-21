@@ -2524,6 +2524,50 @@ export type Database = {
           },
         ]
       }
+      shared_modality_links: {
+        Row: {
+          access_count: number | null
+          created_at: string | null
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          last_accessed_at: string | null
+          modality_id: string
+          share_token: string
+        }
+        Insert: {
+          access_count?: number | null
+          created_at?: string | null
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          modality_id: string
+          share_token: string
+        }
+        Update: {
+          access_count?: number | null
+          created_at?: string | null
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          modality_id?: string
+          share_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_modality_links_modality_id_fkey"
+            columns: ["modality_id"]
+            isOneToOne: false
+            referencedRelation: "modalities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sharepoint_cache: {
         Row: {
           cached_at: string

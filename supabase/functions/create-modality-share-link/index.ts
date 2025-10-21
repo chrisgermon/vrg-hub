@@ -47,10 +47,10 @@ serve(async (req) => {
 
     // Create shareable link record
     const { data: shareLink, error: insertError } = await supabaseClient
-      .from('shareable_modality_links')
+      .from('shared_modality_links')
       .insert({
         modality_id: modalityId,
-        encrypted_token: token,
+        share_token: token,
         created_by: user.id,
         expires_at: expiresAt,
         is_active: true,
@@ -60,7 +60,7 @@ serve(async (req) => {
 
     if (insertError) throw insertError;
 
-    const shareUrl = `https://hub.visionradiology.com.au/shared/modality/${token}`;
+    const shareUrl = `https://hub.visionradiology.com.au/shared-modality/${token}`;
 
     return new Response(
       JSON.stringify({ 

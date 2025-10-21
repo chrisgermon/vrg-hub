@@ -168,7 +168,7 @@ function App() {
                     />
                   ))}
                   <Route path="/shared/:token" element={<SharedClinic />} />
-                  <Route path="/shared/modality/:token" element={<SharedModality />} />
+                  <Route path="/shared-modality/:token" element={<SharedModality />} />
                   <Route path="/confirm-order/:token" element={<ConfirmOrder />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>

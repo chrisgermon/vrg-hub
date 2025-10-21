@@ -26,9 +26,9 @@ serve(async (req) => {
 
     // Get the share link
     const { data: shareLink, error: linkError } = await supabase
-      .from('shareable_modality_links')
+      .from('shared_modality_links')
       .select('*')
-      .eq('encrypted_token', token)
+      .eq('share_token', token)
       .eq('is_active', true)
       .maybeSingle();
 
@@ -63,16 +63,26 @@ serve(async (req) => {
 
     if (modalityError) throw modalityError;
 
-    // Increment access count
+    // Get DICOM servers for the clinic
+    const { data: servers } = await supabase
+      .from('dicom_servers')
+      .select('*')
+      .eq('clinic_id', modality.clinic.id);
+
+    // Increment access count and update last accessed
     await supabase
-      .from('shareable_modality_links')
-      .update({ access_count: shareLink.access_count + 1 })
+      .from('shared_modality_links')
+      .update({ 
+        access_count: shareLink.access_count + 1,
+        last_accessed_at: new Date().toISOString()
+      })
       .eq('id', shareLink.id);
 
     return new Response(
       JSON.stringify({ 
         success: true,
         modality,
+        servers: servers || [],
         accessCount: shareLink.access_count + 1,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
