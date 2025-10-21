@@ -1,9 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search, Phone, Printer, MapPin, Mail } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Extension {
   department: string;
@@ -25,7 +27,23 @@ interface Contact {
   email?: string;
 }
 
-const melbourneClinics: Clinic[] = [
+interface Brand {
+  id: string;
+  name: string;
+  display_name: string;
+  logo_url: string | null;
+}
+
+interface DirectoryData {
+  melbourneClinics: Clinic[];
+  regionalClinics: Clinic[];
+  adminContacts: Contact[];
+  marketingContacts: Contact[];
+}
+
+// Vision Radiology Directory Data
+const visionRadiologyData: DirectoryData = {
+  melbourneClinics: [
   {
     name: "Botanic Ridge",
     phone: "03 9998 7455",
@@ -274,9 +292,8 @@ const melbourneClinics: Clinic[] = [
       { department: "Radiologist", extension: "315" },
     ]
   },
-];
-
-const regionalClinics: Clinic[] = [
+],
+  regionalClinics: [
   {
     name: "Kangaroo Flat",
     phone: "03 9087 4377",
@@ -367,25 +384,120 @@ const regionalClinics: Clinic[] = [
       { department: "Radiologist", extension: "515" },
     ]
   },
-];
-
-const adminContacts: Contact[] = [
+],
+  adminContacts: [
   { name: "Slav Kotevski", title: "Radiology Workflow Manager" },
   { name: "Carol Rizkallah", title: "Clinical Support Manager" },
   { name: "Claire Brewer", title: "South East Regional Manager" },
-];
-
-const marketingContacts: Contact[] = [
+],
+  marketingContacts: [
   { name: "Lauren Moutafis", title: "Head of Marketing" },
   { name: "Megan Smythe", title: "Customer Relationship Representative" },
   { name: "Danielle Jensen", title: "Customer Relationship Representative" },
   { name: "Suella Panagiotou", title: "Customer Relationship Representative" },
   { name: "Kristina Bilic", title: "Customer Relationship Representative" },
   { name: "Baylee Yanner", title: "Customer Relationship Representative" },
-];
+]
+};
+
+// Quantum Medical Imaging Directory Data
+const quantumMedicalImagingData: DirectoryData = {
+  melbourneClinics: [
+    {
+      name: "QMI Melbourne CBD",
+      phone: "03 XXXX XXXX",
+      address: "Address to be updated",
+      fax: "03 XXXX XXXX",
+      extensions: [
+        { department: "Reception", extension: "XXX" },
+      ]
+    },
+  ],
+  regionalClinics: [],
+  adminContacts: [
+    { name: "Contact Name", title: "Title to be updated" },
+  ],
+  marketingContacts: [
+    { name: "Contact Name", title: "Title to be updated" },
+  ]
+};
+
+// Light Radiology Directory Data
+const lightRadiologyData: DirectoryData = {
+  melbourneClinics: [
+    {
+      name: "Light Radiology Location",
+      phone: "03 XXXX XXXX",
+      address: "Address to be updated",
+      fax: "03 XXXX XXXX",
+      extensions: [
+        { department: "Reception", extension: "XXX" },
+      ]
+    },
+  ],
+  regionalClinics: [],
+  adminContacts: [
+    { name: "Contact Name", title: "Title to be updated" },
+  ],
+  marketingContacts: [
+    { name: "Contact Name", title: "Title to be updated" },
+  ]
+};
+
+// Focus Radiology Directory Data
+const focusRadiologyData: DirectoryData = {
+  melbourneClinics: [
+    {
+      name: "Focus Radiology Location",
+      phone: "03 XXXX XXXX",
+      address: "Address to be updated",
+      fax: "03 XXXX XXXX",
+      extensions: [
+        { department: "Reception", extension: "XXX" },
+      ]
+    },
+  ],
+  regionalClinics: [],
+  adminContacts: [
+    { name: "Contact Name", title: "Title to be updated" },
+  ],
+  marketingContacts: [
+    { name: "Contact Name", title: "Title to be updated" },
+  ]
+};
+
+// Map brand names to directory data
+const brandDirectoryMap: Record<string, DirectoryData> = {
+  'vr': visionRadiologyData,
+  'qmi': quantumMedicalImagingData,
+  'lr': lightRadiologyData,
+  'fr': focusRadiologyData,
+};
 
 export default function CompanyDirectory() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState<string>('vr');
+  const [isLoadingBrands, setIsLoadingBrands] = useState(true);
+
+  useEffect(() => {
+    const fetchBrands = async () => {
+      const { data, error } = await supabase
+        .from('brands')
+        .select('id, name, display_name, logo_url')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (data && !error) {
+        setBrands(data);
+      }
+      setIsLoadingBrands(false);
+    };
+
+    fetchBrands();
+  }, []);
+
+  const currentDirectoryData = brandDirectoryMap[selectedBrand] || visionRadiologyData;
 
   const filterClinics = (clinics: Clinic[]) => {
     if (!searchQuery) return clinics;
@@ -402,8 +514,14 @@ export default function CompanyDirectory() {
     );
   };
 
-  const filteredMelbourneClinics = useMemo(() => filterClinics(melbourneClinics), [searchQuery]);
-  const filteredRegionalClinics = useMemo(() => filterClinics(regionalClinics), [searchQuery]);
+  const filteredMelbourneClinics = useMemo(
+    () => filterClinics(currentDirectoryData.melbourneClinics), 
+    [searchQuery, selectedBrand]
+  );
+  const filteredRegionalClinics = useMemo(
+    () => filterClinics(currentDirectoryData.regionalClinics), 
+    [searchQuery, selectedBrand]
+  );
 
   const filterContacts = (contacts: Contact[]) => {
     if (!searchQuery) return contacts;
@@ -415,21 +533,54 @@ export default function CompanyDirectory() {
     );
   };
 
-  const filteredAdminContacts = useMemo(() => filterContacts(adminContacts), [searchQuery]);
-  const filteredMarketingContacts = useMemo(() => filterContacts(marketingContacts), [searchQuery]);
+  const filteredAdminContacts = useMemo(
+    () => filterContacts(currentDirectoryData.adminContacts), 
+    [searchQuery, selectedBrand]
+  );
+  const filteredMarketingContacts = useMemo(
+    () => filterContacts(currentDirectoryData.marketingContacts), 
+    [searchQuery, selectedBrand]
+  );
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">Phone Directory</h1>
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search by clinic, department, extension, or contact..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+      <div className="mb-8 space-y-6">
+        <div>
+          <h1 className="text-4xl font-bold mb-4">Phone Directory</h1>
+          <p className="text-muted-foreground">Select a brand to view their contact directory</p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+          <div className="w-full sm:w-64">
+            <label className="text-sm font-medium mb-2 block">Select Brand</label>
+            <Select 
+              value={selectedBrand} 
+              onValueChange={setSelectedBrand}
+              disabled={isLoadingBrands}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a brand" />
+              </SelectTrigger>
+              <SelectContent>
+                {brands.map((brand) => (
+                  <SelectItem key={brand.id} value={brand.name}>
+                    {brand.display_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="relative flex-1 w-full">
+            <label className="text-sm font-medium mb-2 block">Search Directory</label>
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search by clinic, department, extension, or contact..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
       </div>
 
