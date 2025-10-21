@@ -71,6 +71,7 @@ const ReminderDetail = lazy(() => import("./pages/ReminderDetail"));
 const ReminderEdit = lazy(() => import("./pages/ReminderEdit"));
 const SiteMaps = lazy(() => import("./pages/SiteMaps"));
 const SharedModality = lazy(() => import("./pages/SharedModality"));
+const MissionStatement = lazy(() => import("./pages/MissionStatement"));
 
 const protectedLayoutRoutes: Array<{
   path: string;
@@ -133,6 +134,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/site-maps", element: <SiteMaps /> },
   { path: "/dashboard", element: <Dashboard /> },
   { path: "/install", element: <Install /> },
+  { path: "/mission-statement", element: <MissionStatement /> },
   ];
 
 const queryClient = new QueryClient();
