@@ -73,6 +73,7 @@ const ReminderEdit = lazy(() => import("./pages/ReminderEdit"));
 const SiteMaps = lazy(() => import("./pages/SiteMaps"));
 const SharedModality = lazy(() => import("./pages/SharedModality"));
 const MissionStatement = lazy(() => import("./pages/MissionStatement"));
+const ExternalProviders = lazy(() => import("./pages/ExternalProviders"));
 
 const protectedLayoutRoutes: Array<{
   path: string;
@@ -115,6 +116,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/directory", element: <CompanyDirectory /> },
   { path: "/phone-directory", element: <CompanyDirectory /> },
   { path: "/company-directory", element: <CompanyDirectory /> },
+  { path: "/external-providers", element: <ExternalProviders /> },
   { path: "/fax-campaigns", element: <NotifyreFaxLogs /> },
   { path: "/contact-support", element: <ContactSupport /> },
   { path: "/admin", element: <Admin />, requiredRole: ["super_admin"] },
