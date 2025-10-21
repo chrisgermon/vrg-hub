@@ -4,8 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search, Phone, Printer, MapPin, Mail } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import visionLogo from '/vision-radiology-logo.png';
+import focusLogo from '@/assets/brands/focus-radiology-logo.svg';
+import lightLogo from '@/assets/brands/light-radiology-logo.svg';
 
 interface Extension {
   department: string;
@@ -32,6 +34,7 @@ interface Brand {
   name: string;
   display_name: string;
   logo_url: string | null;
+  logoAsset?: string;
 }
 
 interface DirectoryData {
@@ -489,7 +492,25 @@ export default function CompanyDirectory() {
         .order('sort_order', { ascending: true });
 
       if (data && !error) {
-        setBrands(data);
+        // Map local logo assets to brands
+        const brandsWithLogos = data.map(brand => {
+          let logoAsset = '';
+          switch(brand.name) {
+            case 'vr':
+              logoAsset = visionLogo;
+              break;
+            case 'fr':
+              logoAsset = focusLogo;
+              break;
+            case 'lr':
+              logoAsset = lightLogo;
+              break;
+            default:
+              logoAsset = brand.logo_url || '';
+          }
+          return { ...brand, logoAsset };
+        });
+        setBrands(brandsWithLogos);
       }
       setIsLoadingBrands(false);
     };
@@ -550,37 +571,41 @@ export default function CompanyDirectory() {
           <p className="text-muted-foreground">Select a brand to view their contact directory</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          <div className="w-full sm:w-64">
-            <label className="text-sm font-medium mb-2 block">Select Brand</label>
-            <Select 
-              value={selectedBrand} 
-              onValueChange={setSelectedBrand}
-              disabled={isLoadingBrands}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a brand" />
-              </SelectTrigger>
-              <SelectContent>
-                {brands.map((brand) => (
-                  <SelectItem key={brand.id} value={brand.name}>
-                    {brand.display_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Brand Logo Selector */}
+        <div className="flex flex-wrap items-center gap-4 pb-4 border-b">
+          {isLoadingBrands ? (
+            <div className="text-sm text-muted-foreground">Loading brands...</div>
+          ) : (
+            brands.map((brand) => (
+              <button
+                key={brand.id}
+                onClick={() => setSelectedBrand(brand.name)}
+                className={`p-3 rounded-lg border-2 transition-all hover:shadow-md ${
+                  selectedBrand === brand.name
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/50'
+                }`}
+                title={brand.display_name}
+              >
+                <img
+                  src={brand.logoAsset}
+                  alt={brand.display_name}
+                  className="h-12 w-auto object-contain"
+                />
+              </button>
+            ))
+          )}
+        </div>
 
-          <div className="relative flex-1 w-full">
-            <label className="text-sm font-medium mb-2 block">Search Directory</label>
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search by clinic, department, extension, or contact..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+        {/* Search Bar */}
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search by clinic, department, extension, or contact..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
         </div>
       </div>
 
