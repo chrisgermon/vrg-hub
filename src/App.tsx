@@ -96,7 +96,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/news", element: <NewsManagement /> },
   { path: "/news/new", element: <ArticleEditor /> },
   { path: "/news/edit/:articleId", element: <ArticleEditor /> },
-  { path: "/news/view/:articleId", element: <ArticleView /> },
+  { path: "/news/:slug", element: <ArticleView /> },
   { path: "/user-accounts/new", element: <NewUserAccount /> },
   { path: "/user-offboarding/new", element: <NewUserOffboarding /> },
   { path: "/marketing/new", element: <NewMarketingRequest /> },

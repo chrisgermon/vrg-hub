@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 interface Article {
   id: string;
   title: string;
+  slug?: string;
   excerpt?: string;
   author_id: string;
   is_published: boolean;
@@ -155,7 +156,7 @@ export default function ArticlesList() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/news/${article.id}`)}
+                            onClick={() => navigate(`/news/${article.slug || article.id}`)}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>

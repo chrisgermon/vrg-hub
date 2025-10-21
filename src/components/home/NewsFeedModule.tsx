@@ -100,7 +100,7 @@ export function NewsFeedModule({
           {articles.map((article) => (
             <Link
               key={article.id}
-              to={`/news/view/${article.id}`}
+              to={`/news/${article.slug || article.id}`}
               className="block group"
             >
               <div className="flex gap-3 items-start">

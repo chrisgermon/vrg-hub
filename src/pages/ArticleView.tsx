@@ -7,24 +7,33 @@ import { Loader2, ArrowLeft, Calendar, User } from 'lucide-react';
 import { formatAUDateTimeFull } from '@/lib/dateUtils';
 
 export default function ArticleView() {
-  const { articleId } = useParams<{ articleId: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchArticle = async () => {
-      if (!articleId) return;
+      if (!slug) return;
 
       try {
-        const { data, error } = await supabase
+        // Try to fetch by slug first
+        let query = supabase
           .from('news_articles')
           .select(`
             *,
             author:profiles!author_id(full_name, email)
           `)
-          .eq('id', articleId)
-          .eq('is_published', true)
-          .single();
+          .eq('is_published', true);
+
+        // Check if slug is a UUID (for backward compatibility)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(slug)) {
+          query = query.eq('id', slug);
+        } else {
+          query = query.eq('slug', slug);
+        }
+
+        const { data, error } = await query.single();
 
         if (error) throw error;
         setArticle(data);
@@ -36,7 +45,7 @@ export default function ArticleView() {
     };
 
     fetchArticle();
-  }, [articleId]);
+  }, [slug]);
 
   if (loading) {
     return (
