@@ -12,8 +12,8 @@ import { Plus, Pencil, Trash2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Extension {
-  department: string;
-  extension: string;
+  name: string;
+  number: string;
 }
 
 interface Clinic {
@@ -360,15 +360,15 @@ function ClinicForm({ clinic, onSave, onCancel }: {
     is_active: true
   });
 
-  const [extensionInput, setExtensionInput] = useState({ department: '', extension: '' });
+  const [extensionInput, setExtensionInput] = useState({ name: '', number: '' });
 
   const addExtension = () => {
-    if (extensionInput.department && extensionInput.extension) {
+    if (extensionInput.name && extensionInput.number) {
       setFormData({
         ...formData,
         extensions: [...formData.extensions, extensionInput]
       });
-      setExtensionInput({ department: '', extension: '' });
+      setExtensionInput({ name: '', number: '' });
     }
   };
 
@@ -415,8 +415,8 @@ function ClinicForm({ clinic, onSave, onCancel }: {
         <div className="space-y-2">
           {formData.extensions.map((ext, index) => (
             <div key={index} className="flex gap-2 items-center">
-              <Input value={ext.department} disabled />
-              <Input value={ext.extension} disabled className="w-24" />
+              <Input value={ext.name} disabled />
+              <Input value={ext.number} disabled className="w-24" />
               <Button variant="outline" size="sm" onClick={() => removeExtension(index)}>
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -424,14 +424,14 @@ function ClinicForm({ clinic, onSave, onCancel }: {
           ))}
           <div className="flex gap-2">
             <Input
-              placeholder="Department"
-              value={extensionInput.department}
-              onChange={(e) => setExtensionInput({ ...extensionInput, department: e.target.value })}
+              placeholder="Name (e.g. Reception 1)"
+              value={extensionInput.name}
+              onChange={(e) => setExtensionInput({ ...extensionInput, name: e.target.value })}
             />
             <Input
-              placeholder="Extension"
-              value={extensionInput.extension}
-              onChange={(e) => setExtensionInput({ ...extensionInput, extension: e.target.value })}
+              placeholder="Number"
+              value={extensionInput.number}
+              onChange={(e) => setExtensionInput({ ...extensionInput, number: e.target.value })}
               className="w-24"
             />
             <Button onClick={addExtension}>Add</Button>
