@@ -16,18 +16,22 @@ interface Extension {
 }
 
 interface Clinic {
+  id: string;
   name: string;
   phone: string;
   address: string;
   fax: string;
   extensions: Extension[];
+  category_id: string;
 }
 
 interface Contact {
+  id: string;
   name: string;
   title: string;
   phone?: string;
   email?: string;
+  category_id: string;
 }
 
 interface Brand {
@@ -37,11 +41,11 @@ interface Brand {
   logo_url: string | null;
 }
 
-interface DirectoryData {
-  melbourneClinics: Clinic[];
-  regionalClinics: Clinic[];
-  adminContacts: Contact[];
-  marketingContacts: Contact[];
+interface DirectoryCategory {
+  id: string;
+  name: string;
+  category_type: 'clinic' | 'contact';
+  sort_order: number;
 }
 
 export default function CompanyDirectory() {
@@ -49,10 +53,9 @@ export default function CompanyDirectory() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [selectedBrand, setSelectedBrand] = useState<string>('');
   const [isLoadingBrands, setIsLoadingBrands] = useState(true);
-  const [melbourneClinics, setMelbourneClinics] = useState<Clinic[]>([]);
-  const [regionalClinics, setRegionalClinics] = useState<Clinic[]>([]);
-  const [adminContacts, setAdminContacts] = useState<Contact[]>([]);
-  const [marketingContacts, setMarketingContacts] = useState<Contact[]>([]);
+  const [categories, setCategories] = useState<DirectoryCategory[]>([]);
+  const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const { userRole } = useAuth();
@@ -90,7 +93,13 @@ export default function CompanyDirectory() {
       return;
     }
 
-    const [clinicsRes, contactsRes] = await Promise.all([
+    const [categoriesRes, clinicsRes, contactsRes] = await Promise.all([
+      supabase
+        .from('directory_categories')
+        .select('*')
+        .eq('brand_id', brand.id)
+        .eq('is_active', true)
+        .order('sort_order'),
       supabase
         .from('directory_clinics')
         .select('*')
@@ -105,58 +114,51 @@ export default function CompanyDirectory() {
         .order('sort_order')
     ]);
 
+    if (categoriesRes.data) {
+      setCategories(categoriesRes.data.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        category_type: c.category_type as 'clinic' | 'contact',
+        sort_order: c.sort_order
+      })));
+    }
+
     if (clinicsRes.data) {
-      const melbourne = clinicsRes.data
-        .filter((c: any) => c.region === 'melbourne')
-        .map((c: any) => ({
-          name: c.name,
-          phone: c.phone,
-          address: c.address,
-          fax: c.fax,
-          extensions: (c.extensions || []) as Extension[]
-        }));
-      
-      const regional = clinicsRes.data
-        .filter((c: any) => c.region === 'regional')
-        .map((c: any) => ({
-          name: c.name,
-          phone: c.phone,
-          address: c.address,
-          fax: c.fax,
-          extensions: (c.extensions || []) as Extension[]
-        }));
-      
-      setMelbourneClinics(melbourne);
-      setRegionalClinics(regional);
+      setClinics(clinicsRes.data.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        phone: c.phone,
+        address: c.address,
+        fax: c.fax,
+        extensions: (c.extensions || []) as Extension[],
+        category_id: c.category_id
+      })));
     }
-    
+
     if (contactsRes.data) {
-      const admin = contactsRes.data
-        .filter((c: any) => c.contact_type === 'admin')
-        .map((c: any) => ({
-          name: c.name,
-          title: c.title,
-          phone: c.phone,
-          email: c.email
-        }));
-      
-      const marketing = contactsRes.data
-        .filter((c: any) => c.contact_type === 'marketing')
-        .map((c: any) => ({
-          name: c.name,
-          title: c.title,
-          phone: c.phone,
-          email: c.email
-        }));
-      
-      setAdminContacts(admin);
-      setMarketingContacts(marketing);
+      setContacts(contactsRes.data.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        title: c.title,
+        phone: c.phone,
+        email: c.email,
+        category_id: c.category_id
+      })));
     }
+
     setIsLoadingData(false);
   };
 
+  const getClinicsByCategory = (categoryId: string) => {
+    return clinics.filter(c => c.category_id === categoryId);
+  };
+
+  const getContactsByCategory = (categoryId: string) => {
+    return contacts.filter(c => c.category_id === categoryId);
+  };
+
   const filterClinics = (clinics: Clinic[]) => {
-    if (!searchQuery) return clinics;
+    if (!searchQuery.trim()) return clinics;
     
     const query = searchQuery.toLowerCase();
     return clinics.filter(clinic => 
@@ -170,33 +172,21 @@ export default function CompanyDirectory() {
     );
   };
 
-  const filteredMelbourneClinics = useMemo(
-    () => filterClinics(melbourneClinics), 
-    [searchQuery, melbourneClinics]
-  );
-  const filteredRegionalClinics = useMemo(
-    () => filterClinics(regionalClinics), 
-    [searchQuery, regionalClinics]
-  );
-
   const filterContacts = (contacts: Contact[]) => {
-    if (!searchQuery) return contacts;
+    if (!searchQuery.trim()) return contacts;
     
     const query = searchQuery.toLowerCase();
     return contacts.filter(contact =>
       contact.name.toLowerCase().includes(query) ||
-      contact.title.toLowerCase().includes(query)
+      contact.title.toLowerCase().includes(query) ||
+      contact.phone?.toLowerCase().includes(query) ||
+      contact.email?.toLowerCase().includes(query)
     );
   };
 
-  const filteredAdminContacts = useMemo(
-    () => filterContacts(adminContacts), 
-    [searchQuery, adminContacts]
-  );
-  const filteredMarketingContacts = useMemo(
-    () => filterContacts(marketingContacts), 
-    [searchQuery, marketingContacts]
-  );
+  const clinicCategories = categories.filter(c => c.category_type === 'clinic');
+  const contactCategories = categories.filter(c => c.category_type === 'contact');
+  const defaultTab = categories.length > 0 ? categories[0].id : '';
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -262,115 +252,68 @@ export default function CompanyDirectory() {
         </div>
       </div>
 
-      <Tabs defaultValue="melbourne" className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-4">
-          <TabsTrigger value="melbourne">Melbourne</TabsTrigger>
-          <TabsTrigger value="regional">Regional</TabsTrigger>
-          <TabsTrigger value="contacts">Contacts</TabsTrigger>
-          <TabsTrigger value="support">Support</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="melbourne" className="space-y-4">
-          <h2 className="text-2xl font-semibold mb-4">Melbourne Clinics</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredMelbourneClinics.map((clinic) => (
-              <ClinicCard key={clinic.name} clinic={clinic} />
-            ))}
-          </div>
-          {filteredMelbourneClinics.length === 0 && (
-            <p className="text-muted-foreground text-center py-8">No results found</p>
+      {categories.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No directory categories found for this brand.</p>
+          {isAdmin && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Click "Edit Directory" to add categories and entries.
+            </p>
           )}
-        </TabsContent>
-
-        <TabsContent value="regional" className="space-y-4">
-          <h2 className="text-2xl font-semibold mb-4">Regional Clinics</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredRegionalClinics.map((clinic) => (
-              <ClinicCard key={clinic.name} clinic={clinic} />
+        </div>
+      ) : (
+        <Tabs defaultValue={defaultTab} className="space-y-6">
+          <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${categories.length}, 1fr)` }}>
+            {categories.map((category) => (
+              <TabsTrigger key={category.id} value={category.id}>
+                {category.name}
+              </TabsTrigger>
             ))}
-          </div>
-          {filteredRegionalClinics.length === 0 && (
-            <p className="text-muted-foreground text-center py-8">No results found</p>
-          )}
-        </TabsContent>
+          </TabsList>
 
-        <TabsContent value="contacts" className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-semibold mb-4">Admin Contacts</h2>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredAdminContacts.map((contact) => (
-                <ContactCard key={contact.name} contact={contact} />
-              ))}
-            </div>
-          </div>
+          {clinicCategories.map((category) => {
+            const categoryClinicsList = getClinicsByCategory(category.id);
+            const filteredClinics = filterClinics(categoryClinicsList);
+            
+            return (
+              <TabsContent key={category.id} value={category.id} className="space-y-4">
+                <h2 className="text-2xl font-semibold mb-4">{category.name}</h2>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredClinics.map((clinic) => (
+                    <ClinicCard key={clinic.id} clinic={clinic} />
+                  ))}
+                </div>
+                {filteredClinics.length === 0 && (
+                  <p className="text-muted-foreground text-center py-8">
+                    {searchQuery ? 'No results found' : 'No clinics in this category'}
+                  </p>
+                )}
+              </TabsContent>
+            );
+          })}
 
-          <div>
-            <h2 className="text-2xl font-semibold mb-4">Marketing and Sales Contacts</h2>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredMarketingContacts.map((contact) => (
-                <ContactCard key={contact.name} contact={contact} />
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-semibold mb-4">Referrer Support</h2>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Contact Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-muted-foreground">For referrer support inquiries</p>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="support" className="space-y-4">
-          <h2 className="text-2xl font-semibold mb-4">Support Services</h2>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Crowd IT Support</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span className="font-semibold">Contact Number:</span>
-                <a href="tel:0383305755" className="text-primary hover:underline">03 8330 5755</a>
-              </div>
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span className="font-semibold">Email:</span>
-                <a href="mailto:support@crowdit.com.au" className="text-primary hover:underline">support@crowdit.com.au</a>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">Portal:</span>
-                <a href="https://support.crowdit.com.au/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">https://support.crowdit.com.au/</a>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Zed Technologies - Patient Portal</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Badge variant="destructive" className="mb-2">DO NOT GIVE THIS NUMBER TO PATIENTS</Badge>
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span className="font-semibold">Contact Number:</span>
-                <a href="tel:1300662980" className="text-primary hover:underline">1300 662 980</a>
-              </div>
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span className="font-semibold">Email:</span>
-                <a href="mailto:support@zedtechnologies.com.au" className="text-primary hover:underline">support@zedtechnologies.com.au</a>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          {contactCategories.map((category) => {
+            const categoryContactsList = getContactsByCategory(category.id);
+            const filteredContactsList = filterContacts(categoryContactsList);
+            
+            return (
+              <TabsContent key={category.id} value={category.id} className="space-y-4">
+                <h2 className="text-2xl font-semibold mb-4">{category.name}</h2>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredContactsList.map((contact) => (
+                    <ContactCard key={contact.id} contact={contact} />
+                  ))}
+                </div>
+                {filteredContactsList.length === 0 && (
+                  <p className="text-muted-foreground text-center py-8">
+                    {searchQuery ? 'No results found' : 'No contacts in this category'}
+                  </p>
+                )}
+              </TabsContent>
+            );
+          })}
+        </Tabs>
+      )}
     </div>
   );
 }
@@ -404,8 +347,8 @@ function ClinicCard({ clinic }: { clinic: Clinic }) {
         <div className="border-t pt-3">
           <h4 className="font-semibold text-xs mb-2 text-muted-foreground uppercase">Extensions</h4>
           <div className="grid grid-cols-2 gap-2">
-            {clinic.extensions.map((ext) => (
-              <div key={ext.name} className="flex justify-between text-xs">
+            {clinic.extensions.map((ext, index) => (
+              <div key={index} className="flex justify-between text-xs">
                 <span className="text-muted-foreground">{ext.name}</span>
                 <Badge variant="outline" className="text-xs">{ext.number}</Badge>
               </div>
@@ -419,14 +362,14 @@ function ClinicCard({ clinic }: { clinic: Clinic }) {
 
 function ContactCard({ contact }: { contact: Contact }) {
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle className="text-lg">{contact.name}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
-        <p className="text-sm text-muted-foreground">{contact.title}</p>
+      <CardContent className="space-y-2 text-sm">
+        <p className="text-muted-foreground">{contact.title}</p>
         {contact.phone && (
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2">
             <Phone className="h-4 w-4 text-muted-foreground" />
             <a href={`tel:${contact.phone.replace(/\s/g, '')}`} className="text-primary hover:underline">
               {contact.phone}
@@ -434,7 +377,7 @@ function ContactCard({ contact }: { contact: Contact }) {
           </div>
         )}
         {contact.email && (
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2">
             <Mail className="h-4 w-4 text-muted-foreground" />
             <a href={`mailto:${contact.email}`} className="text-primary hover:underline">
               {contact.email}

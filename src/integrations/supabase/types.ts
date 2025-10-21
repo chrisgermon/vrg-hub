@@ -378,10 +378,52 @@ export type Database = {
           },
         ]
       }
+      directory_categories: {
+        Row: {
+          brand_id: string
+          category_type: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          category_type: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          category_type?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "directory_categories_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       directory_clinics: {
         Row: {
           address: string
           brand_id: string
+          category_id: string | null
           created_at: string | null
           extensions: Json | null
           fax: string | null
@@ -396,6 +438,7 @@ export type Database = {
         Insert: {
           address: string
           brand_id: string
+          category_id?: string | null
           created_at?: string | null
           extensions?: Json | null
           fax?: string | null
@@ -410,6 +453,7 @@ export type Database = {
         Update: {
           address?: string
           brand_id?: string
+          category_id?: string | null
           created_at?: string | null
           extensions?: Json | null
           fax?: string | null
@@ -429,11 +473,19 @@ export type Database = {
             referencedRelation: "brands"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "directory_clinics_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "directory_categories"
+            referencedColumns: ["id"]
+          },
         ]
       }
       directory_contacts: {
         Row: {
           brand_id: string
+          category_id: string | null
           contact_type: string
           created_at: string | null
           email: string | null
@@ -447,6 +499,7 @@ export type Database = {
         }
         Insert: {
           brand_id: string
+          category_id?: string | null
           contact_type: string
           created_at?: string | null
           email?: string | null
@@ -460,6 +513,7 @@ export type Database = {
         }
         Update: {
           brand_id?: string
+          category_id?: string | null
           contact_type?: string
           created_at?: string | null
           email?: string | null
@@ -477,6 +531,13 @@ export type Database = {
             columns: ["brand_id"]
             isOneToOne: false
             referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "directory_contacts_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "directory_categories"
             referencedColumns: ["id"]
           },
         ]
