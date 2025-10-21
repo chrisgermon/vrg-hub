@@ -1,62 +1,17 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Pencil, Trash2, Save } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface Extension {
-  name: string;
-  number: string;
-}
-
-interface Clinic {
-  id?: string;
-  brand_id: string;
-  name: string;
-  phone: string;
-  address: string;
-  fax: string;
-  region: 'melbourne' | 'regional';
-  category_id: string;
-  extensions: Extension[];
-  sort_order: number;
-  is_active: boolean;
-}
-
-interface Contact {
-  id?: string;
-  brand_id: string;
-  name: string;
-  title: string;
-  phone?: string;
-  email?: string;
-  contact_type: 'admin' | 'marketing';
-  category_id: string;
-  sort_order: number;
-  is_active: boolean;
-}
-
-interface DirectoryCategory {
-  id?: string;
-  brand_id: string;
-  name: string;
-  category_type: 'clinic' | 'contact';
-  sort_order: number;
-  is_active: boolean;
-}
-
-interface Brand {
-  id: string;
-  name: string;
-  display_name: string;
-}
+import { Brand, DirectoryCategory, Clinic, Contact } from '@/types/directory';
+import { CategoryForm } from './forms/CategoryForm';
+import { ClinicForm } from './forms/ClinicForm';
+import { ContactForm } from './forms/ContactForm';
 
 export default function DirectoryEditor() {
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -95,44 +50,44 @@ export default function DirectoryEditor() {
   const fetchData = async () => {
     setIsLoading(true);
     
-    const [categoriesRes, clinicsRes, contactsRes] = await Promise.all([
-      supabase
-        .from('directory_categories')
-        .select('*')
-        .eq('brand_id', selectedBrand)
-        .order('sort_order'),
-      supabase
-        .from('directory_clinics')
-        .select('*')
-        .eq('brand_id', selectedBrand)
-        .order('sort_order'),
-      supabase
-        .from('directory_contacts')
-        .select('*')
-        .eq('brand_id', selectedBrand)
-        .order('sort_order')
-    ]);
+    try {
+      const [categoriesRes, clinicsRes, contactsRes] = await Promise.all([
+        supabase
+          .from('directory_categories')
+          .select('*')
+          .eq('brand_id', selectedBrand)
+          .order('sort_order'),
+        supabase
+          .from('directory_clinics')
+          .select('*')
+          .eq('brand_id', selectedBrand)
+          .order('sort_order'),
+        supabase
+          .from('directory_contacts')
+          .select('*')
+          .eq('brand_id', selectedBrand)
+          .order('sort_order')
+      ]);
 
-    if (categoriesRes.data) {
-      setCategories(categoriesRes.data.map(c => ({
+      if (categoriesRes.error) throw categoriesRes.error;
+      if (clinicsRes.error) throw clinicsRes.error;
+      if (contactsRes.error) throw contactsRes.error;
+
+      setCategories((categoriesRes.data || []).map(c => ({
         ...c,
         category_type: c.category_type as 'clinic' | 'contact'
       })));
-    }
-    if (clinicsRes.data) {
-      setClinics(clinicsRes.data.map(c => ({
+      setClinics((clinicsRes.data || []).map(c => ({
         ...c,
-        region: c.region as 'melbourne' | 'regional',
-        extensions: c.extensions as unknown as Extension[]
+        extensions: c.extensions as any as import('@/types/directory').Extension[]
       })));
+      setContacts(contactsRes.data || []);
+    } catch (error) {
+      console.error('Error fetching directory data:', error);
+      toast.error('Failed to load directory data');
+    } finally {
+      setIsLoading(false);
     }
-    if (contactsRes.data) {
-      setContacts(contactsRes.data.map(c => ({
-        ...c,
-        contact_type: c.contact_type as 'admin' | 'marketing'
-      })));
-    }
-    setIsLoading(false);
   };
 
   const saveCategory = async (category: DirectoryCategory) => {
@@ -161,22 +116,24 @@ export default function DirectoryEditor() {
   };
 
   const saveClinic = async (clinic: Clinic) => {
-    const clinicData = {
-      ...clinic,
-      extensions: clinic.extensions as any
-    };
-    
-    const { error } = clinic.id
-      ? await supabase.from('directory_clinics').update(clinicData).eq('id', clinic.id)
-      : await supabase.from('directory_clinics').insert([clinicData]);
+    try {
+      const clinicData = { 
+        ...clinic, 
+        extensions: clinic.extensions as any,
+        region: clinic.region || 'melbourne'
+      };
+      const { error } = clinic.id
+        ? await supabase.from('directory_clinics').update(clinicData).eq('id', clinic.id)
+        : await supabase.from('directory_clinics').insert([clinicData]);
 
-    if (error) {
-      toast.error('Failed to save clinic');
-      console.error(error);
-    } else {
+      if (error) throw error;
+      
       toast.success('Clinic saved successfully');
       fetchData();
       setEditingClinic(null);
+    } catch (error) {
+      console.error('Error saving clinic:', error);
+      toast.error('Failed to save clinic');
     }
   };
 
@@ -191,9 +148,13 @@ export default function DirectoryEditor() {
   };
 
   const saveContact = async (contact: Contact) => {
+    const contactData = {
+      ...contact,
+      contact_type: contact.contact_type || 'admin'
+    };
     const { error } = contact.id
-      ? await supabase.from('directory_contacts').update(contact).eq('id', contact.id)
-      : await supabase.from('directory_contacts').insert([contact]);
+      ? await supabase.from('directory_contacts').update(contactData).eq('id', contact.id)
+      : await supabase.from('directory_contacts').insert([contactData]);
 
     if (error) {
       toast.error('Failed to save contact');
@@ -520,255 +481,6 @@ export default function DirectoryEditor() {
           </TabsContent>
         </Tabs>
       )}
-    </div>
-  );
-}
-
-function CategoryForm({
-  category,
-  onSave,
-  onCancel,
-}: {
-  category: DirectoryCategory;
-  onSave: (category: DirectoryCategory) => void;
-  onCancel: () => void;
-}) {
-  const [formData, setFormData] = useState(category);
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <Label>Category Name</Label>
-        <Input
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="e.g., Melbourne Clinics"
-        />
-      </div>
-
-      <div>
-        <Label>Category Type</Label>
-        <Select
-          value={formData.category_type}
-          onValueChange={(value: 'clinic' | 'contact') =>
-            setFormData({ ...formData, category_type: value })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="clinic">Clinic</SelectItem>
-            <SelectItem value="contact">Contact</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex gap-2 justify-end">
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button onClick={() => onSave(formData)}>
-          <Save className="mr-2 h-4 w-4" />
-          Save
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function ClinicForm({
-  clinic,
-  categories,
-  onSave,
-  onCancel,
-}: {
-  clinic: Clinic;
-  categories: DirectoryCategory[];
-  onSave: (clinic: Clinic) => void;
-  onCancel: () => void;
-}) {
-  const [formData, setFormData] = useState<Clinic>(clinic);
-  const [extensionInput, setExtensionInput] = useState({ name: '', number: '' });
-
-  const addExtension = () => {
-    if (extensionInput.name && extensionInput.number) {
-      setFormData({
-        ...formData,
-        extensions: [...formData.extensions, extensionInput]
-      });
-      setExtensionInput({ name: '', number: '' });
-    }
-  };
-
-  const removeExtension = (index: number) => {
-    setFormData({
-      ...formData,
-      extensions: formData.extensions.filter((_, i) => i !== index)
-    });
-  };
-
-  return (
-    <div className="space-y-4 max-h-[70vh] overflow-y-auto">
-      <div>
-        <Label>Category</Label>
-        <Select
-          value={formData.category_id}
-          onValueChange={(value) => setFormData({ ...formData, category_id: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select category" />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map(cat => (
-              <SelectItem key={cat.id} value={cat.id!}>{cat.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label>Clinic Name</Label>
-        <Input
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-        />
-      </div>
-
-      <div>
-        <Label>Phone</Label>
-        <Input
-          value={formData.phone}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-        />
-      </div>
-
-      <div>
-        <Label>Address</Label>
-        <Textarea
-          value={formData.address}
-          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-        />
-      </div>
-
-      <div>
-        <Label>Fax</Label>
-        <Input
-          value={formData.fax}
-          onChange={(e) => setFormData({ ...formData, fax: e.target.value })}
-        />
-      </div>
-
-      <div>
-        <Label>Extensions</Label>
-        <div className="space-y-2">
-          {formData.extensions.map((ext, index) => (
-            <div key={index} className="flex gap-2 items-center">
-              <Input value={ext.name} disabled />
-              <Input value={ext.number} disabled className="w-24" />
-              <Button variant="outline" size="sm" onClick={() => removeExtension(index)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-          <div className="flex gap-2">
-            <Input
-              placeholder="Name (e.g. Reception 1)"
-              value={extensionInput.name}
-              onChange={(e) => setExtensionInput({ ...extensionInput, name: e.target.value })}
-            />
-            <Input
-              placeholder="Number"
-              value={extensionInput.number}
-              onChange={(e) => setExtensionInput({ ...extensionInput, number: e.target.value })}
-              className="w-24"
-            />
-            <Button onClick={addExtension}>Add</Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex gap-2 justify-end">
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button onClick={() => onSave(formData)}>
-          <Save className="mr-2 h-4 w-4" />
-          Save
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function ContactForm({
-  contact,
-  categories,
-  onSave,
-  onCancel,
-}: {
-  contact: Contact;
-  categories: DirectoryCategory[];
-  onSave: (contact: Contact) => void;
-  onCancel: () => void;
-}) {
-  const [formData, setFormData] = useState(contact);
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <Label>Category</Label>
-        <Select
-          value={formData.category_id}
-          onValueChange={(value) => setFormData({ ...formData, category_id: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select category" />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map(cat => (
-              <SelectItem key={cat.id} value={cat.id!}>{cat.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label>Name</Label>
-        <Input
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-        />
-      </div>
-
-      <div>
-        <Label>Title</Label>
-        <Input
-          value={formData.title}
-          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-        />
-      </div>
-
-      <div>
-        <Label>Phone (optional)</Label>
-        <Input
-          value={formData.phone || ''}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-        />
-      </div>
-
-      <div>
-        <Label>Email (optional)</Label>
-        <Input
-          type="email"
-          value={formData.email || ''}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-        />
-      </div>
-
-      <div className="flex gap-2 justify-end">
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button onClick={() => onSave(formData)}>
-          <Save className="mr-2 h-4 w-4" />
-          Save
-        </Button>
-      </div>
     </div>
   );
 }
