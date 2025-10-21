@@ -5,9 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Phone, Printer, MapPin, Mail } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import visionLogo from '/vision-radiology-logo.png';
-import focusLogo from '@/assets/brands/focus-radiology-logo.svg';
-import lightLogo from '@/assets/brands/light-radiology-logo.svg';
 
 interface Extension {
   department: string;
@@ -34,7 +31,6 @@ interface Brand {
   name: string;
   display_name: string;
   logo_url: string | null;
-  logoAsset?: string;
 }
 
 interface DirectoryData {
@@ -492,25 +488,7 @@ export default function CompanyDirectory() {
         .order('sort_order', { ascending: true });
 
       if (data && !error) {
-        // Map local logo assets to brands
-        const brandsWithLogos = data.map(brand => {
-          let logoAsset = '';
-          switch(brand.name) {
-            case 'vr':
-              logoAsset = visionLogo;
-              break;
-            case 'fr':
-              logoAsset = focusLogo;
-              break;
-            case 'lr':
-              logoAsset = lightLogo;
-              break;
-            default:
-              logoAsset = brand.logo_url || '';
-          }
-          return { ...brand, logoAsset };
-        });
-        setBrands(brandsWithLogos);
+        setBrands(data);
       }
       setIsLoadingBrands(false);
     };
@@ -588,7 +566,7 @@ export default function CompanyDirectory() {
                 title={brand.display_name}
               >
                 <img
-                  src={brand.logoAsset}
+                  src={brand.logo_url || ''}
                   alt={brand.display_name}
                   className="h-12 w-auto object-contain"
                 />
