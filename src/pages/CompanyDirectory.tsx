@@ -558,7 +558,7 @@ export default function CompanyDirectory() {
               <button
                 key={brand.id}
                 onClick={() => setSelectedBrand(brand.name)}
-                className={`p-3 rounded-lg border-2 transition-all hover:shadow-md w-32 h-20 flex items-center justify-center ${
+                className={`p-4 rounded-lg border-2 transition-all hover:shadow-md w-40 h-28 flex items-center justify-center ${
                   selectedBrand === brand.name
                     ? 'border-primary bg-primary/5'
                     : 'border-border hover:border-primary/50'
@@ -568,7 +568,7 @@ export default function CompanyDirectory() {
                 <img
                   src={brand.logo_url || ''}
                   alt={brand.display_name}
-                  className="max-h-12 max-w-full object-contain"
+                  className="max-h-20 max-w-full object-contain"
                 />
               </button>
             ))
