@@ -114,7 +114,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/help-ticket", element: <HelpTicket /> },
   { path: "/directory", element: <CompanyDirectory /> },
   { path: "/phone-directory", element: <CompanyDirectory /> },
-  { path: "/knowledge-base", element: <KnowledgeBase /> },
+  { path: "/company-directory", element: <CompanyDirectory /> },
   { path: "/fax-campaigns", element: <NotifyreFaxLogs /> },
   { path: "/contact-support", element: <ContactSupport /> },
   { path: "/admin", element: <Admin />, requiredRole: ["super_admin"] },
