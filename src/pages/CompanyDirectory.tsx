@@ -2,9 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Phone, Printer, MapPin, Mail } from 'lucide-react';
+import { Search, Phone, Printer, MapPin, Mail, Settings } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import DirectoryEditor from '@/components/directory/DirectoryEditor';
 
 interface Extension {
   department: string;
@@ -476,8 +480,16 @@ const brandDirectoryMap: Record<string, DirectoryData> = {
 export default function CompanyDirectory() {
   const [searchQuery, setSearchQuery] = useState('');
   const [brands, setBrands] = useState<Brand[]>([]);
-  const [selectedBrand, setSelectedBrand] = useState<string>('vr');
+  const [selectedBrand, setSelectedBrand] = useState<string>('');
   const [isLoadingBrands, setIsLoadingBrands] = useState(true);
+  const [melbourneClinics, setMelbourneClinics] = useState<Clinic[]>([]);
+  const [regionalClinics, setRegionalClinics] = useState<Clinic[]>([]);
+  const [adminContacts, setAdminContacts] = useState<Contact[]>([]);
+  const [marketingContacts, setMarketingContacts] = useState<Contact[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'tenant_admin' || userRole === 'super_admin';
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -489,6 +501,7 @@ export default function CompanyDirectory() {
 
       if (data && !error) {
         setBrands(data);
+        if (data.length > 0) setSelectedBrand(data[0].name);
       }
       setIsLoadingBrands(false);
     };
@@ -496,7 +509,84 @@ export default function CompanyDirectory() {
     fetchBrands();
   }, []);
 
-  const currentDirectoryData = brandDirectoryMap[selectedBrand] || visionRadiologyData;
+  useEffect(() => {
+    if (selectedBrand) {
+      fetchDirectoryData();
+    }
+  }, [selectedBrand, brands]);
+
+  const fetchDirectoryData = async () => {
+    setIsLoadingData(true);
+    const brand = brands.find(b => b.name === selectedBrand);
+    if (!brand) {
+      setIsLoadingData(false);
+      return;
+    }
+
+    const [clinicsRes, contactsRes] = await Promise.all([
+      supabase
+        .from('directory_clinics')
+        .select('*')
+        .eq('brand_id', brand.id)
+        .eq('is_active', true)
+        .order('sort_order'),
+      supabase
+        .from('directory_contacts')
+        .select('*')
+        .eq('brand_id', brand.id)
+        .eq('is_active', true)
+        .order('sort_order')
+    ]);
+
+    if (clinicsRes.data) {
+      const melbourne = clinicsRes.data
+        .filter((c: any) => c.region === 'melbourne')
+        .map((c: any) => ({
+          name: c.name,
+          phone: c.phone,
+          address: c.address,
+          fax: c.fax,
+          extensions: (c.extensions || []) as Extension[]
+        }));
+      
+      const regional = clinicsRes.data
+        .filter((c: any) => c.region === 'regional')
+        .map((c: any) => ({
+          name: c.name,
+          phone: c.phone,
+          address: c.address,
+          fax: c.fax,
+          extensions: (c.extensions || []) as Extension[]
+        }));
+      
+      setMelbourneClinics(melbourne);
+      setRegionalClinics(regional);
+    }
+    
+    if (contactsRes.data) {
+      const admin = contactsRes.data
+        .filter((c: any) => c.contact_type === 'admin')
+        .map((c: any) => ({
+          name: c.name,
+          title: c.title,
+          phone: c.phone,
+          email: c.email
+        }));
+      
+      const marketing = contactsRes.data
+        .filter((c: any) => c.contact_type === 'marketing')
+        .map((c: any) => ({
+          name: c.name,
+          title: c.title,
+          phone: c.phone,
+          email: c.email
+        }));
+      
+      setAdminContacts(admin);
+      setMarketingContacts(marketing);
+    }
+    setIsLoadingData(false);
+  };
 
   const filterClinics = (clinics: Clinic[]) => {
     if (!searchQuery) return clinics;
@@ -514,12 +604,12 @@ export default function CompanyDirectory() {
   };
 
   const filteredMelbourneClinics = useMemo(
-    () => filterClinics(currentDirectoryData.melbourneClinics), 
-    [searchQuery, selectedBrand]
+    () => filterClinics(melbourneClinics), 
+    [searchQuery, melbourneClinics]
   );
   const filteredRegionalClinics = useMemo(
-    () => filterClinics(currentDirectoryData.regionalClinics), 
-    [searchQuery, selectedBrand]
+    () => filterClinics(regionalClinics), 
+    [searchQuery, regionalClinics]
   );
 
   const filterContacts = (contacts: Contact[]) => {
@@ -533,20 +623,38 @@ export default function CompanyDirectory() {
   };
 
   const filteredAdminContacts = useMemo(
-    () => filterContacts(currentDirectoryData.adminContacts), 
-    [searchQuery, selectedBrand]
+    () => filterContacts(adminContacts), 
+    [searchQuery, adminContacts]
   );
   const filteredMarketingContacts = useMemo(
-    () => filterContacts(currentDirectoryData.marketingContacts), 
-    [searchQuery, selectedBrand]
+    () => filterContacts(marketingContacts), 
+    [searchQuery, marketingContacts]
   );
 
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8 space-y-6">
-        <div>
-          <h1 className="text-4xl font-bold mb-4">Phone Directory</h1>
-          <p className="text-muted-foreground">Select a brand to view their contact directory</p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-4xl font-bold mb-4">Phone Directory</h1>
+            <p className="text-muted-foreground">Select a brand to view their contact directory</p>
+          </div>
+          {isAdmin && (
+            <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Edit Directory
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Directory Editor</DialogTitle>
+                </DialogHeader>
+                <DirectoryEditor />
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Brand Logo Selector */}

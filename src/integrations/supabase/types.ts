@@ -378,6 +378,109 @@ export type Database = {
           },
         ]
       }
+      directory_clinics: {
+        Row: {
+          address: string
+          brand_id: string
+          created_at: string | null
+          extensions: Json | null
+          fax: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          phone: string
+          region: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          address: string
+          brand_id: string
+          created_at?: string | null
+          extensions?: Json | null
+          fax?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          phone: string
+          region: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string
+          brand_id?: string
+          created_at?: string | null
+          extensions?: Json | null
+          fax?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          phone?: string
+          region?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "directory_clinics_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      directory_contacts: {
+        Row: {
+          brand_id: string
+          contact_type: string
+          created_at: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          phone: string | null
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          brand_id: string
+          contact_type: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          phone?: string | null
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          brand_id?: string
+          contact_type?: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          phone?: string | null
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "directory_contacts_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_logs: {
         Row: {
           created_at: string | null
