@@ -113,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setUserRole(null);
           setProfile(null);
+          setLoading(false);
         }
       }
     );
@@ -128,6 +129,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setLoading(false);
       }
+    }).catch((err) => {
+      console.error('Error getting session:', err);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
