@@ -113,6 +113,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/help", element: <Help /> },
   { path: "/help-ticket", element: <HelpTicket /> },
   { path: "/directory", element: <CompanyDirectory /> },
+  { path: "/phone-directory", element: <CompanyDirectory /> },
   { path: "/knowledge-base", element: <KnowledgeBase /> },
   { path: "/fax-campaigns", element: <NotifyreFaxLogs /> },
   { path: "/contact-support", element: <ContactSupport /> },
