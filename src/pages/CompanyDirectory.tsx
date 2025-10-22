@@ -33,7 +33,7 @@ export default function CompanyDirectory() {
 
       if (data && !error) {
         setBrands(data);
-        if (data.length > 0) setSelectedBrand(data[0].name);
+        if (data.length > 0) setSelectedBrand(data[0].id);
       }
       setIsLoadingBrands(false);
     };
@@ -120,9 +120,9 @@ export default function CompanyDirectory() {
             brands.map((brand) => (
               <button
                 key={brand.id}
-                onClick={() => setSelectedBrand(brand.name)}
+                onClick={() => setSelectedBrand(brand.id)}
                 className={`p-4 rounded-lg border-2 transition-all hover:shadow-md w-40 h-28 flex items-center justify-center ${
-                  selectedBrand === brand.name
+                  selectedBrand === brand.id
                     ? 'border-primary bg-primary/5'
                     : 'border-border hover:border-primary/50'
                 }`}
