@@ -9,6 +9,7 @@ import { formatRequestId } from '@/lib/requestUtils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RequestActivity } from '@/components/requests/RequestActivity';
 
 type UnifiedRequest = {
   id: string;
@@ -427,6 +428,8 @@ export default function RequestDetail() {
             )}
           </CardContent>
         </Card>
+
+        <RequestActivity requestId={request.id} requestType={request.type} />
       </div>
     </div>
   );

@@ -860,6 +860,7 @@ export type Database = {
           admin_approval_notes: string | null
           admin_approved_at: string | null
           admin_id: string | null
+          assigned_to: string | null
           brand_id: string | null
           business_justification: string
           clinic_name: string | null
@@ -887,6 +888,7 @@ export type Database = {
           admin_approval_notes?: string | null
           admin_approved_at?: string | null
           admin_id?: string | null
+          assigned_to?: string | null
           brand_id?: string | null
           business_justification: string
           clinic_name?: string | null
@@ -914,6 +916,7 @@ export type Database = {
           admin_approval_notes?: string | null
           admin_approved_at?: string | null
           admin_id?: string | null
+          assigned_to?: string | null
           brand_id?: string | null
           business_justification?: string
           clinic_name?: string | null
@@ -2262,6 +2265,45 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      request_activity: {
+        Row: {
+          activity_type: string
+          comment: string | null
+          created_at: string | null
+          id: string
+          is_internal: boolean | null
+          new_value: string | null
+          old_value: string | null
+          request_id: string
+          request_type: string
+          user_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          new_value?: string | null
+          old_value?: string | null
+          request_id: string
+          request_type?: string
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          new_value?: string | null
+          old_value?: string | null
+          request_id?: string
+          request_type?: string
+          user_id?: string | null
         }
         Relationships: []
       }
