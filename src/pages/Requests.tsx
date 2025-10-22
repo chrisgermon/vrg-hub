@@ -94,16 +94,16 @@ export default function Requests() {
           </TabsList>
 
           <TabsContent value="all" className="space-y-6">
-            <RequestsList onRequestSelect={handleRequestSelect} selectedRequestId={selectedRequestId} />
+            <RequestsList onRequestSelect={handleRequestSelect} selectedRequestId={selectedRequestId} filterType="all" />
           </TabsContent>
 
           <TabsContent value="my-requests" className="space-y-6">
-            <RequestsList onRequestSelect={handleRequestSelect} selectedRequestId={selectedRequestId} />
+            <RequestsList onRequestSelect={handleRequestSelect} selectedRequestId={selectedRequestId} filterType="my-requests" />
           </TabsContent>
 
           {isManagerOrAdmin && (
             <TabsContent value="pending" className="space-y-6">
-              <RequestsList onRequestSelect={handleRequestSelect} selectedRequestId={selectedRequestId} />
+              <RequestsList onRequestSelect={handleRequestSelect} selectedRequestId={selectedRequestId} filterType="pending" />
             </TabsContent>
           )}
         </Tabs>

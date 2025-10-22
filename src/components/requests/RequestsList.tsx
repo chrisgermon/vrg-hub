@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Eye, Clock, CheckCircle, XCircle, Package } from 'lucide-react';
+import { Loader2, Eye, Clock, CheckCircle, XCircle, Package, Search, ArrowUpDown } from 'lucide-react';
 import { formatAUDate } from '@/lib/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { RequestStatus } from '@/types/request';
@@ -25,24 +27,41 @@ interface Request {
 interface RequestsListProps {
   onRequestSelect?: (requestId: string) => void;
   selectedRequestId?: string | null;
+  filterType?: 'all' | 'my-requests' | 'pending';
 }
 
-export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsListProps) {
+export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 'all' }: RequestsListProps) {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'priority' | 'status'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
 
   useEffect(() => {
     loadRequests();
-  }, []);
+  }, [filterType, user]);
 
   const loadRequests = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('hardware_requests')
-        .select('*, request_number')
-        .order('created_at', { ascending: false });
+        .select('*, request_number');
+
+      // Apply filters based on tab
+      if (filterType === 'my-requests') {
+        query = query.eq('user_id', user?.id);
+      } else if (filterType === 'pending') {
+        const isManagerOrAdmin = ['manager', 'marketing_manager', 'tenant_admin', 'super_admin'].includes(userRole || '');
+        if (isManagerOrAdmin) {
+          query = query.in('status', ['submitted', 'pending_manager_approval', 'pending_admin_approval']);
+        }
+      }
+
+      query = query.order('created_at', { ascending: false });
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setRequests((data as any) || []);
@@ -93,6 +112,49 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
     );
   };
 
+  // Filter and sort requests
+  const filteredAndSortedRequests = useMemo(() => {
+    let filtered = [...requests];
+
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((request) => {
+        const requestId = request.request_number ? formatRequestId(request.request_number) : '';
+        return (
+          request.title.toLowerCase().includes(query) ||
+          requestId.toLowerCase().includes(query) ||
+          request.status.toLowerCase().includes(query) ||
+          request.priority.toLowerCase().includes(query)
+        );
+      });
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case 'date':
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+        case 'priority': {
+          const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+          comparison = (priorityOrder[a.priority as keyof typeof priorityOrder] || 0) - 
+                      (priorityOrder[b.priority as keyof typeof priorityOrder] || 0);
+          break;
+        }
+        case 'status':
+          comparison = a.status.localeCompare(b.status);
+          break;
+      }
+
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return filtered;
+  }, [requests, searchQuery, sortBy, sortOrder]);
+
   if (loading) {
     return (
       <Card>
@@ -109,9 +171,41 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
         <CardTitle>All Requests</CardTitle>
       </CardHeader>
       <CardContent>
-        {requests.length === 0 ? (
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by title, ID, status, or priority..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">Date Created</SelectItem>
+                <SelectItem value="priority">Priority</SelectItem>
+                <SelectItem value="status">Status</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              title={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+            >
+              <ArrowUpDown className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {filteredAndSortedRequests.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            No requests found. Create your first request to get started.
+            {searchQuery ? 'No requests match your search.' : 'No requests found. Create your first request to get started.'}
           </div>
         ) : (
           <div className="rounded-md border">
@@ -128,7 +222,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId }: RequestsLis
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {requests.map((request) => {
+                {filteredAndSortedRequests.map((request) => {
                   const requestNum = request.request_number 
                     ? formatRequestId(request.request_number)
                     : `request-${request.id}`;
