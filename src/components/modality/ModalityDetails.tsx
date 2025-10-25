@@ -44,10 +44,12 @@ import {
   Link as LinkIcon,
   Mail,
   Copy,
-  Check
+  Check,
+  Download
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ExcelImporter } from './ExcelImporter';
+import * as XLSX from 'xlsx';
 
 interface Clinic {
   id: string;
@@ -620,10 +622,101 @@ export function ModalityDetails() {
     }
   };
 
+  const handleExportToExcel = () => {
+    if (!selectedClinic || !selectedClinicData) return;
+
+    try {
+      // Prepare clinic info
+      const clinicInfo = [
+        ['Clinic Information'],
+        ['Location', selectedClinicData.location_name],
+        ['IP Range', selectedClinicData.ip_range || '-'],
+        ['Gateway', selectedClinicData.gateway || '-'],
+        ['Notes', selectedClinicData.notes || '-'],
+        [],
+      ];
+
+      // Prepare modalities data
+      const modalitiesData = [
+        ['Modalities'],
+        ['Name', 'Type', 'Brand', 'IP Address', 'AE Title', 'Port', 'Worklist IP', 'Worklist AE', 'Worklist Port', 'Notes'],
+        ...modalities.map(m => [
+          m.name,
+          m.modality_type || '-',
+          brands.find(b => b.id === m.brand_id)?.display_name || '-',
+          m.ip_address,
+          m.ae_title || '-',
+          m.port?.toString() || '-',
+          m.worklist_ip_address || '-',
+          m.worklist_ae_title || '-',
+          m.worklist_port?.toString() || '-',
+          m.notes || '-',
+        ]),
+        [],
+      ];
+
+      // Prepare servers data
+      const serversData = [
+        ['DICOM Servers'],
+        ['Name', 'IP Address', 'AE Title', 'Port', 'Function', 'Notes'],
+        ...servers.map(s => [
+          s.name,
+          s.ip_address,
+          s.ae_title || '-',
+          s.port?.toString() || '-',
+          s.function || '-',
+          s.notes || '-',
+        ]),
+      ];
+
+      // Combine all data
+      const wsData = [...clinicInfo, ...modalitiesData, ...serversData];
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 10 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 30 },
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Clinic Details');
+
+      // Generate filename
+      const filename = `${selectedClinicData.location_name.replace(/[^a-z0-9]/gi, '_')}_modalities_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+      // Save file
+      XLSX.writeFile(wb, filename);
+
+      toast({
+        title: 'Success',
+        description: 'Excel file downloaded successfully',
+      });
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to export to Excel',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleOpenShareDialog = async () => {
     if (!selectedClinic) return;
     
     setShareUrl('');
+    setIsCopied(false);
     setShowShareDialog(true);
     // Auto-generate link
     setIsSharing(true);
@@ -1267,10 +1360,19 @@ export function ModalityDetails() {
                       setShowShareDialog(false);
                       setShowEmailDialog(true);
                     }}
+                    variant="outline"
                     className="flex-1"
                   >
                     <Mail className="h-4 w-4 mr-2" />
                     Email Link
+                  </Button>
+                  <Button
+                    onClick={handleExportToExcel}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Excel
                   </Button>
                 </div>
               </>
