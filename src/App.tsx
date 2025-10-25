@@ -108,6 +108,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/office-services/new", element: <NewOfficeServicesRequest /> },
   { path: "/technology-training/new", element: <NewTechnologyTrainingRequest /> },
   { path: "/toner/new", element: <NewTonerRequest /> },
+  { path: "/newsletter", element: <MonthlyNewsletter /> },
   { path: "/approvals", element: <Approvals /> },
   { path: "/settings", element: <Settings /> },
   { path: "/modality-management", element: <ModalityManagement /> },
