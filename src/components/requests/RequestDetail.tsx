@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, ArrowLeft, CheckCircle, XCircle, Building2, MapPin } from 'lucide-react';
+import { Loader2, ArrowLeft, Building2, MapPin } from 'lucide-react';
 import { formatAUDateTimeFull } from '@/lib/dateUtils';
 import { RequestStatus } from '@/types/request';
+import { RequestActivity } from './RequestActivity';
+import { formatRequestId } from '@/lib/requestUtils';
 
 interface Request {
   id: string;
@@ -77,33 +79,6 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
     }
   };
 
-  const handleStatusUpdate = async (newStatus: string) => {
-    if (!request) return;
-
-    try {
-      const { error } = await supabase
-        .from('hardware_requests')
-        .update({ status: newStatus })
-        .eq('id', request.id);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success',
-        description: 'Request status updated',
-      });
-
-      loadRequest();
-    } catch (error) {
-      console.error('Error updating status:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update request status',
-        variant: 'destructive',
-      });
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -153,94 +128,116 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between">
         <Button variant="outline" onClick={() => navigate('/requests')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Requests
         </Button>
+        {request.request_number && (
+          <span className="font-mono text-sm text-muted-foreground">
+            {formatRequestId(request.request_number)}
+          </span>
+        )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-2xl mb-2">{request.title}</CardTitle>
-              <div className="flex gap-2 flex-wrap">
-                {getStatusBadge(request.status)}
-                {getPriorityBadge(request.priority)}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content - Left Side */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="space-y-4">
+                <div>
+                  <CardTitle className="text-2xl mb-2">{request.title}</CardTitle>
+                  <div className="flex gap-2 flex-wrap">
+                    {getStatusBadge(request.status)}
+                    {getPriorityBadge(request.priority)}
+                  </div>
+                </div>
+
+                {(request.brands || request.locations) && (
+                  <div className="flex gap-4 flex-wrap pt-2 border-t">
+                    {request.brands && (
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">{request.brands.display_name}</span>
+                      </div>
+                    )}
+                    {request.locations && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{request.locations.name}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-            {isManagerOrAdmin && request.status === 'submitted' && (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleStatusUpdate('approved')}
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Approve
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleStatusUpdate('declined')}
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Decline
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {(request.brands || request.locations) && (
-            <div className="flex gap-4 flex-wrap">
-              {request.brands && (
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{request.brands.display_name}</span>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {request.description && (
+                <div>
+                  <h3 className="font-semibold mb-2">Description</h3>
+                  <p className="text-muted-foreground whitespace-pre-wrap">{request.description}</p>
                 </div>
               )}
-              {request.locations && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">{request.locations.name}</span>
+
+              {request.business_justification && (
+                <div>
+                  <h3 className="font-semibold mb-2">Details</h3>
+                  <div className="text-sm text-muted-foreground whitespace-pre-wrap bg-muted/50 p-4 rounded-lg">
+                    {request.business_justification}
+                  </div>
                 </div>
               )}
-            </div>
-          )}
+            </CardContent>
+          </Card>
 
-          {request.description && (
-            <div>
-              <h3 className="font-semibold mb-2">Description</h3>
-              <p className="text-muted-foreground whitespace-pre-wrap">{request.description}</p>
-            </div>
-          )}
+          {/* Activity Section */}
+          <RequestActivity requestId={request.id} requestType="hardware" />
+        </div>
 
-          <div>
-            <h3 className="font-semibold mb-2">Business Justification</h3>
-            <p className="text-muted-foreground whitespace-pre-wrap">{request.business_justification}</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="font-semibold mb-2">Created</h3>
-              <p className="text-muted-foreground">
-                {formatAUDateTimeFull(request.created_at)}
-              </p>
-            </div>
-
-            {request.total_amount && (
+        {/* Sidebar - Right Side */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Request Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div>
-                <h3 className="font-semibold mb-2">Total Amount</h3>
-                <p className="text-muted-foreground">
-                  {request.currency} {request.total_amount.toFixed(2)}
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">Created</h4>
+                <p className="text-sm">
+                  {formatAUDateTimeFull(request.created_at)}
                 </p>
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">Last Updated</h4>
+                <p className="text-sm">
+                  {formatAUDateTimeFull(request.updated_at)}
+                </p>
+              </div>
+
+              {request.total_amount && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Total Amount</h4>
+                  <p className="text-sm font-semibold">
+                    {request.currency} {request.total_amount.toFixed(2)}
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">Priority</h4>
+                <div>{getPriorityBadge(request.priority)}</div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">Current Status</h4>
+                <div>{getStatusBadge(request.status)}</div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
