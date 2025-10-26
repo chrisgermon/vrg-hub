@@ -58,6 +58,7 @@ const CompanyAdmin = lazy(() => import("./pages/CompanyAdmin"));
 const CompanyDirectory = lazy(() => import("./pages/CompanyDirectory"));
 const KnowledgeBase = lazy(() => import("./pages/KnowledgeBase"));
 const NotifyreFaxLogs = lazy(() => import("./pages/NotifyreFaxLogs"));
+const MailchimpCampaigns = lazy(() => import("./pages/MailchimpCampaigns"));
 const PermissionManager = lazy(() => import("./pages/PermissionManager"));
 const NewsletterSubmit = lazy(() => import("./pages/NewsletterSubmit"));
 const AdvancedNotifications = lazy(() => import("./pages/AdvancedNotifications"));
@@ -138,6 +139,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/form-templates", element: <FormTemplates />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/form-templates/seed", element: <SeedFormTemplates />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/integrations", element: <Integrations />, requiredRole: ["super_admin"] },
+  { path: "/mailchimp-campaigns", element: <MailchimpCampaigns /> },
   { path: "/reminders", element: <Reminders /> },
   { path: "/reminders/new", element: <NewReminder /> },
   { path: "/reminders/edit/:id", element: <ReminderEdit /> },

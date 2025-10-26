@@ -29,7 +29,8 @@ import {
   Bell,
   Edit,
   Pencil,
-  Plug
+  Plug,
+  Mail
 } from "lucide-react";
 import * as Icons from "lucide-react";
 import { NavLink, useLocation, Link } from "react-router-dom";
@@ -510,6 +511,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             ...(hasPermission('view_fax_campaigns') && isFeatureEnabled('fax_campaigns')
               ? [{ title: "Fax Campaigns", url: "/fax-campaigns", icon: Send }]
               : []),
+            { title: "Mailchimp Campaigns", url: "/mailchimp-campaigns", icon: Mail },
           ],
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
             ? { title: "Monthly Newsletter", url: "/newsletter", icon: Newspaper } 
