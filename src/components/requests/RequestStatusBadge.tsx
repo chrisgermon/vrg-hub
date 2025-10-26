@@ -10,7 +10,8 @@ import {
   AlertCircle,
   Zap,
   Eye,
-  CheckCircle2
+  CheckCircle2,
+  Inbox
 } from 'lucide-react';
 import type { RequestStatus } from '@/types/request';
 
@@ -32,6 +33,11 @@ export function RequestStatusBadge({ status, showIcon = true, size = 'default' }
         label: 'Submitted',
         icon: Eye,
         className: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md hover:shadow-lg border border-blue-400/30',
+      },
+      inbox: {
+        label: 'Inbox',
+        icon: Inbox,
+        className: 'bg-gradient-to-r from-sky-500 to-blue-500 text-white shadow-md hover:shadow-lg border border-blue-400/30',
       },
       pending_manager_approval: {
         label: 'Pending Manager',
