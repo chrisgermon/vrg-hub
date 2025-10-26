@@ -74,6 +74,7 @@ const SiteMaps = lazy(() => import("./pages/SiteMaps"));
 const SharedModality = lazy(() => import("./pages/SharedModality"));
 const MissionStatement = lazy(() => import("./pages/MissionStatement"));
 const ExternalProviders = lazy(() => import("./pages/ExternalProviders"));
+const EmailTest = lazy(() => import("./pages/EmailTest"));
 
 const protectedLayoutRoutes: Array<{
   path: string;
@@ -140,6 +141,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/dashboard", element: <Dashboard /> },
   { path: "/install", element: <Install /> },
   { path: "/mission-statement", element: <MissionStatement /> },
+  { path: "/email-test", element: <EmailTest />, requiredRole: ["super_admin", "tenant_admin", "manager"] },
   ];
 
 const queryClient = new QueryClient();
