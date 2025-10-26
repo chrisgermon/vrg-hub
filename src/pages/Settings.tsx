@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useEffect } from 'react';
@@ -18,7 +19,6 @@ import { CompanyDomainsManager } from '@/components/settings/CompanyDomainsManag
 import { CompanyFeaturesManager } from '@/components/settings/CompanyFeaturesManager';
 import { DepartmentRequestTypeManager } from '@/components/requests/admin/DepartmentRequestTypeManager';
 import { TeamManagement } from '@/components/requests/admin/TeamManagement';
-import { RoutingRulesManager } from '@/components/requests/admin/RoutingRulesManager';
 import { TicketQueueManager } from '@/components/requests/admin/TicketQueueManager';
 import { TicketAuditLog } from '@/components/requests/admin/TicketAuditLog';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,10 +26,52 @@ import { Button } from '@/components/ui/button';
 import { Edit } from 'lucide-react';
 import { APP_VERSION, BUILD_DATE } from '@/lib/version';
 
+const ticketingSections = [
+  {
+    value: 'departments',
+    label: 'Departments & Types',
+    content: <DepartmentRequestTypeManager />,
+  },
+  {
+    value: 'teams',
+    label: 'Teams',
+    content: <TeamManagement />,
+  },
+  {
+    value: 'queue',
+    label: 'Ticket Queue',
+    content: <TicketQueueManager />,
+  },
+  {
+    value: 'audit',
+    label: 'Audit Log',
+    content: <TicketAuditLog />,
+  },
+];
+
+function TicketingSettingsTabs() {
+  return (
+    <Tabs defaultValue={ticketingSections[0].value} className="space-y-4">
+      <TabsList className="flex flex-wrap gap-2">
+        {ticketingSections.map((section) => (
+          <TabsTrigger key={section.value} value={section.value} className="whitespace-nowrap">
+            {section.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      {ticketingSections.map((section) => (
+        <TabsContent key={section.value} value={section.value} className="space-y-6">
+          {section.content}
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
+}
+
 export default function Settings() {
   const { userRole } = useAuth();
   const navigate = useNavigate();
-  
+
   const isSuperAdmin = userRole === 'super_admin';
   const isTenantAdmin = userRole === 'tenant_admin';
   const isAdmin = isSuperAdmin || isTenantAdmin;
@@ -42,6 +84,159 @@ export default function Settings() {
     localStorage.setItem('theme', 'light');
   }, []);
 
+  const sections = [
+    {
+      value: 'general',
+      label: 'General',
+      allowed: true,
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>About</CardTitle>
+            <CardDescription>Application information</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Version</span>
+                <span className="font-medium">{APP_VERSION}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Build Date</span>
+                <span className="font-medium">{BUILD_DATE}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Environment</span>
+                <span className="font-medium">beta</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      value: 'branding',
+      label: 'Branding',
+      allowed: isAdmin,
+      content: <CompanySettings />,
+    },
+    {
+      value: 'brands',
+      label: 'Brands',
+      allowed: isAdmin,
+      content: <BrandsManager />,
+    },
+    {
+      value: 'locations',
+      label: 'Locations',
+      allowed: isAdmin,
+      content: <LocationsManager />,
+    },
+    {
+      value: 'features',
+      label: 'Features',
+      allowed: isAdmin,
+      content: <CompanyFeaturesManager />,
+    },
+    {
+      value: 'company',
+      label: 'Company',
+      allowed: isAdmin,
+      content: (
+        <Fragment>
+          <CompanyDomainsManager />
+          <PrintBrandsManager />
+          <CannedResponsesManager />
+        </Fragment>
+      ),
+    },
+    {
+      value: 'users',
+      label: 'Users & Roles',
+      allowed: isAdmin,
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>User & Role Management</CardTitle>
+            <CardDescription>Manage user roles and permissions with RBAC system</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Centralized role-based access control for all users and permissions.
+              </p>
+              <Button onClick={() => navigate('/user-roles')}>
+                <Edit className="w-4 h-4 mr-2" />
+                Manage Users & Roles
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      value: 'forms',
+      label: 'Request Forms',
+      allowed: isAdmin,
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Request Form Templates</CardTitle>
+            <CardDescription>Customize department request forms with advanced form builder</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Edit and customize all department request forms including fields, validation, and layout.
+              </p>
+              <Button onClick={() => navigate('/form-templates')}>
+                <Edit className="w-4 h-4 mr-2" />
+                Open Form Editor
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      value: 'ticketing',
+      label: 'Ticketing System',
+      allowed: isAdmin,
+      content: <TicketingSettingsTabs />,
+    },
+    {
+      value: 'notifications',
+      label: 'Notifications',
+      allowed: isAdmin,
+      content: (
+        <Fragment>
+          {(isSuperAdmin || isTenantAdmin) && <RequestNotificationAssignments />}
+          <NotificationSettingsManager />
+        </Fragment>
+      ),
+    },
+    {
+      value: 'menu',
+      label: 'Menu',
+      allowed: isAdmin,
+      content: <MenuEditor />,
+    },
+    {
+      value: 'system',
+      label: 'System',
+      allowed: isSuperAdmin,
+      content: (
+        <Fragment>
+          <SystemStatusManager />
+          <SystemBannerManager />
+          <ApprovalWorkflowManager />
+        </Fragment>
+      ),
+    },
+  ].filter((section) => section.allowed);
+
+  const defaultTab = sections[0]?.value ?? 'general';
+
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8">
@@ -49,180 +244,20 @@ export default function Settings() {
         <p className="text-muted-foreground mt-2">Manage your application preferences and configuration</p>
       </div>
 
-      <Tabs defaultValue="general" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="general">General</TabsTrigger>
-          {isAdmin && <TabsTrigger value="branding">Branding</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="brands">Brands</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="locations">Locations</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="features">Features</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="company">Company</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="users">Users & Roles</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="forms">Request Forms</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="ticketing">Ticketing System</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="notifications">Notifications</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="menu">Menu</TabsTrigger>}
-          {isSuperAdmin && <TabsTrigger value="system">System</TabsTrigger>}
+      <Tabs defaultValue={defaultTab} className="space-y-6">
+        <TabsList className="flex flex-wrap gap-2">
+          {sections.map((section) => (
+            <TabsTrigger key={section.value} value={section.value} className="whitespace-nowrap">
+              {section.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent value="general" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>About</CardTitle>
-              <CardDescription>
-                Application information
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Version</span>
-                  <span className="font-medium">{APP_VERSION}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Build Date</span>
-                  <span className="font-medium">{BUILD_DATE}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Environment</span>
-                  <span className="font-medium">beta</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {isAdmin && (
-          <TabsContent value="branding" className="space-y-6">
-            <CompanySettings />
+        {sections.map((section) => (
+          <TabsContent key={section.value} value={section.value} className="space-y-6">
+            {section.content}
           </TabsContent>
-        )}
-
-        {isAdmin && (
-          <TabsContent value="brands" className="space-y-6">
-            <BrandsManager />
-          </TabsContent>
-        )}
-
-        {isAdmin && (
-          <TabsContent value="locations" className="space-y-6">
-            <LocationsManager />
-          </TabsContent>
-        )}
-
-        {isAdmin && (
-          <TabsContent value="features" className="space-y-6">
-            <CompanyFeaturesManager />
-          </TabsContent>
-        )}
-
-        {isAdmin && (
-          <TabsContent value="company" className="space-y-6">
-            <CompanyDomainsManager />
-            <PrintBrandsManager />
-            <CannedResponsesManager />
-          </TabsContent>
-        )}
-
-        {isAdmin && (
-          <TabsContent value="users" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>User & Role Management</CardTitle>
-                <CardDescription>
-                  Manage user roles and permissions with RBAC system
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Centralized role-based access control for all users and permissions.
-                  </p>
-                  <Button onClick={() => navigate('/user-roles')}>
-                    <Edit className="w-4 h-4 mr-2" />
-                    Manage Users & Roles
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-
-        {isAdmin && (
-          <TabsContent value="forms" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Request Form Templates</CardTitle>
-                <CardDescription>
-                  Customize department request forms with advanced form builder
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Edit and customize all department request forms including fields, validation, and layout.
-                  </p>
-                  <Button onClick={() => navigate('/form-templates')}>
-                    <Edit className="w-4 h-4 mr-2" />
-                    Open Form Editor
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-
-        {isAdmin && (
-          <TabsContent value="ticketing" className="space-y-6">
-            <Tabs defaultValue="departments" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="departments">Departments & Types</TabsTrigger>
-                <TabsTrigger value="teams">Teams</TabsTrigger>
-                <TabsTrigger value="routing">Routing Rules</TabsTrigger>
-                <TabsTrigger value="queue">Ticket Queue</TabsTrigger>
-                <TabsTrigger value="audit">Audit Log</TabsTrigger>
-              </TabsList>
-              <TabsContent value="departments">
-                <DepartmentRequestTypeManager />
-              </TabsContent>
-              <TabsContent value="teams">
-                <TeamManagement />
-              </TabsContent>
-              <TabsContent value="routing">
-                <RoutingRulesManager />
-              </TabsContent>
-              <TabsContent value="queue">
-                <TicketQueueManager />
-              </TabsContent>
-              <TabsContent value="audit">
-                <TicketAuditLog />
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-        )}
-
-        {isAdmin && (
-          <TabsContent value="notifications" className="space-y-6">
-            {(isSuperAdmin || isTenantAdmin) && (
-              <RequestNotificationAssignments />
-            )}
-            <NotificationSettingsManager />
-          </TabsContent>
-        )}
-
-        {isAdmin && (
-          <TabsContent value="menu" className="space-y-6">
-            <MenuEditor />
-          </TabsContent>
-        )}
-
-        {isSuperAdmin && (
-          <TabsContent value="system" className="space-y-6">
-            <SystemStatusManager />
-            <SystemBannerManager />
-            <ApprovalWorkflowManager />
-          </TabsContent>
-        )}
+        ))}
       </Tabs>
     </div>
   );

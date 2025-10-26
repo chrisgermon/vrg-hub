@@ -517,7 +517,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           directory: isMenuItemVisible(directoryItem.key) ? directoryItem : null,
           settings: { title: "Settings", url: "/settings", icon: Settings },
           help: isMenuItemVisible(helpItem.key) ? helpItem : null,
-          helpTicket: isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
+          helpTicket: canSubmitTicket && isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
         };
       
         default:
@@ -525,7 +525,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           common: commonItems,
           categories: [],
           help: isMenuItemVisible(helpItem.key) ? helpItem : null,
-          helpTicket: isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
+          helpTicket: canSubmitTicket && isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
         };
     }
   };
