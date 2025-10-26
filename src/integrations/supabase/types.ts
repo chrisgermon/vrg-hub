@@ -624,15 +624,7 @@ export type Database = {
           subject?: string
           ticket_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "email_notifications_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: false
-            referencedRelation: "tickets"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       escalation_policies: {
         Row: {
@@ -3099,15 +3091,7 @@ export type Database = {
           id?: string
           ticket_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "ticket_comments_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: false
-            referencedRelation: "tickets"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       ticket_events: {
         Row: {
@@ -3134,15 +3118,7 @@ export type Database = {
           ticket_id?: string
           type?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "ticket_events_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: false
-            referencedRelation: "tickets"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       ticket_watchers: {
         Row: {
@@ -3166,78 +3142,54 @@ export type Database = {
           ticket_id?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "ticket_watchers_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: false
-            referencedRelation: "tickets"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       tickets: {
         Row: {
-          assigned_team_id: string | null
-          assigned_user_id: string | null
-          created_at: string | null
+          assigned_to: string | null
+          created_at: string
+          department_id: string | null
           description: string | null
-          due_at: string | null
           id: string
-          metadata: Json | null
-          priority: string | null
-          reference_code: string
-          request_type_id: string
-          requester_user_id: string | null
-          status: string | null
-          subject: string
-          updated_at: string | null
+          priority: string
+          request_number: number
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
         }
         Insert: {
-          assigned_team_id?: string | null
-          assigned_user_id?: string | null
-          created_at?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          department_id?: string | null
           description?: string | null
-          due_at?: string | null
           id?: string
-          metadata?: Json | null
-          priority?: string | null
-          reference_code: string
-          request_type_id: string
-          requester_user_id?: string | null
-          status?: string | null
-          subject: string
-          updated_at?: string | null
+          priority?: string
+          request_number?: never
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
         }
         Update: {
-          assigned_team_id?: string | null
-          assigned_user_id?: string | null
-          created_at?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          department_id?: string | null
           description?: string | null
-          due_at?: string | null
           id?: string
-          metadata?: Json | null
-          priority?: string | null
-          reference_code?: string
-          request_type_id?: string
-          requester_user_id?: string | null
-          status?: string | null
-          subject?: string
-          updated_at?: string | null
+          priority?: string
+          request_number?: never
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "tickets_assigned_team_id_fkey"
-            columns: ["assigned_team_id"]
+            foreignKeyName: "fk_tickets_department"
+            columns: ["department_id"]
             isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tickets_request_type_id_fkey"
-            columns: ["request_type_id"]
-            isOneToOne: false
-            referencedRelation: "request_types"
+            referencedRelation: "departments"
             referencedColumns: ["id"]
           },
         ]
@@ -3385,10 +3337,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      clean_expired_sharepoint_cache: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      clean_expired_sharepoint_cache: { Args: never; Returns: undefined }
       has_rbac_role: {
         Args: { _role_name: string; _user_id: string }
         Returns: boolean

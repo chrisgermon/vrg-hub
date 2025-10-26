@@ -22,6 +22,7 @@ import NotFound from "./pages/NotFound";
 // Lazy imports for low-traffic pages
 import NewRequest from "./pages/NewRequest";
 const NewHardwareRequest = lazy(() => import("./pages/NewHardwareRequest"));
+const NewTicket = lazy(() => import("./pages/NewTicket"));
 const NewUserAccount = lazy(() => import("./pages/NewUserAccount"));
 const NewUserOffboarding = lazy(() => import("./pages/NewUserOffboarding"));
 const NewMarketingRequest = lazy(() => import("./pages/NewMarketingRequest"));
@@ -91,6 +92,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/requests/user-account/:id", element: <Requests /> },
   { path: "/requests/new", element: <NewRequest /> },
   { path: "/requests/hardware/new", element: <NewHardwareRequest /> },
+  { path: "/tickets/new", element: <NewTicket /> },
   { path: "/catalog", element: <Catalog /> },
   { path: "/documentation", element: <Documentation /> },
   { path: "/news/view-all", element: <NewsViewAll /> },

@@ -49,7 +49,7 @@ export function TicketAuditLog() {
             <SelectItem value="none">Select a ticket</SelectItem>
             {tickets?.map((ticket) => (
               <SelectItem key={ticket.id} value={ticket.id}>
-                {ticket.reference_code} - {ticket.subject}
+                VRG-{String(ticket.request_number).padStart(5, '0')} - {ticket.title}
               </SelectItem>
             ))}
           </SelectContent>

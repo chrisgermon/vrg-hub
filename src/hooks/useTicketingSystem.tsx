@@ -117,16 +117,11 @@ export function useTickets(filters?: any) {
     queryFn: async () => {
       let query = supabase
         .from('tickets')
-        .select(`
-          *,
-          request_type:request_types(name, department:departments(name)),
-          assigned_team:teams(name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
       if (filters?.status) query = query.eq('status', filters.status);
       if (filters?.priority) query = query.eq('priority', filters.priority);
-      if (filters?.request_type_id) query = query.eq('request_type_id', filters.request_type_id);
       
       const { data, error } = await query;
       if (error) throw error;
