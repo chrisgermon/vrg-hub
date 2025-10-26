@@ -90,7 +90,7 @@ export default function NewRequest() {
       icon: Wrench,
       path: '/facility-services/new',
       featureKey: 'department_requests',
-      permissionKey: 'create_department_request',
+      permissionKey: 'create_facility_services_request',
       color: 'text-amber-600',
       bgColor: 'bg-amber-50 dark:bg-amber-950/30',
       hoverColor: 'hover:bg-amber-100 dark:hover:bg-amber-900/40'
@@ -101,7 +101,7 @@ export default function NewRequest() {
       icon: Building2,
       path: '/office-services/new',
       featureKey: 'department_requests',
-      permissionKey: 'create_department_request',
+      permissionKey: 'create_office_services_request',
       color: 'text-cyan-600',
       bgColor: 'bg-cyan-50 dark:bg-cyan-950/30',
       hoverColor: 'hover:bg-cyan-100 dark:hover:bg-cyan-900/40'
@@ -112,10 +112,54 @@ export default function NewRequest() {
       icon: DollarSign,
       path: '/accounts-payable/new',
       featureKey: 'department_requests',
-      permissionKey: 'create_department_request',
+      permissionKey: 'create_accounts_payable_request',
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50 dark:bg-emerald-950/30',
       hoverColor: 'hover:bg-emerald-100 dark:hover:bg-emerald-900/40'
+    },
+    {
+      title: 'Finance',
+      description: 'Statements and payroll issues',
+      icon: TrendingUp,
+      path: '/finance/new',
+      featureKey: 'department_requests',
+      permissionKey: 'create_finance_request',
+      color: 'text-lime-600',
+      bgColor: 'bg-lime-50 dark:bg-lime-950/30',
+      hoverColor: 'hover:bg-lime-100 dark:hover:bg-lime-900/40'
+    },
+    {
+      title: 'Technology Training',
+      description: 'System and application training',
+      icon: GraduationCap,
+      path: '/technology-training/new',
+      featureKey: 'department_requests',
+      permissionKey: 'create_technology_training_request',
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50 dark:bg-indigo-950/30',
+      hoverColor: 'hover:bg-indigo-100 dark:hover:bg-indigo-900/40'
+    },
+    {
+      title: 'IT Service Desk',
+      description: 'Computer and IT support',
+      icon: HelpCircle,
+      path: '/it-service-desk/new',
+      featureKey: 'department_requests',
+      permissionKey: 'create_it_service_desk_request',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50 dark:bg-blue-950/30',
+      hoverColor: 'hover:bg-blue-100 dark:hover:bg-blue-900/40'
+    },
+    {
+      title: 'HR',
+      description: 'HR support and compliance',
+      icon: Users,
+      path: '/hr/new',
+      featureKey: 'department_requests',
+      permissionKey: 'create_hr_request',
+      color: 'text-rose-600',
+      bgColor: 'bg-rose-50 dark:bg-rose-950/30',
+      hoverColor: 'hover:bg-rose-100 dark:hover:bg-rose-900/40'
     },
     {
       title: 'Finance',

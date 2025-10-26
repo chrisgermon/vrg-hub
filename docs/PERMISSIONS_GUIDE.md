@@ -156,6 +156,15 @@ const { isVisible } = useMenuVisibility('admin-system');
 - `create_toner_request` - Create toner requests
 - `create_marketing_request` - Create marketing requests
 - `create_user_account_request` - Create user account requests
+- `create_user_offboarding_request` - Create user offboarding requests
+- `create_ticket_request` - Submit IT support tickets
+- `create_facility_services_request` - Create facility services requests
+- `create_office_services_request` - Create office services requests
+- `create_accounts_payable_request` - Create accounts payable requests
+- `create_finance_request` - Create finance requests
+- `create_technology_training_request` - Create technology training requests
+- `create_it_service_desk_request` - Create IT service desk requests
+- `create_hr_request` - Create HR requests
 - `edit_own_drafts` - Edit draft requests
 
 ### Approvals
@@ -163,6 +172,14 @@ const { isVisible } = useMenuVisibility('admin-system');
 - `approve_marketing_requests` - Approve marketing requests
 - `approve_user_account_requests` - Approve user account requests
 - `approve_newsletter_submissions` - Approve newsletter submissions
+
+### Ticket Management
+- `view_ticket_queue` - View the unified ticket queue
+- `view_ticket_audit_log` - View ticket activity history
+- `assign_ticket_requests` - Assign tickets to users
+- `start_ticket_requests` - Move tickets into progress
+- `resolve_ticket_requests` - Resolve or close tickets
+- `manage_ticket_watchers` - Manage ticket watcher lists
 
 ### Management
 - `manage_company_users` - Manage company users

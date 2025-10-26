@@ -299,6 +299,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
 
     const helpItem = { title: "Help Guide", url: "/help", icon: HelpCircle, key: "help" };
     const helpTicketItem = { title: "Submit IT Ticket", url: "/help-ticket", icon: LifeBuoy, key: "help-ticket" };
+    const canSubmitTicket = hasPermission('create_ticket_request');
     const directoryItem = { title: "Company Directory", url: "/directory", icon: Users, key: "directory" };
 
     // Helper to check if newsletter should be visible
@@ -315,6 +316,30 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
     const filterByFeatures = (items: any[]) => {
       return items.filter(item => {
         // Map URLs to feature keys and permission keys
+        if (item.url?.includes('/requests/tickets/new')) {
+          return hasPermission('create_ticket_request');
+        }
+        if (item.url?.includes('/facility-services')) {
+          return hasPermission('create_facility_services_request');
+        }
+        if (item.url?.includes('/office-services')) {
+          return hasPermission('create_office_services_request');
+        }
+        if (item.url?.includes('/accounts-payable')) {
+          return hasPermission('create_accounts_payable_request');
+        }
+        if (item.url?.includes('/finance/new')) {
+          return hasPermission('create_finance_request');
+        }
+        if (item.url?.includes('/technology-training')) {
+          return hasPermission('create_technology_training_request');
+        }
+        if (item.url?.includes('/it-service-desk')) {
+          return hasPermission('create_it_service_desk_request');
+        }
+        if (item.url?.includes('/hr/new')) {
+          return hasPermission('create_hr_request');
+        }
         if (item.url?.includes('/requests') && !item.url?.includes('/marketing')) {
           return isFeatureEnabled('hardware_requests') && hasPermission('create_hardware_request');
         }
@@ -385,7 +410,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             : null,
           directory: isMenuItemVisible(directoryItem.key) ? directoryItem : null,
           help: isMenuItemVisible(helpItem.key) ? helpItem : null,
-          helpTicket: isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
+          helpTicket: canSubmitTicket && isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
         };
       
       case "manager":
@@ -420,7 +445,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             : null,
           directory: isMenuItemVisible(directoryItem.key) ? directoryItem : null,
           help: isMenuItemVisible(helpItem.key) ? helpItem : null,
-          helpTicket: isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
+          helpTicket: canSubmitTicket && isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
         };
       
       case "tenant_admin":
@@ -455,7 +480,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           directory: isMenuItemVisible(directoryItem.key) ? directoryItem : null,
           settings: { title: "Settings", url: "/settings", icon: Settings },
           help: isMenuItemVisible(helpItem.key) ? helpItem : null,
-          helpTicket: isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
+          helpTicket: canSubmitTicket && isMenuItemVisible(helpTicketItem.key) ? helpTicketItem : null
         };
       
       case "super_admin":

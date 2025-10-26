@@ -13,8 +13,22 @@ interface UsePermissionsOptions {
 const ROLE_GROUPS_MAP: Record<UserRoleKey, string[]> = {
   requester: ["basic-access", "create-requests", "documentation"],
   marketing: ["basic-access", "create-requests", "marketing", "documentation"],
-  manager: ["basic-access", "create-requests", "approvals", "management", "documentation"],
-  marketing_manager: ["basic-access", "create-requests", "marketing", "approvals", "documentation"],
+  manager: [
+    "basic-access",
+    "create-requests",
+    "approvals",
+    "management",
+    "documentation",
+    "ticket-management",
+  ],
+  marketing_manager: [
+    "basic-access",
+    "create-requests",
+    "marketing",
+    "approvals",
+    "documentation",
+    "ticket-management",
+  ],
   tenant_admin: [
     "basic-access",
     "create-requests",
@@ -23,6 +37,7 @@ const ROLE_GROUPS_MAP: Record<UserRoleKey, string[]> = {
     "management",
     "configuration",
     "documentation",
+    "ticket-management",
   ],
   super_admin: [
     "basic-access",
@@ -33,6 +48,7 @@ const ROLE_GROUPS_MAP: Record<UserRoleKey, string[]> = {
     "configuration",
     "documentation",
     "system-admin",
+    "ticket-management",
   ],
 };
 

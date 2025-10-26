@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MarketingRequestForm } from '@/components/marketing/MarketingRequestForm';
+import { PermissionGuard } from '@/components/PermissionGuard';
 
 export default function NewMarketingRequest() {
   const navigate = useNavigate();
@@ -10,15 +11,17 @@ export default function NewMarketingRequest() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">New Marketing Request</h1>
-        <p className="text-muted-foreground">
-          Create a marketing request for campaigns, design work, website updates, and more
-        </p>
-      </div>
+    <PermissionGuard permission="create_marketing_request">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">New Marketing Request</h1>
+          <p className="text-muted-foreground">
+            Create a marketing request for campaigns, design work, website updates, and more
+          </p>
+        </div>
 
-      <MarketingRequestForm onSuccess={handleSuccess} />
-    </div>
+        <MarketingRequestForm onSuccess={handleSuccess} />
+      </div>
+    </PermissionGuard>
   );
 }
