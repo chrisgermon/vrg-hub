@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { RequestsList } from '@/components/requests/RequestsList';
 import { useAuth } from '@/hooks/useAuth';
 import { DetailsPanel, DetailsSection, DetailsField } from '@/components/ui/details-panel';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { formatRequestId } from '@/lib/requestUtils';
 
@@ -16,7 +16,9 @@ export default function Requests() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { userRole } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(id || null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const isManagerOrAdmin = ['manager', 'marketing_manager', 'tenant_admin', 'super_admin'].includes(userRole || '');
 
@@ -70,6 +72,13 @@ export default function Requests() {
     return colors[status] || 'default';
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ['request'] });
+    // Give a small delay for visual feedback
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
+
   return (
     <div className="flex gap-0 -m-3 md:-m-6">
       <div className="flex-1 min-w-0 p-3 md:p-6">
@@ -80,10 +89,15 @@ export default function Requests() {
               View and manage all hardware and equipment requests
             </p>
           </div>
-          <Button onClick={() => navigate('/requests/new')}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Request
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isRefreshing}>
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button onClick={() => navigate('/requests/new')}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Request
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="all" className="space-y-6">

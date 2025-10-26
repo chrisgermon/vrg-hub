@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Eye, Clock, CheckCircle, XCircle, Package, Search, ArrowUpDown } from 'lucide-react';
+import { Loader2, Eye, Clock, CheckCircle, XCircle, Package, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { formatAUDate } from '@/lib/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { RequestStatus } from '@/types/request';
@@ -33,6 +33,7 @@ interface RequestsListProps {
 export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 'all' }: RequestsListProps) {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'priority' | 'status'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -43,8 +44,10 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
     loadRequests();
   }, [filterType, user]);
 
-  const loadRequests = async () => {
+  const loadRequests = async (isRefresh = false) => {
     try {
+      if (isRefresh) setRefreshing(true);
+      
       let query = supabase
         .from('hardware_requests')
         .select('*, request_number');
@@ -69,6 +72,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
       console.error('Error loading requests:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -199,6 +203,15 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
               title={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
             >
               <ArrowUpDown className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => loadRequests(true)}
+              disabled={refreshing}
+              title="Refresh requests"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </div>
