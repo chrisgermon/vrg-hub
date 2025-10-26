@@ -11,7 +11,6 @@ interface AuthContextType {
   userRole: UserRole | null;
   loading: boolean;
   profile: any | null;
-  company: any | null;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signInWithAzure: () => Promise<void>;
@@ -32,7 +31,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any | null>(null);
-  const [company, setCompany] = useState<any | null>(null);
   const { toast } = useToast();
 
   const fetchUserRole = async (userId: string) => {
@@ -205,7 +203,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     setProfile(null);
-    setCompany(null);
     setUserRole(null);
     setSession(null);
     setUser(null);
@@ -232,7 +229,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userRole,
       loading,
       profile,
-      company,
       signInWithPassword,
       signUp,
       signInWithAzure,

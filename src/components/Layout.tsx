@@ -2,34 +2,30 @@ import React, { ReactNode, Suspense, useEffect, useState } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, ChevronDown } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import crowdITLogo from "@/assets/crowdit-logo.png";
 import { useAuth } from "@/hooks/useAuth";
 import { NewsletterBanner } from "./newsletter/NewsletterBanner";
 import { SystemStatusIndicator } from "./SystemStatusIndicator";
-import { CompanySelector } from "./CompanySelector";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import {
   NavigationMenu,
-  NavigationMenuContent,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 
 import { CriticalSystemsBar } from "./CriticalSystemsBar";
 import { Footer } from "./Footer";
 import { FrontChatWidget } from "./FrontChatWidget";
 import { NotificationsDropdown } from "./NotificationsDropdown";
-import { RoleImpersonationSelector } from "./RoleImpersonationSelector";
 import { useRoleImpersonation } from "@/hooks/useRoleImpersonation";
 import { RouteLoading } from "./RouteLoading";
-import { GlobalSearch } from "./GlobalSearch";
 import { SystemBanners } from "./banners/SystemBanners";
 import { ProfileDialog } from "./ProfileDialog";
 import { FirstTimeSetupDialog } from "./FirstTimeSetupDialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface LayoutProps {
   children: ReactNode;
@@ -40,45 +36,54 @@ export function Layout({ children }: LayoutProps) {
   const { effectiveRole, isImpersonating } = useRoleImpersonation();
   const [logoUrl, setLogoUrl] = useState<string>(crowdITLogo);
   const [profileOpen, setProfileOpen] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const loadCompanyLogo = async () => {
       if (!user?.id) return;
 
-      // First, try to get the user's brand logo
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('brand_id')
-        .eq('id', user.id)
-        .maybeSingle();
+      try {
+        const [{ data: profileData, error: profileError }, { data: configData, error: configError }] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('brand:brands(logo_url)')
+            .eq('id', user.id)
+            .maybeSingle(),
+          supabase
+            .from('app_config')
+            .select('logo_url')
+            .limit(1)
+            .maybeSingle(),
+        ]);
 
-      if (profile?.brand_id) {
-        const { data: brand } = await supabase
-          .from('brands')
-          .select('logo_url')
-          .eq('id', profile.brand_id)
-          .maybeSingle();
+        if (profileError) throw profileError;
+        if (configError) throw configError;
 
-        if (brand?.logo_url) {
-          setLogoUrl(brand.logo_url);
+        const brandLogo = profileData?.brand?.logo_url;
+        if (brandLogo) {
+          setLogoUrl(brandLogo);
           return;
         }
-      }
 
-      // Fallback to app_config logo if no brand logo
-      const { data: config } = await supabase
-        .from('app_config')
-        .select('logo_url')
-        .limit(1)
-        .maybeSingle();
-      
-      if (config?.logo_url) {
-        setLogoUrl(config.logo_url);
+        if (configData?.logo_url) {
+          setLogoUrl(configData.logo_url);
+          return;
+        }
+
+        setLogoUrl(crowdITLogo);
+      } catch (error) {
+        console.error('Error loading company logo:', error);
+        setLogoUrl(crowdITLogo);
+        toast({
+          title: 'Unable to load branding',
+          description: 'Displaying the default logo while we reconnect.',
+          variant: 'destructive',
+        });
       }
     };
-    
+
     loadCompanyLogo();
-  }, [user?.id]);
+  }, [user?.id, toast]);
 
   const handleSignOut = async () => {
     try {
@@ -131,29 +136,7 @@ export function Layout({ children }: LayoutProps) {
                       </Link>
                     </NavigationMenuLink>
                   </NavigationMenuItem>
-                  
-                  <NavigationMenuItem>
-                    <NavigationMenuTrigger>Rosters</NavigationMenuTrigger>
-                    <NavigationMenuContent>
-                      <ul className="grid w-[200px] gap-3 p-4">
-                        <li>
-                          <NavigationMenuLink asChild>
-                            <Link to="/rosters/current" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                              <div className="text-sm font-medium leading-none">Current Rosters</div>
-                            </Link>
-                          </NavigationMenuLink>
-                        </li>
-                        <li>
-                          <NavigationMenuLink asChild>
-                            <Link to="/rosters/upcoming" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                              <div className="text-sm font-medium leading-none">Upcoming Rosters</div>
-                            </Link>
-                          </NavigationMenuLink>
-                        </li>
-                      </ul>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
-                  
+
                   <NavigationMenuItem>
                     <NavigationMenuLink asChild>
                       <a href="https://outlook.office.com" target="_blank" rel="noopener noreferrer" className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50">

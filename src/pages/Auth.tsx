@@ -9,8 +9,9 @@ import { Loader2, Building2 } from 'lucide-react';
 import crowdHubLogo from '@/assets/crowdhub-logo.png';
 import heroBackground from '@/assets/hero-background.svg';
 import { useAuth } from '@/hooks/useAuth';
-import { extractSubdomain, getCompanyBySubdomain, buildSubdomainUrl } from '@/lib/subdomain';
+import { extractSubdomain, getCompanyBySubdomain } from '@/lib/subdomain';
 import { supabase } from '@/integrations/supabase/client';
+import { useTenantTheme } from '@/hooks/useTenantTheme';
 
 export default function Auth() {
   const { signInWithAzure, user, userRole, loading: authLoading } = useAuth();
@@ -19,8 +20,10 @@ export default function Auth() {
   const [error, setError] = useState<string | null>(null);
   const [companyData, setCompanyData] = useState<any>(null);
   const [loadingCompany, setLoadingCompany] = useState(true);
-  
+
   const currentSubdomain = extractSubdomain(window.location.hostname);
+
+  useTenantTheme(companyData);
 
   // Force custom domain for auth to ensure tokens land on correct origin
   // BUT only if there are no auth tokens in the URL
@@ -105,38 +108,10 @@ export default function Auth() {
       if (subdomain) {
         const company = await getCompanyBySubdomain(subdomain);
         setCompanyData(company);
-        
-        // Apply custom colors if enabled
-        if (company?.use_custom_colors) {
-          const root = document.documentElement;
-          const colorMap = {
-            primary: company.primary_color,
-            background: company.background_color,
-            foreground: company.foreground_color,
-            card: company.card_color,
-            "card-foreground": company.card_foreground_color,
-            muted: company.muted_color,
-            "muted-foreground": company.muted_foreground_color,
-            border: company.border_color,
-            accent: company.accent_color,
-          };
-
-          Object.entries(colorMap).forEach(([key, value]) => {
-            if (value) {
-              root.style.setProperty(`--${key}`, value);
-            }
-          });
-          
-          // Store in localStorage for persistence
-          localStorage.setItem('company_theme', JSON.stringify({
-            companyId: company.id,
-            colors: colorMap
-          }));
-        }
       }
       setLoadingCompany(false);
     };
-    
+
     loadCompanyData();
   }, []);
 

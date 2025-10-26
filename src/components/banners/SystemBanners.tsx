@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, AlertTriangle, Info, CheckCircle, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
@@ -19,7 +18,6 @@ export function SystemBanners() {
     const stored = localStorage.getItem('dismissedBanners');
     return stored ? JSON.parse(stored) : [];
   });
-  const { company } = useAuth();
 
   useEffect(() => {
     const fetchBanners = async () => {

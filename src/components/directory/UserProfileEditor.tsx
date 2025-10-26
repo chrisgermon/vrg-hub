@@ -24,7 +24,7 @@ interface UserProfileEditorProps {
 }
 
 export function UserProfileEditor({ open, onOpenChange }: UserProfileEditorProps) {
-  const { user, company } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
