@@ -462,20 +462,21 @@ const handler = async (req: Request): Promise<Response> => {
     const { html, text } = getEmailTemplate(template, data);
 
     // Generate Message-ID for threading
-    const messageId = `<${crypto.randomUUID()}@${mailgunDomain || 'hub.visionradiology.com.au'}>`;
+    const ticketDomain = 'hub.visionradiology.com.au';
+    const messageId = `<${crypto.randomUUID()}@${ticketDomain}>`;
     
     // Generate Reply-To address with request number if available
-    let replyToAddress = `noreply@${mailgunDomain || 'hub.visionradiology.com.au'}`;
+    let replyToAddress = `noreply@${ticketDomain}`;
     if (data.requestNumber) {
       // Extract just the number (e.g., VRG-00001 -> 00001)
       const requestNum = data.requestNumber.replace('VRG-', '');
-      replyToAddress = `reply+VRG-${requestNum}@${mailgunDomain || 'hub.visionradiology.com.au'}`;
+      replyToAddress = `reply+VRG-${requestNum}@${ticketDomain}`;
     }
 
     // Send email using Mailgun
     if (mailgunApiKey && mailgunDomain) {
       const formData = new FormData();
-      formData.append('from', `VisionRadiology Hub <noreply@${mailgunDomain}>`);
+      formData.append('from', `VisionRadiology Hub <noreply@${ticketDomain}>`);
       formData.append('to', to);
       formData.append('subject', subject);
       formData.append('html', html);

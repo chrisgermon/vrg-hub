@@ -40,7 +40,7 @@ export function EmailSystemTest() {
 
       toast({
         title: 'Test email sent!',
-        description: `Check the inbox for notification with Reply-To: reply+VRG-${String(requestNumber).padStart(5, '0')}@yourdomain.com`,
+        description: `Check the inbox for notification with Reply-To: reply+VRG-${String(requestNumber).padStart(5, '0')}@hub.visionradiology.com.au`,
       });
     } catch (error: any) {
       toast({
@@ -109,7 +109,7 @@ export function EmailSystemTest() {
                         Requester: {request.profiles?.full_name || request.profiles?.email || 'Unknown'}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Reply-To: <code>reply+VRG-{String(request.request_number).padStart(5, '0')}@yourdomain.com</code>
+                        Reply-To: <code>reply+VRG-{String(request.request_number).padStart(5, '0')}@hub.visionradiology.com.au</code>
                       </div>
                     </div>
                     <Button
