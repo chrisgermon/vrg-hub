@@ -1,51 +1,23 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY');
+const mailgunDomain = Deno.env.get('MAILGUN_DOMAIN');
+
 interface EmailRequest {
   to: string;
   subject: string;
-  template: 'request_submitted' | 'request_approved' | 'request_declined' | 'request_ordered' | 'hardware_order_notification' | 'user_account_notification' | 'marketing_request_submitted' | 'marketing_request_approved' | 'marketing_request_declined' | 'department_request_submitted' | 'request_comment_reply';
-  data: {
-    requestTitle?: string;
-    requestId: string;
-    requestNumber?: string;
-    requestUrl?: string;
-    requesterName: string;
-    managerName?: string;
-    adminName?: string;
-    assigneeName?: string;
-    commenterName?: string;
-    commentText?: string;
-    declineReason?: string;
-    totalAmount?: number;
-    currency?: string;
-    managerEmail?: string;
-    approvalToken?: string;
-    items?: any[];
-    clinicName?: string;
-    businessJustification?: string;
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    department?: string;
-    subDepartment?: string;
-    jobTitle?: string;
-    startDate?: string;
-    office365License?: string;
-    sharedMailboxes?: string[];
-    roles?: string[];
-    applications?: string[];
-    requestType?: string;
-    brand?: string;
-    clinic?: string;
-    description?: string;
-    priority?: string;
-    scheduledSendDate?: string;
-  };
+  template: string;
+  data: any;
+  requestId?: string;
+  requestType?: 'hardware' | 'department';
+  inReplyTo?: string;
+  references?: string;
 }
 
 const generateApprovalToken = async (requestId: string, managerEmail: string): Promise<string> => {
@@ -479,92 +451,94 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { to, subject, template, data }: EmailRequest = await req.json();
+    const { to, subject, template, data, requestId, requestType, inReplyTo, references }: EmailRequest = await req.json();
     
-    const mailgunApiKey = Deno.env.get("MAILGUN_API_KEY");
-    const mailgunDomain = Deno.env.get("MAILGUN_DOMAIN") || "mg.crowdhub.app";
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    console.log('Using Mailgun domain:', mailgunDomain);
-    console.log('API key exists:', !!mailgunApiKey);
+    console.log(`[send-notification-email] Sending ${template} to ${to}`);
+
+    const { html, text } = getEmailTemplate(template, data);
+
+    // Generate Message-ID for threading
+    const messageId = `<${crypto.randomUUID()}@${mailgunDomain || 'hub.visionradiology.com.au'}>`;
     
-    if (!mailgunApiKey) {
-      throw new Error("MAILGUN_API_KEY is not configured");
+    // Generate Reply-To address with request number if available
+    let replyToAddress = `noreply@${mailgunDomain || 'hub.visionradiology.com.au'}`;
+    if (data.requestNumber) {
+      // Extract just the number (e.g., VRG-00001 -> 00001)
+      const requestNum = data.requestNumber.replace('VRG-', '');
+      replyToAddress = `reply+VRG-${requestNum}@${mailgunDomain || 'hub.visionradiology.com.au'}`;
     }
 
-    // Generate approval token for request_submitted emails
-    if (template === 'request_submitted' && data.managerEmail) {
-      data.approvalToken = await generateApprovalToken(data.requestId, data.managerEmail);
-    }
-
-    const emailContent = getEmailTemplate(template, data);
-    
-    const formData = new FormData();
-    formData.append("from", "Vision Radiology Hub <hub@visionradiology.com.au>");
-    formData.append("to", to);
-    formData.append("subject", subject);
-
-    // Prepare HTML and try to attach logo inline; fall back to public URL(s) if fetch fails
-    let html = emailContent.html;
-    try {
-      const storageLogoUrl = 'https://znpjdrmvjfmneotdhwdo.supabase.co/storage/v1/object/public/company-assets/crowdhub-logo.png';
-      const appLogoUrl = 'https://hub.visionradiology.com.au/crowdhub-logo.png';
-
-      let logoResp = await fetch(storageLogoUrl);
-      if (logoResp.ok) {
-        const logoBlob = await logoResp.blob();
-        // Attach as inline so <img src="cid:crowdhub-logo.png"> works
-        formData.append('inline', logoBlob, 'crowdhub-logo.png');
-      } else {
-        // Try app public asset
-        logoResp = await fetch(appLogoUrl);
-        if (logoResp.ok) {
-          const logoBlob = await logoResp.blob();
-          formData.append('inline', logoBlob, 'crowdhub-logo.png');
-        } else {
-          // Fallback to URL replacement
-          html = html.replace('cid:crowdhub-logo.png', appLogoUrl);
-        }
+    // Send email using Mailgun
+    if (mailgunApiKey && mailgunDomain) {
+      const formData = new FormData();
+      formData.append('from', `VisionRadiology Hub <noreply@${mailgunDomain}>`);
+      formData.append('to', to);
+      formData.append('subject', subject);
+      formData.append('html', html);
+      formData.append('text', text);
+      formData.append('h:Reply-To', replyToAddress);
+      formData.append('h:Message-ID', messageId);
+      
+      if (inReplyTo) {
+        formData.append('h:In-Reply-To', inReplyTo);
       }
-    } catch (e) {
-      const appLogoUrl = 'https://hub.visionradiology.com.au/crowdhub-logo.png';
-      html = html.replace('cid:crowdhub-logo.png', appLogoUrl);
-      console.warn('Inline logo fetch failed, using URL fallback');
+      
+      if (references) {
+        formData.append('h:References', references);
+      } else if (inReplyTo) {
+        formData.append('h:References', inReplyTo);
+      }
+
+      const mailgunResponse = await fetch(
+        `https://api.mailgun.net/v3/${mailgunDomain}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${btoa(`api:${mailgunApiKey}`)}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (!mailgunResponse.ok) {
+        const error = await mailgunResponse.text();
+        throw new Error(`Mailgun error: ${error}`);
+      }
+
+      const mailgunResult = await mailgunResponse.json();
+      console.log('[send-notification-email] Mailgun success:', mailgunResult);
+      
+      // Track email message for threading
+      if (requestId && requestType) {
+        await supabase.from('email_message_tracking').insert({
+          request_id: requestId,
+          request_type: requestType,
+          message_id: messageId,
+          in_reply_to: inReplyTo || null,
+          references: references || inReplyTo || null,
+          from_email: `noreply@${mailgunDomain}`,
+          to_email: to,
+          subject: subject,
+          direction: 'outbound',
+        });
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, messageId }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    } else {
+      throw new Error('Mailgun not configured');
     }
-
-    formData.append("html", html);
-    formData.append("text", emailContent.text);
-
-    console.log('Sending email via Mailgun...');
-    
-    const response = await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Basic ${btoa(`api:${mailgunApiKey}`)}`
-      },
-      body: formData
-    });
-
-    console.log('Mailgun response status:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Mailgun API error:", errorText);
-      console.error("Response headers:", Object.fromEntries(response.headers.entries()));
-      throw new Error(`Mailgun API error: ${response.status} ${errorText}`);
-    }
-
-    const result = await response.json();
-    console.log("Email sent successfully:", result);
-
-    return new Response(JSON.stringify({ success: true, messageId: result.id }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders,
-      },
-    });
   } catch (error: any) {
-    console.error("Error in send-notification-email function:", error);
+    console.error("[send-notification-email] ERROR:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
