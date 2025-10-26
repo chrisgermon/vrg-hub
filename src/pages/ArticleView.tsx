@@ -107,13 +107,7 @@ export default function ArticleView() {
           </div>
         </div>
 
-        {article.excerpt && (
-          <p className="text-xl text-muted-foreground mb-8 italic">
-            {article.excerpt}
-          </p>
-        )}
-
-        <div 
+        <div
           className="prose prose-slate dark:prose-invert max-w-none"
           dangerouslySetInnerHTML={{ __html: article.content }}
         />

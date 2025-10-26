@@ -27,7 +27,6 @@ export default function ArticleEditor({ articleId: propArticleId, onSave }: Arti
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState('');
-  const [excerpt, setExcerpt] = useState('');
   const [content, setContent] = useState('');
   const [isPublished, setIsPublished] = useState(false);
   const [featuredImageUrl, setFeaturedImageUrl] = useState('');
@@ -54,7 +53,6 @@ export default function ArticleEditor({ articleId: propArticleId, onSave }: Arti
 
       if (data) {
         setTitle(data.title);
-        setExcerpt(data.excerpt || '');
         setContent(data.content);
         setIsPublished(data.is_published);
         setFeaturedImageUrl(data.featured_image_url || '');
@@ -141,7 +139,6 @@ export default function ArticleEditor({ articleId: propArticleId, onSave }: Arti
     try {
       const articleData = {
         title,
-        excerpt,
         content,
         is_published: isPublished,
         featured_image_url: featuredImageUrl || null,
@@ -215,17 +212,6 @@ export default function ArticleEditor({ articleId: propArticleId, onSave }: Arti
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Article title"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="excerpt">Excerpt</Label>
-            <Textarea
-              id="excerpt"
-              value={excerpt}
-              onChange={(e) => setExcerpt(e.target.value)}
-              placeholder="Brief summary of the article"
-              rows={3}
             />
           </div>
 
