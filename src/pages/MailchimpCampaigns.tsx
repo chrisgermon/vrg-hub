@@ -236,8 +236,14 @@ const MailchimpCampaigns = () => {
             <div>
               <h3 className="text-lg font-semibold mb-2">Recipients ({recipients.length})</h3>
               {loadingRecipients ? (
-                <div className="space-y-2">
-                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="h-6 w-6 animate-spin text-primary mr-2" />
+                    <span className="text-muted-foreground">Loading recipients...</span>
+                  </div>
+                  <div className="space-y-2">
+                    {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+                  </div>
                 </div>
               ) : (
                 <Table>
