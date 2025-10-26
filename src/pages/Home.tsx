@@ -3,10 +3,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { NewsFeedModule } from "@/components/home/NewsFeedModule";
 import { PendingApprovalsWidget } from "@/components/home/PendingApprovalsWidget";
 import { Button } from "@/components/ui/button";
-import { 
-  FileText, 
-  Calendar, 
-  Users, 
+import {
+  FileText,
+  Calendar,
+  Users,
   TrendingUp,
   Package,
   Megaphone,
@@ -21,7 +21,7 @@ import { useCompanyFeatures } from "@/hooks/useCompanyFeatures";
 import { usePermissions } from "@/hooks/usePermissions";
 
 export default function Home() {
-  const { user, company } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { isFeatureEnabled } = useCompanyFeatures();
   const { hasPermission } = usePermissions();

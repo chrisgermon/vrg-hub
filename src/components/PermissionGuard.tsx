@@ -53,7 +53,9 @@ export function PermissionGuard({
   fallback,
   hideOnDenied = false,
 }: PermissionGuardProps) {
-  const { hasPermission, hasFeature, hasAnyPermission, isLoading } = usePermissions();
+  const { hasPermission, hasFeature, hasAnyPermission, isLoading } = usePermissions({
+    withFeatureFlags: Boolean(feature),
+  });
 
   // Still loading permissions
   if (isLoading) {

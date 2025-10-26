@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { formatRequestId } from '@/lib/requestUtils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Requests() {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ export default function Requests() {
   const queryClient = useQueryClient();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(id || null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { toast } = useToast();
 
   const isManagerOrAdmin = ['manager', 'marketing_manager', 'tenant_admin', 'super_admin'].includes(userRole || '');
 
@@ -27,26 +29,28 @@ export default function Requests() {
     queryKey: ['request', selectedRequestId],
     queryFn: async () => {
       if (!selectedRequestId) return null;
-      
-      // Fetch request
-      const { data: request, error: requestError } = await supabase
+
+      const { data, error } = await supabase
         .from('hardware_requests')
-        .select('*, request_number')
+        .select('*, request_number, requester:profiles!hardware_requests_user_id_fkey(full_name,email)')
         .eq('id', selectedRequestId)
-        .single();
-      
-      if (requestError || !request) return null;
-      
-      // Fetch user profile separately
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, email')
-        .eq('id', request.user_id)
-        .single();
-      
-      return { ...request, profile };
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
     },
     enabled: !!selectedRequestId,
+    onError: (error: any) => {
+      console.error('Error loading request details:', error);
+      toast({
+        title: 'Failed to load request details',
+        description: error.message ?? 'We were unable to fetch the latest request information.',
+        variant: 'destructive',
+      });
+    },
   });
 
   const handleRequestSelect = (requestId: string) => {
@@ -74,7 +78,10 @@ export default function Requests() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ['request'] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['hardware-requests'] }),
+      queryClient.invalidateQueries({ queryKey: ['request'] }),
+    ]);
     // Give a small delay for visual feedback
     setTimeout(() => setIsRefreshing(false), 500);
   };
@@ -153,13 +160,13 @@ export default function Requests() {
             </DetailsSection>
 
             <DetailsSection title="Requester">
-              <DetailsField 
-                label="Name" 
-                value={selectedRequest.profile?.full_name || 'Unknown'} 
+              <DetailsField
+                label="Name"
+                value={(selectedRequest as any).requester?.full_name || 'Unknown'}
               />
-              <DetailsField 
-                label="Email" 
-                value={selectedRequest.profile?.email || '-'} 
+              <DetailsField
+                label="Email"
+                value={(selectedRequest as any).requester?.email || '-'}
               />
             </DetailsSection>
 
