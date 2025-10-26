@@ -19,7 +19,6 @@ import { CompanyDomainsManager } from '@/components/settings/CompanyDomainsManag
 import { CompanyFeaturesManager } from '@/components/settings/CompanyFeaturesManager';
 import { DepartmentRequestTypeManager } from '@/components/requests/admin/DepartmentRequestTypeManager';
 import { TeamManagement } from '@/components/requests/admin/TeamManagement';
-import { TicketQueueManager } from '@/components/requests/admin/TicketQueueManager';
 import { TicketAuditLog } from '@/components/requests/admin/TicketAuditLog';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -36,11 +35,6 @@ const ticketingSections = [
     value: 'teams',
     label: 'Teams',
     content: <TeamManagement />,
-  },
-  {
-    value: 'queue',
-    label: 'Ticket Queue',
-    content: <TicketQueueManager />,
   },
   {
     value: 'audit',
