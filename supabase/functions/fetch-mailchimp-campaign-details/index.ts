@@ -17,14 +17,23 @@ serve(async (req) => {
       throw new Error('MAILCHIMP_API_KEY is not configured');
     }
 
-    // Extract datacenter from API key (last part after the dash)
+    const { campaignId } = await req.json();
+    
+    if (!campaignId) {
+      throw new Error('Campaign ID is required');
+    }
+
+    // Extract datacenter from API key
     const datacenter = MAILCHIMP_API_KEY.split('-')[1];
     
     if (!datacenter) {
       throw new Error('Invalid Mailchimp API key format');
     }
 
-    const url = `https://${datacenter}.api.mailchimp.com/3.0/campaigns?count=100&sort_field=send_time&sort_dir=DESC`;
+    // Fetch sent-to details for the campaign
+    const url = `https://${datacenter}.api.mailchimp.com/3.0/reports/${campaignId}/sent-to?count=1000`;
+    
+    console.log(`Fetching recipients for campaign ${campaignId}`);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -37,15 +46,37 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Mailchimp API error:', errorText);
+      
+      // If campaign hasn't been sent yet, return empty array
+      if (response.status === 404) {
+        return new Response(
+          JSON.stringify({ recipients: [] }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          }
+        );
+      }
+      
       throw new Error(`Mailchimp API error: ${response.status}`);
     }
 
     const data = await response.json();
     
-    console.log(`Fetched ${data.campaigns?.length || 0} campaigns from Mailchimp`);
+    console.log(`Fetched ${data.sent_to?.length || 0} recipients for campaign ${campaignId}`);
+
+    // Transform the data to match our interface
+    const recipients = (data.sent_to || []).map((recipient: any) => ({
+      email_address: recipient.email_address,
+      status: recipient.status,
+      open_count: recipient.open_count || 0,
+      click_count: recipient.click_count || 0,
+      last_open: recipient.last_open,
+      last_click: recipient.last_click,
+    }));
 
     return new Response(
-      JSON.stringify({ campaigns: data.campaigns || [] }),
+      JSON.stringify({ recipients }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -53,16 +84,16 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in fetch-mailchimp-campaigns:', error);
+    console.error('Error in fetch-mailchimp-campaign-details:', error);
     
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Unknown error occurred',
-        campaigns: [],
+        recipients: [],
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200, // Return 200 with empty array to prevent UI errors
+        status: 200,
       }
     );
   }

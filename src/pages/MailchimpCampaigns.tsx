@@ -1,72 +1,96 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { RefreshCw, Mail, CheckCircle, XCircle, Clock, Users } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import * as React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { RefreshCw, Mail, Send, XCircle, FileText, Eye, CheckCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Campaign {
   id: string;
   web_id: number;
-  title: string;
-  subject_line: string;
+  settings: {
+    title: string;
+    subject_line: string;
+  };
   status: string;
   emails_sent: number;
-  send_time: string;
-  report_summary: {
-    opens: number;
-    unique_opens: number;
-    clicks: number;
-    subscriber_clicks: number;
+  send_time?: string;
+  report_summary?: {
+    opens?: number;
+    unique_opens?: number;
+    clicks?: number;
+    subscriber_clicks?: number;
   };
 }
 
-export default function MailchimpCampaigns() {
-  const { toast } = useToast();
-  const [isRefreshing, setIsRefreshing] = useState(false);
+interface RecipientDetail {
+  email_address: string;
+  status: string;
+  open_count: number;
+  click_count: number;
+  last_open?: string;
+  last_click?: string;
+}
+
+const MailchimpCampaigns = () => {
+  const [selectedCampaign, setSelectedCampaign] = React.useState<Campaign | null>(null);
+  const [recipients, setRecipients] = React.useState<RecipientDetail[]>([]);
+  const [loadingRecipients, setLoadingRecipients] = React.useState(false);
 
   const { data: campaigns, isLoading, refetch } = useQuery({
     queryKey: ['mailchimp-campaigns'],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('fetch-mailchimp-campaigns');
-      
       if (error) throw error;
       return data.campaigns as Campaign[];
     },
   });
 
   const handleRefresh = async () => {
-    setIsRefreshing(true);
+    toast.loading("Refreshing campaigns...");
+    await refetch();
+    toast.dismiss();
+    toast.success("Campaigns refreshed!");
+  };
+
+  const fetchRecipients = async (campaignId: string) => {
+    setLoadingRecipients(true);
     try {
-      await refetch();
-      toast({
-        title: 'Refreshed',
-        description: 'Campaign data has been updated',
+      const { data, error } = await supabase.functions.invoke('fetch-mailchimp-campaign-details', {
+        body: { campaignId },
       });
+      if (error) throw error;
+      setRecipients(data.recipients || []);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to refresh campaign data',
-        variant: 'destructive',
-      });
+      console.error('Error fetching recipients:', error);
+      toast.error("Failed to load recipient details");
+      setRecipients([]);
     } finally {
-      setIsRefreshing(false);
+      setLoadingRecipients(false);
     }
   };
 
+  const handleCampaignClick = (campaign: Campaign) => {
+    setSelectedCampaign(campaign);
+    fetchRecipients(campaign.id);
+  };
+
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: any }> = {
-      sent: { variant: 'default', icon: CheckCircle },
-      sending: { variant: 'secondary', icon: Clock },
-      draft: { variant: 'outline', icon: Mail },
-      failed: { variant: 'destructive', icon: XCircle },
+    const statusConfig: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", icon: React.ComponentType<any> }> = {
+      sent: { variant: "default", icon: Send },
+      sending: { variant: "secondary", icon: Mail },
+      draft: { variant: "outline", icon: FileText },
+      save: { variant: "outline", icon: FileText },
+      failed: { variant: "destructive", icon: XCircle },
     };
 
-    const config = variants[status] || variants.draft;
+    const config = statusConfig[status] || statusConfig.draft;
     const Icon = config.icon;
 
     return (
@@ -79,7 +103,7 @@ export default function MailchimpCampaigns() {
 
   const sentCampaigns = campaigns?.filter(c => c.status === 'sent') || [];
   const failedCampaigns = campaigns?.filter(c => c.status === 'failed') || [];
-  const draftCampaigns = campaigns?.filter(c => c.status === 'draft' || c.status === 'sending') || [];
+  const draftCampaigns = campaigns?.filter(c => c.status === 'save' || c.status === 'draft') || [];
 
   if (isLoading) {
     return (
@@ -100,8 +124,8 @@ export default function MailchimpCampaigns() {
             View and analyze your email campaign performance
           </p>
         </div>
-        <Button onClick={handleRefresh} disabled={isRefreshing}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+        <Button onClick={handleRefresh}>
+          <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
       </div>
@@ -114,7 +138,7 @@ export default function MailchimpCampaigns() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{campaigns?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">All time campaigns</p>
+            <p className="text-xs text-muted-foreground">All campaigns</p>
           </CardContent>
         </Card>
 
@@ -141,42 +165,140 @@ export default function MailchimpCampaigns() {
         </Card>
       </div>
 
-      <Tabs defaultValue="all" className="space-y-4">
-        <TabsList>
+      <Tabs defaultValue="all" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="all">All Campaigns</TabsTrigger>
-          <TabsTrigger value="sent">Delivered ({sentCampaigns.length})</TabsTrigger>
-          <TabsTrigger value="failed">Failed ({failedCampaigns.length})</TabsTrigger>
-          <TabsTrigger value="draft">Draft ({draftCampaigns.length})</TabsTrigger>
+          <TabsTrigger value="sent">Delivered</TabsTrigger>
+          <TabsTrigger value="failed">Failed</TabsTrigger>
+          <TabsTrigger value="draft">Draft</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all" className="space-y-4">
-          <CampaignTable campaigns={campaigns || []} getStatusBadge={getStatusBadge} />
+        <TabsContent value="all">
+          <CampaignTable campaigns={campaigns} getStatusBadge={getStatusBadge} onCampaignClick={handleCampaignClick} />
         </TabsContent>
 
-        <TabsContent value="sent" className="space-y-4">
-          <CampaignTable campaigns={sentCampaigns} getStatusBadge={getStatusBadge} />
+        <TabsContent value="sent">
+          <CampaignTable 
+            campaigns={sentCampaigns} 
+            getStatusBadge={getStatusBadge}
+            onCampaignClick={handleCampaignClick}
+          />
         </TabsContent>
 
-        <TabsContent value="failed" className="space-y-4">
-          <CampaignTable campaigns={failedCampaigns} getStatusBadge={getStatusBadge} />
+        <TabsContent value="failed">
+          <CampaignTable 
+            campaigns={failedCampaigns} 
+            getStatusBadge={getStatusBadge}
+            onCampaignClick={handleCampaignClick}
+          />
         </TabsContent>
 
-        <TabsContent value="draft" className="space-y-4">
-          <CampaignTable campaigns={draftCampaigns} getStatusBadge={getStatusBadge} />
+        <TabsContent value="draft">
+          <CampaignTable 
+            campaigns={draftCampaigns} 
+            getStatusBadge={getStatusBadge}
+            onCampaignClick={handleCampaignClick}
+          />
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!selectedCampaign} onOpenChange={(open) => !open && setSelectedCampaign(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedCampaign?.settings.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Subject</p>
+                <p className="font-medium">{selectedCampaign?.settings.subject_line}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <div className="mt-1">
+                  {selectedCampaign && getStatusBadge(selectedCampaign.status)}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Emails Sent</p>
+                <p className="font-medium">{selectedCampaign?.emails_sent.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Sent Date</p>
+                <p className="font-medium">
+                  {selectedCampaign?.send_time 
+                    ? new Date(selectedCampaign.send_time).toLocaleString()
+                    : 'Not sent'}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Recipients ({recipients.length})</h3>
+              {loadingRecipients ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Opens</TableHead>
+                      <TableHead>Clicks</TableHead>
+                      <TableHead>Last Activity</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recipients.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground">
+                          No recipient details available
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      recipients.map((recipient) => (
+                        <TableRow key={recipient.email_address}>
+                          <TableCell className="font-medium">{recipient.email_address}</TableCell>
+                          <TableCell>
+                            <Badge variant={recipient.status === 'sent' ? 'default' : 'secondary'}>
+                              {recipient.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{recipient.open_count}</TableCell>
+                          <TableCell>{recipient.click_count}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {recipient.last_open 
+                              ? new Date(recipient.last_open).toLocaleString()
+                              : recipient.last_click
+                              ? new Date(recipient.last_click).toLocaleString()
+                              : 'No activity'}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-}
+};
 
-function CampaignTable({ 
+const CampaignTable = ({ 
   campaigns, 
-  getStatusBadge 
+  getStatusBadge,
+  onCampaignClick
 }: { 
-  campaigns: Campaign[]; 
-  getStatusBadge: (status: string) => JSX.Element;
-}) {
-  if (campaigns.length === 0) {
+  campaigns?: Campaign[]; 
+  getStatusBadge: (status: string) => React.ReactNode;
+  onCampaignClick: (campaign: Campaign) => void;
+}) => {
+  if (!campaigns || campaigns.length === 0) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center h-32">
@@ -191,30 +313,38 @@ function CampaignTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Campaign</TableHead>
+            <TableHead>Campaign Name</TableHead>
             <TableHead>Subject</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="text-right">Sent</TableHead>
-            <TableHead className="text-right">Opens</TableHead>
-            <TableHead className="text-right">Clicks</TableHead>
-            <TableHead>Date</TableHead>
+            <TableHead>Sent</TableHead>
+            <TableHead>Opens</TableHead>
+            <TableHead>Clicks</TableHead>
+            <TableHead>Send Date</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {campaigns.map((campaign) => (
             <TableRow key={campaign.id}>
-              <TableCell className="font-medium">{campaign.title}</TableCell>
-              <TableCell>{campaign.subject_line}</TableCell>
+              <TableCell className="font-medium">{campaign.settings.title}</TableCell>
+              <TableCell>{campaign.settings.subject_line}</TableCell>
               <TableCell>{getStatusBadge(campaign.status)}</TableCell>
-              <TableCell className="text-right">{campaign.emails_sent.toLocaleString()}</TableCell>
-              <TableCell className="text-right">
-                {campaign.report_summary?.unique_opens || 0}
-              </TableCell>
-              <TableCell className="text-right">
-                {campaign.report_summary?.subscriber_clicks || 0}
+              <TableCell>{campaign.emails_sent.toLocaleString()}</TableCell>
+              <TableCell>{campaign.report_summary?.unique_opens?.toLocaleString() || 0}</TableCell>
+              <TableCell>{campaign.report_summary?.subscriber_clicks?.toLocaleString() || 0}</TableCell>
+              <TableCell>
+                {campaign.send_time 
+                  ? new Date(campaign.send_time).toLocaleDateString()
+                  : 'Not sent'}
               </TableCell>
               <TableCell>
-                {campaign.send_time ? new Date(campaign.send_time).toLocaleDateString() : 'N/A'}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onCampaignClick(campaign)}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
               </TableCell>
             </TableRow>
           ))}
@@ -222,4 +352,6 @@ function CampaignTable({
       </Table>
     </Card>
   );
-}
+};
+
+export default MailchimpCampaigns;
