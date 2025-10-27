@@ -1,30 +1,26 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { useAuth } from "@/hooks/useAuth";
+import { ArrowLeft } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 
-interface KnowledgeBasePageDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  categoryId: string | null;
-  subcategoryId: string | null;
-  onSuccess: (pageId: string) => void;
+interface ArticleEditorProps {
+  articleId: string;
+  onBack: () => void;
 }
 
-export function KnowledgeBasePageDialog({ open, onOpenChange, categoryId, onSuccess }: KnowledgeBasePageDialogProps) {
-  const { user } = useAuth();
+export function ArticleEditor({ articleId, onBack }: ArticleEditorProps) {
   const [title, setTitle] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState(categoryId || "");
+  const [categoryId, setCategoryId] = useState("");
   const [loading, setLoading] = useState(false);
 
   const { data: categories = [] } = useQuery({
@@ -40,36 +36,51 @@ export function KnowledgeBasePageDialog({ open, onOpenChange, categoryId, onSucc
     },
   });
 
+  useEffect(() => {
+    const fetchArticle = async () => {
+      const { data, error } = await supabase
+        .from("kb_pages")
+        .select("*")
+        .eq("id", articleId)
+        .single();
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      if (data) {
+        setTitle(data.title);
+        setExcerpt(data.excerpt || "");
+        setContent(data.content);
+        setCategoryId(data.category_id);
+      }
+    };
+
+    fetchArticle();
+  }, [articleId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-    
     setLoading(true);
 
     try {
       const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("kb_pages")
-        .insert({
+        .update({
           title,
           excerpt,
           content,
           slug,
-          category_id: selectedCategoryId,
-          author_id: user.id,
-          is_published: false,
+          category_id: categoryId,
         })
-        .select()
-        .single();
+        .eq("id", articleId);
 
       if (error) throw error;
 
-      toast.success("Article created successfully");
-      setTitle("");
-      setExcerpt("");
-      setContent("");
-      onSuccess(data.id);
-      onOpenChange(false);
+      toast.success("Article updated successfully");
+      onBack();
     } catch (error: any) {
       toast.error(error.message);
     } finally {
@@ -78,11 +89,16 @@ export function KnowledgeBasePageDialog({ open, onOpenChange, categoryId, onSucc
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create Article</DialogTitle>
-        </DialogHeader>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          Edit Article
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="title">Title</Label>
@@ -95,7 +111,7 @@ export function KnowledgeBasePageDialog({ open, onOpenChange, categoryId, onSucc
           </div>
           <div>
             <Label htmlFor="category">Category</Label>
-            <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+            <Select value={categoryId} onValueChange={setCategoryId}>
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
@@ -127,15 +143,15 @@ export function KnowledgeBasePageDialog({ open, onOpenChange, categoryId, onSucc
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={onBack}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create Article"}
+              {loading ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+    </Card>
   );
 }

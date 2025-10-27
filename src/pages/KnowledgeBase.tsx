@@ -4,14 +4,24 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, BookOpen } from 'lucide-react';
+import { Search, BookOpen, Plus, FolderPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { VideoLibrary } from '@/components/knowledge-base/VideoLibrary';
+import { KnowledgeBaseCategoryDialog } from '@/components/knowledge-base/KnowledgeBaseCategoryDialog';
+import { KnowledgeBasePageDialog } from '@/components/knowledge-base/KnowledgeBasePageDialog';
+import { ArticleManagement } from '@/components/knowledge-base/ArticleManagement';
+import { ArticleEditor } from '@/components/knowledge-base/ArticleEditor';
+import { useAccessControl } from '@/hooks/useAccessControl';
 
 export default function KnowledgeBase() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [pageDialogOpen, setPageDialogOpen] = useState(false);
+  const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { isTenantAdmin, isSuperAdmin } = useAccessControl();
+  const isAdmin = isTenantAdmin || isSuperAdmin;
 
   const { data: categories = [] } = useQuery({
     queryKey: ['kb-categories'],
@@ -27,13 +37,16 @@ export default function KnowledgeBase() {
     },
   });
 
-  const { data: pages = [] } = useQuery({
-    queryKey: ['kb-pages', searchQuery],
+  const { data: pages = [], refetch: refetchPages } = useQuery({
+    queryKey: ['kb-pages', searchQuery, isAdmin],
     queryFn: async () => {
       let query = supabase
         .from('kb_pages')
-        .select('*')
-        .eq('is_published', true);
+        .select('*');
+
+      if (!isAdmin) {
+        query = query.eq('is_published', true);
+      }
 
       if (searchQuery) {
         query = query.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
@@ -46,11 +59,29 @@ export default function KnowledgeBase() {
     },
   });
 
+  if (editingArticleId) {
+    return <ArticleEditor articleId={editingArticleId} onBack={() => setEditingArticleId(null)} />;
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Knowledge Base</h1>
-        <p className="text-muted-foreground">Find answers, documentation, and how-to videos</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Knowledge Base</h1>
+          <p className="text-muted-foreground">Find answers, documentation, and how-to videos</p>
+        </div>
+        {isAdmin && (
+          <div className="flex gap-2">
+            <Button onClick={() => setCategoryDialogOpen(true)} variant="outline">
+              <FolderPlus className="h-4 w-4 mr-2" />
+              New Category
+            </Button>
+            <Button onClick={() => setPageDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Article
+            </Button>
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="articles" className="w-full">
@@ -97,33 +128,41 @@ export default function KnowledgeBase() {
 
       <div>
         <h2 className="text-xl font-semibold mb-4">
-          {searchQuery ? 'Search Results' : 'Recent Articles'}
+          {searchQuery ? 'Search Results' : isAdmin ? 'All Articles' : 'Recent Articles'}
         </h2>
-        <div className="space-y-4">
-          {pages.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                {searchQuery ? 'No articles found matching your search' : 'No articles available yet'}
-              </CardContent>
-            </Card>
-          ) : (
-            pages.map((page) => (
-              <Card key={page.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <CardTitle>{page.title}</CardTitle>
-                </CardHeader>
-                {page.excerpt && (
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">{page.excerpt}</p>
-                    <Button variant="link" className="px-0 mt-2">
-                      Read more →
-                    </Button>
-                  </CardContent>
-                )}
+        {isAdmin ? (
+          <ArticleManagement
+            articles={pages}
+            onEdit={setEditingArticleId}
+            onRefresh={refetchPages}
+          />
+        ) : (
+          <div className="space-y-4">
+            {pages.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  {searchQuery ? 'No articles found matching your search' : 'No articles available yet'}
+                </CardContent>
               </Card>
-            ))
-          )}
-        </div>
+            ) : (
+              pages.map((page) => (
+                <Card key={page.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle>{page.title}</CardTitle>
+                  </CardHeader>
+                  {page.excerpt && (
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">{page.excerpt}</p>
+                      <Button variant="link" className="px-0 mt-2">
+                        Read more →
+                      </Button>
+                    </CardContent>
+                  )}
+                </Card>
+              ))
+            )}
+          </div>
+        )}
           </div>
         </TabsContent>
 
@@ -131,6 +170,25 @@ export default function KnowledgeBase() {
           <VideoLibrary />
         </TabsContent>
       </Tabs>
+
+      <KnowledgeBaseCategoryDialog
+        open={categoryDialogOpen}
+        onOpenChange={setCategoryDialogOpen}
+        onSuccess={() => {
+          refetchPages();
+        }}
+      />
+
+      <KnowledgeBasePageDialog
+        open={pageDialogOpen}
+        onOpenChange={setPageDialogOpen}
+        categoryId={null}
+        subcategoryId={null}
+        onSuccess={(pageId) => {
+          refetchPages();
+          setEditingArticleId(pageId);
+        }}
+      />
     </div>
   );
 }
