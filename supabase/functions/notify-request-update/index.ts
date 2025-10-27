@@ -26,15 +26,32 @@ const handler = async (req: Request): Promise<Response> => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get request details first
-    const { data: requestData, error: requestError } = await supabase
-      .from('hardware_requests')
+    // Get request details first - try tickets table first, then hardware_requests
+    let requestData: any = null;
+    let ccEmails: string[] = [];
+    
+    const { data: ticketData } = await supabase
+      .from('tickets')
       .select('*')
       .eq('id', requestId)
-      .single();
+      .maybeSingle();
 
-    if (requestError || !requestData) {
-      throw new Error(`Failed to fetch request: ${requestError?.message}`);
+    if (ticketData) {
+      requestData = ticketData;
+      ccEmails = ticketData.cc_emails || [];
+    } else {
+      const { data: hwData, error: requestError } = await supabase
+        .from('hardware_requests')
+        .select('*')
+        .eq('id', requestId)
+        .single();
+
+      if (requestError || !hwData) {
+        throw new Error(`Failed to fetch request: ${requestError?.message}`);
+      }
+      
+      requestData = hwData;
+      ccEmails = hwData.cc_emails || [];
     }
 
     // Get requester profile
@@ -136,6 +153,7 @@ const handler = async (req: Request): Promise<Response> => {
               const emailResult = await supabase.functions.invoke('send-notification-email', {
                 body: {
                   to: recipientEmail,
+                  cc: ccEmails.length > 0 ? ccEmails : undefined,
                   subject,
                   template: 'request_submitted',
                   data: emailData,
@@ -151,7 +169,8 @@ const handler = async (req: Request): Promise<Response> => {
                 error_message: (emailResult as any).error?.message || null,
                 metadata: {
                   requester_name: requesterProfile.name,
-                  source: 'fallback_emails'
+                  source: 'fallback_emails',
+                  cc_emails: ccEmails,
                 },
               });
             }
@@ -187,6 +206,7 @@ const handler = async (req: Request): Promise<Response> => {
             const emailResult = await supabase.functions.invoke('send-notification-email', {
               body: {
                 to: recipientEmail,
+                cc: ccEmails.length > 0 ? ccEmails : undefined,
                 subject,
                 template: 'request_submitted',
                 data: emailData,
@@ -202,7 +222,8 @@ const handler = async (req: Request): Promise<Response> => {
               error_message: (emailResult as any).error?.message || null,
               metadata: {
                 requester_name: requesterProfile.name,
-                source: 'fallback_profiles'
+                source: 'fallback_profiles',
+                cc_emails: ccEmails,
               },
             });
           }
@@ -243,6 +264,7 @@ const handler = async (req: Request): Promise<Response> => {
           const emailResult = await supabase.functions.invoke('send-notification-email', {
             body: {
               to: recipientEmail,
+              cc: ccEmails.length > 0 ? ccEmails : undefined,
               subject,
               template: 'request_submitted',
               data: emailData,
@@ -258,7 +280,8 @@ const handler = async (req: Request): Promise<Response> => {
             error_message: (emailResult as any).error?.message || null,
             metadata: {
               requester_name: requesterProfile.name,
-              source: 'user_notifications'
+              source: 'user_notifications',
+              cc_emails: ccEmails,
             },
           });
         }
@@ -283,6 +306,7 @@ const handler = async (req: Request): Promise<Response> => {
         const emailResult = await supabase.functions.invoke('send-notification-email', {
           body: {
             to: recipientEmail,
+            cc: ccEmails.length > 0 ? ccEmails : undefined,
             subject,
             template: 'request_approved',
             data: emailData
@@ -301,7 +325,8 @@ const handler = async (req: Request): Promise<Response> => {
             error_message: emailResult.error?.message || null,
             metadata: {
               approver_name: approverData?.name,
-              requester_name: requesterProfile.name
+              requester_name: requesterProfile.name,
+              cc_emails: ccEmails,
             }
           });
 
@@ -389,6 +414,7 @@ const handler = async (req: Request): Promise<Response> => {
         const emailResultDeclined = await supabase.functions.invoke('send-notification-email', {
           body: {
             to: recipientEmail,
+            cc: ccEmails.length > 0 ? ccEmails : undefined,
             subject,
             template: 'request_declined',
             data: emailData
@@ -408,7 +434,8 @@ const handler = async (req: Request): Promise<Response> => {
             metadata: {
               approver_name: approverData?.name,
               requester_name: requesterProfile.name,
-              decline_reason: requestData.decline_reason || notes
+              decline_reason: requestData.decline_reason || notes,
+              cc_emails: ccEmails,
             }
           });
         break;
@@ -430,6 +457,7 @@ const handler = async (req: Request): Promise<Response> => {
         const emailResultOrdered = await supabase.functions.invoke('send-notification-email', {
           body: {
             to: recipientEmail,
+            cc: ccEmails.length > 0 ? ccEmails : undefined,
             subject,
             template: 'request_ordered',
             data: emailData
@@ -447,7 +475,8 @@ const handler = async (req: Request): Promise<Response> => {
             status: emailResultOrdered.error ? 'failed' : 'sent',
             error_message: emailResultOrdered.error?.message || null,
             metadata: {
-              requester_name: requesterProfile.name
+              requester_name: requesterProfile.name,
+              cc_emails: ccEmails,
             }
           });
         break;

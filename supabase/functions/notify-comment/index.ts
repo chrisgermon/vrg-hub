@@ -123,6 +123,7 @@ const handler = async (req: Request): Promise<Response> => {
         requester_name: requesterProfile.full_name,
         comment_id: commentId,
         request_number: requestNumber,
+        cc_emails: ccEmails,
       },
     };
 

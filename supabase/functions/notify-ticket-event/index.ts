@@ -30,16 +30,33 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`[notify-ticket-event] Processing ${eventType} for ${requestType} request ${requestId}`);
 
-    // Fetch request details
-    const tableName = requestType === 'hardware' ? 'hardware_requests' : 'department_requests';
-    const { data: request, error: requestError } = await supabase
-      .from(tableName)
+    // Fetch request details - try tickets table first, then fallback to specific tables
+    let request: any = null;
+    let ccEmails: string[] = [];
+    
+    const { data: ticketData } = await supabase
+      .from('tickets')
       .select('*, profiles!user_id(email, full_name)')
       .eq('id', requestId)
-      .single();
+      .maybeSingle();
 
-    if (requestError || !request) {
-      throw new Error(`Request not found: ${requestError?.message}`);
+    if (ticketData) {
+      request = ticketData;
+      ccEmails = ticketData.cc_emails || [];
+    } else {
+      const tableName = requestType === 'hardware' ? 'hardware_requests' : 'department_requests';
+      const { data: requestData, error: requestError } = await supabase
+        .from(tableName)
+        .select('*, profiles!user_id(email, full_name)')
+        .eq('id', requestId)
+        .single();
+
+      if (requestError || !requestData) {
+        throw new Error(`Request not found: ${requestError?.message}`);
+      }
+      
+      request = requestData;
+      ccEmails = requestData.cc_emails || [];
     }
 
     // Get actor details
@@ -85,6 +102,15 @@ const handler = async (req: Request): Promise<Response> => {
       watchers.forEach((watcher: any) => {
         if (watcher.user_id !== actorId && watcher.profiles?.email) {
           recipients.add(watcher.profiles.email);
+        }
+      });
+    }
+    
+    // Add CC emails to recipients
+    if (ccEmails && ccEmails.length > 0) {
+      ccEmails.forEach(email => {
+        if (email && email.trim()) {
+          recipients.add(email.trim());
         }
       });
     }
@@ -154,6 +180,22 @@ const handler = async (req: Request): Promise<Response> => {
             subject,
             template,
             data: emailData,
+          },
+        });
+
+        // Log the email
+        await supabase.from('email_logs').insert({
+          request_id: requestId,
+          recipient_email: email,
+          email_type: template,
+          subject: subject,
+          status: emailError ? 'failed' : 'sent',
+          error_message: emailError?.message || null,
+          metadata: {
+            event_type: eventType,
+            actor_name: actorName,
+            request_type: requestType,
+            cc_included: ccEmails.length > 0,
           },
         });
 
