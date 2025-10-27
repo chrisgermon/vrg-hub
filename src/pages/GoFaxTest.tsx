@@ -23,6 +23,7 @@ export default function GoFaxTest() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [subject, setSubject] = useState("");
+  const [fromEmail, setFromEmail] = useState("");
   const [bulkNumbers, setBulkNumbers] = useState("");
   const [formatting, setFormatting] = useState(false);
 
@@ -162,7 +163,8 @@ export default function GoFaxTest() {
           recipients,
           documentUrl,
           fileName: uploadedFile?.name || "document.pdf",
-          subject
+          subject,
+          fromEmail
         }
       });
       
@@ -306,6 +308,17 @@ export default function GoFaxTest() {
                       ))}
                     </div>
                   )}
+                </div>
+
+                <div>
+                  <Label htmlFor="fromEmail">From Email (required by GoFax)</Label>
+                  <Input
+                    id="fromEmail"
+                    type="email"
+                    placeholder="your-registered-email@yourdomain.com"
+                    value={fromEmail}
+                    onChange={(e) => setFromEmail(e.target.value)}
+                  />
                 </div>
 
                 <div>

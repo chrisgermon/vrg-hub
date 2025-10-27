@@ -15,9 +15,19 @@ serve(async (req) => {
     const GOFAX_API_KEY = Deno.env.get('GOFAX_API_KEY');
     if (!GOFAX_API_KEY) throw new Error('GOFAX_API_KEY is not configured');
 
-    const { recipients, documentUrl, fileName, subject } = await req.json();
+    const { recipients, documentUrl, fileName, subject, fromEmail } = await req.json();
     if (!recipients || recipients.length === 0 || !documentUrl) {
       throw new Error('Recipients and document URL are required');
+    }
+
+    // Determine required SendFrom address
+    const DEFAULT_FROM = Deno.env.get('GOFAX_FROM_EMAIL') || '';
+    const sendFrom = String(fromEmail || DEFAULT_FROM).trim();
+    if (!sendFrom) {
+      return new Response(
+        JSON.stringify({ error: 'GoFax requires a SendFrom email. Provide fromEmail in the request or set GOFAX_FROM_EMAIL in secrets.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
     // Sanitize recipients to GoFax expected format: numeric with country code (e.g., 613..., 614...)
@@ -60,6 +70,8 @@ serve(async (req) => {
 
     const makeFax = (to: string) => ({
       SendTo: to,
+      SendFrom: sendFrom,
+      Subject: subject || undefined,
       Documents: [
         {
           Filename: fileName || 'document.pdf',
