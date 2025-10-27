@@ -243,8 +243,26 @@ Deno.serve(async (req) => {
                               campaignFaxes[0]?.group_name || 
                               null;
       
-      // Use client reference as campaign name if available, otherwise message reference, otherwise contact group, otherwise campaign key
-      const campaignName = clientReference || messageReference || contactGroupName || `Campaign ${campaignKey}`;
+      // Generate descriptive campaign name with date
+      const sentDate = campaignFaxes[0]?.sentAt || campaignFaxes[0]?.createdAt || 
+                       (campaignFaxes[0]?.createdDateUtc ? new Date(campaignFaxes[0].createdDateUtc * 1000).toISOString() : new Date().toISOString());
+      const dateStr = new Date(sentDate).toLocaleDateString('en-AU', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+      
+      // Build campaign name with priority: clientReference > messageReference > contactGroupName + date > campaign key + date
+      let campaignName: string;
+      if (clientReference) {
+        campaignName = clientReference;
+      } else if (messageReference) {
+        campaignName = messageReference;
+      } else if (contactGroupName) {
+        campaignName = `${contactGroupName} - ${dateStr}`;
+      } else {
+        campaignName = `Fax Campaign ${campaignKey} - ${dateStr}`;
+      }
 
       // Insert or update campaign
       const { data: campaign, error: campaignError } = await supabaseClient
