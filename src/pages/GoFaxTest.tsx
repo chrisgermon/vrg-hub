@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Send, DollarSign, FileText } from "lucide-react";
+import { RefreshCw, Send, DollarSign, FileText, Upload, X, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -18,9 +18,11 @@ export default function GoFaxTest() {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Send fax form state
-  const [faxNumber, setFaxNumber] = useState("");
+  const [recipients, setRecipients] = useState<string[]>([]);
+  const [newRecipient, setNewRecipient] = useState("");
   const [documentUrl, setDocumentUrl] = useState("");
-  const [fileName, setFileName] = useState("");
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [subject, setSubject] = useState("");
 
   const fetchCreditBalance = async () => {
@@ -69,9 +71,63 @@ export default function GoFaxTest() {
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadedFile(file);
+    setUploading(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('fax-documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('fax-documents')
+        .getPublicUrl(filePath);
+
+      setDocumentUrl(publicUrl);
+      toast.success("File uploaded successfully!");
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error("Failed to upload file");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const addRecipient = () => {
+    if (!newRecipient.trim()) {
+      toast.error("Please enter a fax number");
+      return;
+    }
+    if (recipients.includes(newRecipient)) {
+      toast.error("This number is already in the list");
+      return;
+    }
+    setRecipients([...recipients, newRecipient]);
+    setNewRecipient("");
+  };
+
+  const removeRecipient = (number: string) => {
+    setRecipients(recipients.filter(r => r !== number));
+  };
+
   const sendFax = async () => {
-    if (!faxNumber || !documentUrl) {
-      toast.error("Fax number and document URL are required");
+    if (recipients.length === 0) {
+      toast.error("Please add at least one recipient");
+      return;
+    }
+
+    if (!documentUrl) {
+      toast.error("Please upload a document or provide a URL");
       return;
     }
 
@@ -79,9 +135,9 @@ export default function GoFaxTest() {
     try {
       const { data, error } = await supabase.functions.invoke('gofax-send-fax', {
         body: {
-          faxNumber,
+          recipients,
           documentUrl,
-          fileName,
+          fileName: uploadedFile?.name || "document.pdf",
           subject
         }
       });
@@ -92,11 +148,11 @@ export default function GoFaxTest() {
         throw new Error(data.error);
       }
 
-      toast.success("Fax sent successfully!");
+      toast.success(`Fax sent to ${recipients.length} recipient(s)!`);
       // Clear form
-      setFaxNumber("");
+      setRecipients([]);
       setDocumentUrl("");
-      setFileName("");
+      setUploadedFile(null);
       setSubject("");
     } catch (error) {
       console.error('Error sending fax:', error);
@@ -166,32 +222,61 @@ export default function GoFaxTest() {
             <CardContent className="space-y-4">
               <div className="grid gap-4">
                 <div>
-                  <Label htmlFor="faxNumber">Fax Number *</Label>
-                  <Input
-                    id="faxNumber"
-                    placeholder="+61291234567"
-                    value={faxNumber}
-                    onChange={(e) => setFaxNumber(e.target.value)}
-                  />
+                  <Label htmlFor="fileUpload">Upload Document *</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="fileUpload"
+                      type="file"
+                      accept=".pdf,.doc,.docx,.txt"
+                      onChange={handleFileUpload}
+                      disabled={uploading}
+                    />
+                    {uploading && <RefreshCw className="h-5 w-5 animate-spin" />}
+                  </div>
+                  {uploadedFile && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(2)} KB)
+                    </p>
+                  )}
+                  {documentUrl && (
+                    <p className="text-sm text-green-600 mt-1">
+                      ✓ File ready to send
+                    </p>
+                  )}
                 </div>
+
                 <div>
-                  <Label htmlFor="documentUrl">Document URL *</Label>
-                  <Input
-                    id="documentUrl"
-                    placeholder="https://example.com/document.pdf"
-                    value={documentUrl}
-                    onChange={(e) => setDocumentUrl(e.target.value)}
-                  />
+                  <Label>Recipients ({recipients.length})</Label>
+                  <div className="flex gap-2 mb-2">
+                    <Input
+                      placeholder="+61291234567"
+                      value={newRecipient}
+                      onChange={(e) => setNewRecipient(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && addRecipient()}
+                    />
+                    <Button onClick={addRecipient} type="button" size="icon">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {recipients.length > 0 && (
+                    <div className="border rounded-md p-2 max-h-40 overflow-y-auto space-y-1">
+                      {recipients.map((number, index) => (
+                        <div key={index} className="flex items-center justify-between bg-muted px-2 py-1 rounded">
+                          <span className="text-sm">{number}</span>
+                          <Button
+                            onClick={() => removeRecipient(number)}
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <Label htmlFor="fileName">File Name</Label>
-                  <Input
-                    id="fileName"
-                    placeholder="document.pdf"
-                    value={fileName}
-                    onChange={(e) => setFileName(e.target.value)}
-                  />
-                </div>
+
                 <div>
                   <Label htmlFor="subject">Subject</Label>
                   <Input
@@ -201,9 +286,10 @@ export default function GoFaxTest() {
                     onChange={(e) => setSubject(e.target.value)}
                   />
                 </div>
-                <Button onClick={sendFax} disabled={loading}>
+
+                <Button onClick={sendFax} disabled={loading || !documentUrl || recipients.length === 0}>
                   {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  <span className="ml-2">Send Fax</span>
+                  <span className="ml-2">Send Fax to {recipients.length} Recipient(s)</span>
                 </Button>
               </div>
             </CardContent>

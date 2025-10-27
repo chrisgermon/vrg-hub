@@ -17,17 +17,18 @@ serve(async (req) => {
       throw new Error('GOFAX_API_KEY is not configured');
     }
 
-    const { faxNumber, documentUrl, fileName, subject } = await req.json();
+    const { recipients, documentUrl, fileName, subject } = await req.json();
 
-    if (!faxNumber || !documentUrl) {
-      throw new Error('Fax number and document URL are required');
+    if (!recipients || recipients.length === 0 || !documentUrl) {
+      throw new Error('Recipients and document URL are required');
     }
 
-    console.log(`Sending fax to ${faxNumber} with document ${fileName || 'untitled'}`);
+    console.log(`Sending fax to ${recipients.length} recipient(s) with document ${fileName || 'untitled'}`);
 
     const url = 'https://restful-api.gofax.com.au/v2.0/SendFaxes';
     
-    const faxData = [{
+    // Create a fax request for each recipient
+    const faxData = recipients.map((faxNumber: string) => ({
       ToFaxNumber: faxNumber,
       Documents: [{
         FileLocation: documentUrl,
@@ -35,7 +36,7 @@ serve(async (req) => {
         Order: 0
       }],
       Subject: subject || 'Fax Document'
-    }];
+    }));
 
     const response = await fetch(url, {
       method: 'PUT',
@@ -54,7 +55,7 @@ serve(async (req) => {
 
     const data = await response.json();
     
-    console.log(`Successfully sent fax. Response:`, data);
+    console.log(`Successfully sent fax to ${recipients.length} recipients. Response:`, data);
 
     return new Response(
       JSON.stringify(data),
