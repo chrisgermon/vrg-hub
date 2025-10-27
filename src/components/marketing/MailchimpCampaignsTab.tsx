@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, Mail, Send, XCircle, FileText, Eye, CheckCircle, ArrowUpDown, Download, FileSpreadsheet } from "lucide-react";
+import { RefreshCw, Mail, Send, XCircle, FileText, Eye, CheckCircle, ArrowUpDown, Download, FileSpreadsheet, List } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +45,9 @@ export const MailchimpCampaignsTab = () => {
   const [loadingRecipients, setLoadingRecipients] = React.useState(false);
   const [sortField, setSortField] = React.useState<keyof RecipientDetail>('email_address');
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
+  const [previewCampaign, setPreviewCampaign] = React.useState<Campaign | null>(null);
+  const [campaignHtml, setCampaignHtml] = React.useState<string>('');
+  const [loadingPreview, setLoadingPreview] = React.useState(false);
 
   const { data: campaigns, isLoading, refetch } = useQuery({
     queryKey: ['mailchimp-campaigns'],
@@ -84,6 +87,28 @@ export const MailchimpCampaignsTab = () => {
     setSortField('email_address');
     setSortDirection('asc');
     fetchRecipients(campaign.id);
+  };
+
+  const handlePreviewClick = async (campaign: Campaign) => {
+    setPreviewCampaign(campaign);
+    setLoadingPreview(true);
+    setCampaignHtml('');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-mailchimp-campaign-content', {
+        body: { campaignId: campaign.id }
+      });
+
+      if (error) throw error;
+
+      setCampaignHtml(data.html || data.archive_html || '<p>No preview available</p>');
+    } catch (error) {
+      console.error('Error fetching campaign preview:', error);
+      toast.error("Failed to load campaign preview");
+      setCampaignHtml('<p>Failed to load preview</p>');
+    } finally {
+      setLoadingPreview(false);
+    }
   };
 
   const handleSort = (field: keyof RecipientDetail) => {
@@ -271,34 +296,64 @@ export const MailchimpCampaignsTab = () => {
         </TabsList>
 
         <TabsContent value="all">
-          <CampaignTable campaigns={campaigns} getStatusBadge={getStatusBadge} onCampaignClick={handleCampaignClick} />
+          <CampaignTable 
+            campaigns={campaigns} 
+            getStatusBadge={getStatusBadge} 
+            onCampaignClick={handleCampaignClick}
+            onPreviewClick={handlePreviewClick}
+          />
         </TabsContent>
 
         <TabsContent value="sent">
-          <CampaignTable 
-            campaigns={sentCampaigns} 
-            getStatusBadge={getStatusBadge}
-            onCampaignClick={handleCampaignClick}
-          />
+            <CampaignTable 
+              campaigns={sentCampaigns} 
+              getStatusBadge={getStatusBadge} 
+              onCampaignClick={handleCampaignClick}
+              onPreviewClick={handlePreviewClick}
+            />
         </TabsContent>
 
         <TabsContent value="failed">
-          <CampaignTable 
-            campaigns={failedCampaigns} 
-            getStatusBadge={getStatusBadge}
-            onCampaignClick={handleCampaignClick}
-          />
+            <CampaignTable 
+              campaigns={failedCampaigns} 
+              getStatusBadge={getStatusBadge} 
+              onCampaignClick={handleCampaignClick}
+              onPreviewClick={handlePreviewClick}
+            />
         </TabsContent>
 
         <TabsContent value="draft">
-          <CampaignTable 
-            campaigns={draftCampaigns} 
-            getStatusBadge={getStatusBadge}
-            onCampaignClick={handleCampaignClick}
-          />
+            <CampaignTable 
+              campaigns={draftCampaigns} 
+              getStatusBadge={getStatusBadge} 
+              onCampaignClick={handleCampaignClick}
+              onPreviewClick={handlePreviewClick}
+            />
         </TabsContent>
       </Tabs>
 
+      {/* Campaign Preview Dialog */}
+      <Dialog open={!!previewCampaign} onOpenChange={() => setPreviewCampaign(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Campaign Preview: {previewCampaign?.settings.subject_line}</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-auto max-h-[calc(90vh-8rem)]">
+            {loadingPreview ? (
+              <div className="flex items-center justify-center p-8">
+                <RefreshCw className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <div 
+                className="border rounded-lg bg-background p-4"
+                dangerouslySetInnerHTML={{ __html: campaignHtml }}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Campaign Detail Dialog */}
       <Dialog open={!!selectedCampaign} onOpenChange={(open) => !open && setSelectedCampaign(null)}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -443,11 +498,13 @@ export const MailchimpCampaignsTab = () => {
 const CampaignTable = ({ 
   campaigns, 
   getStatusBadge,
-  onCampaignClick
+  onCampaignClick,
+  onPreviewClick
 }: { 
   campaigns?: Campaign[]; 
   getStatusBadge: (status: string) => React.ReactNode;
   onCampaignClick: (campaign: Campaign) => void;
+  onPreviewClick?: (campaign: Campaign) => void;
 }) => {
   const getCampaignName = (campaign: Campaign) => {
     return campaign.settings.title || campaign.settings.subject_line || `Campaign ${campaign.web_id}`;
@@ -493,13 +550,26 @@ const CampaignTable = ({
                   : 'Not sent'}
               </TableCell>
               <TableCell>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onCampaignClick(campaign)}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
+                <div className="flex gap-2">
+                  {onPreviewClick && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onPreviewClick(campaign)}
+                      title="Preview campaign"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onCampaignClick(campaign)}
+                    title="View details"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
