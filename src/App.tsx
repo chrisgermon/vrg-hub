@@ -76,7 +76,6 @@ const SharedModality = lazy(() => import("./pages/SharedModality"));
 const MissionStatement = lazy(() => import("./pages/MissionStatement"));
 const ExternalProviders = lazy(() => import("./pages/ExternalProviders"));
 const EmailTest = lazy(() => import("./pages/EmailTest"));
-const GoFaxTest = lazy(() => import("./pages/GoFaxTest"));
 
 const protectedLayoutRoutes: Array<{
   path: string;
@@ -151,7 +150,6 @@ const protectedLayoutRoutes: Array<{
   { path: "/install", element: <Install /> },
   { path: "/mission-statement", element: <MissionStatement /> },
   { path: "/email-test", element: <EmailTest />, requiredRole: ["super_admin", "tenant_admin", "manager"] },
-  { path: "/gofax-test", element: <GoFaxTest /> },
   ];
 
 const queryClient = new QueryClient();
