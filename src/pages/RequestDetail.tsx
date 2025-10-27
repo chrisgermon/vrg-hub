@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, Mail, X, StickyNote, UserCog, Clock, Phone, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Loader2, Mail, X, StickyNote, UserCog } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { formatRequestId } from '@/lib/requestUtils';
@@ -344,36 +344,6 @@ export default function RequestDetail() {
 
           {/* Right Sidebar: Ticket Information */}
           <div className="space-y-4">
-            {/* Service Level Agreement */}
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="font-semibold mb-2">Service Level Agreement</h3>
-                <div className="bg-green-500 text-white p-3 rounded-lg text-center">
-                  <div className="text-sm">Default SLA</div>
-                  <div className="text-xs">Low</div>
-                  <div className="text-lg font-bold mt-1">07:28</div>
-                </div>
-                <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                  <div>Response Target: {format(new Date(request.created_at), 'dd/MM/yyyy h:mm a')}</div>
-                  <div>Resolution Target: {format(new Date(request.created_at), 'dd/MM/yyyy h:mm a')}</div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Timer */}
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="font-semibold mb-2">Timer</h3>
-                <div className="text-center">
-                  <div className="text-2xl font-mono">00:00:00</div>
-                  <Button size="sm" variant="outline" className="mt-2 w-full">
-                    <Clock className="w-4 h-4 mr-2" />
-                    Start Timer
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Ticket Information */}
             <Card>
               <CardContent className="p-4 space-y-3">
@@ -457,17 +427,6 @@ export default function RequestDetail() {
                 <div>
                   <p className="text-xs text-muted-foreground">Email Address</p>
                   <p className="text-sm">{request.profile?.email || 'N/A'}</p>
-                </div>
-
-                <div className="pt-2">
-                  <Button size="sm" variant="outline" className="w-full mb-2">
-                    <Phone className="w-4 h-4 mr-2" />
-                    Call on Microsoft Teams
-                  </Button>
-                  <Button size="sm" variant="outline" className="w-full">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Message Directly on Teams
-                  </Button>
                 </div>
 
                 {!isDepartmentRequest && request.locations?.name && (
