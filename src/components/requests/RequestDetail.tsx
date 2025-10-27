@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Mail, MessageSquare, X, Phone, StickyNote, Package, UserCog, Calendar, Clock } from 'lucide-react';
+import { Loader2, Mail, X, StickyNote, UserCog, Clock, Phone, MessageSquare } from 'lucide-react';
 import { formatAUDateTimeFull } from '@/lib/dateUtils';
 import { RequestStatus } from '@/types/request';
 import { RequestComments } from './RequestComments';
@@ -140,32 +140,16 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
               Email User
             </Button>
             <Button variant="outline" size="sm">
-              <MessageSquare className="w-4 h-4 mr-2" />
-              ChatGPT Response
-            </Button>
-            <Button variant="outline" size="sm">
               <X className="w-4 h-4 mr-2" />
               Close with Response
-            </Button>
-            <Button variant="outline" size="sm">
-              <Phone className="w-4 h-4 mr-2" />
-              SMS User
             </Button>
             <Button variant="outline" size="sm">
               <StickyNote className="w-4 h-4 mr-2" />
               Private Note
             </Button>
             <Button variant="outline" size="sm">
-              <Package className="w-4 h-4 mr-2" />
-              Issue Item
-            </Button>
-            <Button variant="outline" size="sm">
               <UserCog className="w-4 h-4 mr-2" />
               Re-Assign
-            </Button>
-            <Button variant="outline" size="sm">
-              <Calendar className="w-4 h-4 mr-2" />
-              Create Appointment
             </Button>
           </div>
         </div>

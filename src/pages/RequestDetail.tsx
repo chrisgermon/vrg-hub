@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, Mail, MessageSquare, X, Phone, StickyNote, Package, UserCog, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, Loader2, Mail, X, StickyNote, UserCog, Clock, Phone, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { formatRequestId } from '@/lib/requestUtils';
@@ -218,32 +218,16 @@ export default function RequestDetail() {
               Email User
             </Button>
             <Button variant="outline" size="sm">
-              <MessageSquare className="w-4 h-4 mr-2" />
-              ChatGPT Response
-            </Button>
-            <Button variant="outline" size="sm">
               <X className="w-4 h-4 mr-2" />
               Close with Response
-            </Button>
-            <Button variant="outline" size="sm">
-              <Phone className="w-4 h-4 mr-2" />
-              SMS User
             </Button>
             <Button variant="outline" size="sm">
               <StickyNote className="w-4 h-4 mr-2" />
               Private Note
             </Button>
             <Button variant="outline" size="sm">
-              <Package className="w-4 h-4 mr-2" />
-              Issue Item
-            </Button>
-            <Button variant="outline" size="sm">
               <UserCog className="w-4 h-4 mr-2" />
               Re-Assign
-            </Button>
-            <Button variant="outline" size="sm">
-              <Calendar className="w-4 h-4 mr-2" />
-              Create Appointment
             </Button>
           </div>
         </div>
