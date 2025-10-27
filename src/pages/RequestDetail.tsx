@@ -19,6 +19,7 @@ import { PrivateNoteDialog } from '@/components/requests/PrivateNoteDialog';
 import { ReassignDialog } from '@/components/requests/ReassignDialog';
 import { EditRequestDialog } from '@/components/requests/EditRequestDialog';
 import { useAuth } from '@/hooks/useAuth';
+import { CCEmailsManager } from '@/components/requests/CCEmailsManager';
 
 type UnifiedRequest = {
   id: string;
@@ -492,18 +493,11 @@ export default function RequestDetail() {
                   </div>
                 </div>
 
-                {request.cc_emails && request.cc_emails.length > 0 && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">CC Notifications</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {request.cc_emails.map((email: string) => (
-                        <Badge key={email} variant="secondary" className="text-xs">
-                          {email}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <CCEmailsManager
+                  requestId={request.id}
+                  requestType={request.type}
+                  currentEmails={request.cc_emails || []}
+                />
               </CardContent>
             </Card>
 
