@@ -113,7 +113,7 @@ export const MailchimpCampaignsTab = () => {
 
     const campaignInfo = [
       ['Campaign Details'],
-      ['Title', selectedCampaign.settings.title],
+      ['Title', selectedCampaign.settings.title || selectedCampaign.settings.subject_line || `Campaign ${selectedCampaign.web_id}`],
       ['Subject', selectedCampaign.settings.subject_line],
       ['Status', selectedCampaign.status],
       ['Emails Sent', selectedCampaign.emails_sent],
@@ -153,7 +153,7 @@ export const MailchimpCampaignsTab = () => {
     }
 
     const exportData = campaigns.map(campaign => ({
-      'Campaign Name': campaign.settings.title,
+      'Campaign Name': campaign.settings.title || campaign.settings.subject_line || `Campaign ${campaign.web_id}`,
       'Subject': campaign.settings.subject_line,
       'Status': campaign.status,
       'Emails Sent': campaign.emails_sent,
@@ -303,7 +303,9 @@ export const MailchimpCampaignsTab = () => {
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle>{selectedCampaign?.settings.title}</DialogTitle>
+              <DialogTitle>
+                {selectedCampaign?.settings.title || selectedCampaign?.settings.subject_line || `Campaign ${selectedCampaign?.web_id}`}
+              </DialogTitle>
               <Button onClick={handleExportCampaign} size="sm" variant="outline">
                 <Download className="h-4 w-4 mr-2" />
                 Export to Excel
@@ -447,6 +449,10 @@ const CampaignTable = ({
   getStatusBadge: (status: string) => React.ReactNode;
   onCampaignClick: (campaign: Campaign) => void;
 }) => {
+  const getCampaignName = (campaign: Campaign) => {
+    return campaign.settings.title || campaign.settings.subject_line || `Campaign ${campaign.web_id}`;
+  };
+
   if (!campaigns || campaigns.length === 0) {
     return (
       <Card>
@@ -475,7 +481,7 @@ const CampaignTable = ({
         <TableBody>
           {campaigns.map((campaign) => (
             <TableRow key={campaign.id}>
-              <TableCell className="font-medium">{campaign.settings.title}</TableCell>
+              <TableCell className="font-medium">{getCampaignName(campaign)}</TableCell>
               <TableCell>{campaign.settings.subject_line}</TableCell>
               <TableCell>{getStatusBadge(campaign.status)}</TableCell>
               <TableCell>{campaign.emails_sent.toLocaleString()}</TableCell>
