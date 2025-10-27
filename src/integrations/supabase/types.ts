@@ -3212,14 +3212,18 @@ export type Database = {
       }
       tickets: {
         Row: {
+          approval_notes: string | null
+          approval_status: string | null
           approved_at: string | null
           approved_by: string | null
+          approver_id: string | null
           assigned_to: string | null
           attachments: Json | null
           brand_id: string | null
           completed_at: string | null
           created_at: string
           deadline: string | null
+          declined_reason: string | null
           department_id: string | null
           description: string | null
           id: string
@@ -3234,14 +3238,18 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approval_notes?: string | null
+          approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          approver_id?: string | null
           assigned_to?: string | null
           attachments?: Json | null
           brand_id?: string | null
           completed_at?: string | null
           created_at?: string
           deadline?: string | null
+          declined_reason?: string | null
           department_id?: string | null
           description?: string | null
           id?: string
@@ -3256,14 +3264,18 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approval_notes?: string | null
+          approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          approver_id?: string | null
           assigned_to?: string | null
           attachments?: Json | null
           brand_id?: string | null
           completed_at?: string | null
           created_at?: string
           deadline?: string | null
+          declined_reason?: string | null
           department_id?: string | null
           description?: string | null
           id?: string
@@ -3452,6 +3464,14 @@ export type Database = {
     }
     Functions: {
       clean_expired_sharepoint_cache: { Args: never; Returns: undefined }
+      get_request_approver: {
+        Args: {
+          p_brand_id: string
+          p_location_id: string
+          p_request_type_id: string
+        }
+        Returns: string
+      }
       has_rbac_role: {
         Args: { _role_name: string; _user_id: string }
         Returns: boolean

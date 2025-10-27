@@ -82,13 +82,35 @@ export function UnifiedRequestForm({ requestTypeId, requestTypeName, departmentI
       // Extract standard fields
       const { title, description, priority, ...customFields } = formData;
 
+      // Determine if approval is required
+      const requiresApproval = formTemplate?.settings?.require_approval || false;
+      
+      // Get approver if needed
+      let approverId = null;
+      let initialStatus = 'inbox';
+      let approvalStatus = 'none';
+
+      if (requiresApproval) {
+        const { data: approverData } = await supabase.rpc('get_request_approver', {
+          p_brand_id: brandId || null,
+          p_location_id: locationId || null,
+          p_request_type_id: requestTypeId
+        });
+        
+        approverId = approverData;
+        initialStatus = 'pending_manager_approval';
+        approvalStatus = 'pending';
+      }
+
       const { data, error } = await supabase
         .from('tickets')
         .insert({
           title: title || 'Untitled Request',
           description: description || null,
           priority: priority || 'medium',
-          status: 'inbox',
+          status: initialStatus,
+          approval_status: approvalStatus,
+          approver_id: approverId,
           user_id: user.id,
           request_type_id: requestTypeId,
           department_id: departmentId || null,
@@ -96,10 +118,21 @@ export function UnifiedRequestForm({ requestTypeId, requestTypeName, departmentI
           location_id: locationId || null,
           metadata: customFields, // Store all custom fields in metadata
         })
-        .select('request_number')
+        .select('id, request_number')
         .single();
 
       if (error) throw error;
+
+      // Send approval email if needed
+      if (requiresApproval && approverId) {
+        await supabase.functions.invoke('send-approval-request', {
+          body: {
+            ticketId: data.id,
+            requestNumber: data.request_number,
+            approverId
+          }
+        });
+      }
 
       toast.success('Request submitted successfully');
       navigate(`/request/${data.request_number}`);

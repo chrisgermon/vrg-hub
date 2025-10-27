@@ -21,10 +21,11 @@ export function PendingApprovals({ refreshTrigger }: PendingApprovalsProps) {
     queryKey: ['pending-approvals', user?.id, refreshTrigger],
     queryFn: async () => {
       const { data: requests, error } = await supabase
-        .from('hardware_requests')
+        .from('tickets')
         .select('*')
-        .in('status', ['pending_manager_approval', 'pending_admin_approval'])
-        .order('created_at', { ascending: false});
+        .eq('approval_status', 'pending')
+        .or(`approver_id.eq.${user?.id}`)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       if (!requests) return [];
@@ -33,11 +34,13 @@ export function PendingApprovals({ refreshTrigger }: PendingApprovalsProps) {
       const userIds = [...new Set(requests.map(r => r.user_id))];
       const brandIds = [...new Set(requests.map(r => r.brand_id).filter(Boolean))];
       const locationIds = [...new Set(requests.map(r => r.location_id).filter(Boolean))];
+      const requestTypeIds = [...new Set(requests.map(r => r.request_type_id).filter(Boolean))];
 
-      const [profiles, brands, locations] = await Promise.all([
+      const [profiles, brands, locations, requestTypes] = await Promise.all([
         userIds.length > 0 ? supabase.from('profiles').select('id, full_name, email').in('id', userIds) : { data: [] },
         brandIds.length > 0 ? supabase.from('brands').select('id, name').in('id', brandIds) : { data: [] },
         locationIds.length > 0 ? supabase.from('locations').select('id, name').in('id', locationIds) : { data: [] },
+        requestTypeIds.length > 0 ? supabase.from('request_types').select('id, name').in('id', requestTypeIds) : { data: [] },
       ]);
 
       // Map the data
@@ -46,6 +49,7 @@ export function PendingApprovals({ refreshTrigger }: PendingApprovalsProps) {
         requester: profiles.data?.find(p => p.id === request.user_id),
         brand: brands.data?.find(b => b.id === request.brand_id),
         location: locations.data?.find(l => l.id === request.location_id),
+        request_type: requestTypes.data?.find(rt => rt.id === request.request_type_id),
       }));
     },
     enabled: !!user?.id,
@@ -53,13 +57,22 @@ export function PendingApprovals({ refreshTrigger }: PendingApprovalsProps) {
 
   const updateRequestStatus = useMutation({
     mutationFn: async ({ requestId, status, notes }: { requestId: string; status: string; notes?: string }) => {
+      const updates: any = {
+        status,
+        approval_status: status === 'approved' ? 'approved' : 'declined',
+        approved_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      if (status === 'approved') {
+        updates.approval_notes = notes || null;
+      } else if (status === 'declined') {
+        updates.declined_reason = notes || 'Declined by approver';
+      }
+
       const { error } = await supabase
-        .from('hardware_requests')
-        .update({
-          status,
-          [`${status.includes('admin') ? 'admin' : 'manager'}_approval_notes`]: notes,
-          [`${status.includes('admin') ? 'admin' : 'manager'}_approved_at`]: status.includes('approved') ? new Date().toISOString() : null,
-        })
+        .from('tickets')
+        .update(updates)
         .eq('id', requestId);
 
       if (error) throw error;
@@ -75,14 +88,7 @@ export function PendingApprovals({ refreshTrigger }: PendingApprovalsProps) {
   });
 
   const handleApprove = (requestId: string) => {
-    const request = pendingRequests.find(r => r.id === requestId);
-    if (!request) return;
-
-    const newStatus = request.status === 'pending_manager_approval' 
-      ? 'pending_admin_approval' 
-      : 'approved';
-
-    updateRequestStatus.mutate({ requestId, status: newStatus });
+    updateRequestStatus.mutate({ requestId, status: 'approved' });
   };
 
   const handleDecline = (requestId: string) => {
@@ -132,8 +138,13 @@ export function PendingApprovals({ refreshTrigger }: PendingApprovalsProps) {
                 <div className="space-y-1">
                   <h4 className="font-medium">{request.title}</h4>
                   <p className="text-sm text-muted-foreground">
-                    Requested by: {request.requester?.full_name || request.requester?.email}
+                    Requested by: {request.requester?.full_name || request.requester?.email || 'Unknown'}
                   </p>
+                  {request.request_type && (
+                    <p className="text-sm text-muted-foreground">
+                      Type: {request.request_type.name}
+                    </p>
+                  )}
                   {request.brand && (
                     <p className="text-sm text-muted-foreground">
                       Brand: {request.brand.name}
@@ -175,7 +186,7 @@ export function PendingApprovals({ refreshTrigger }: PendingApprovalsProps) {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => navigate(`/requests/${request.id}`)}
+                  onClick={() => navigate(`/request/${request.request_number}`)}
                 >
                   View Details
                 </Button>
