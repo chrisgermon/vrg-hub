@@ -2,14 +2,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Mail, MessageSquare, X, Phone, StickyNote, Package, UserCog, Calendar, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { formatRequestId } from '@/lib/requestUtils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RequestActivity } from '@/components/requests/RequestActivity';
+import { Card, CardContent } from '@/components/ui/card';
+import { RequestComments } from '@/components/requests/RequestComments';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
 
 type UnifiedRequest = {
   id: string;
@@ -192,244 +194,315 @@ export default function RequestDetail() {
   const isDepartmentRequest = request.type === 'department';
 
   return (
-    <div className="container max-w-4xl mx-auto py-8">
-      <Button
-        variant="ghost"
-        onClick={() => navigate('/requests')}
-        className="mb-4"
-      >
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to Requests
-      </Button>
-
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl font-bold">{request.title}</h1>
-          <Badge variant={getStatusColor(request.status) as any}>
-            {getStatusLabel(request.status)}
-          </Badge>
+    <div className="min-h-screen bg-muted/30">
+      {/* Header with Back Button */}
+      <div className="border-b bg-background">
+        <div className="container mx-auto px-4 py-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/requests')}
+            size="sm"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Requests
+          </Button>
         </div>
-        <p className="text-muted-foreground">
-          Request {request.request_number ? formatRequestId(request.request_number) : formatRequestId(request.id)}
-        </p>
       </div>
 
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Request ID</p>
-              <p className="font-mono">
-                {request.request_number ? formatRequestId(request.request_number) : formatRequestId(request.id)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Title</p>
-              <p>{request.title}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Description</p>
-              <p>{request.description || 'N/A'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Status</p>
-              <Badge variant={getStatusColor(request.status) as any}>
-                {getStatusLabel(request.status)}
-              </Badge>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Priority</p>
-              <p className="uppercase">{request.priority}</p>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Action Buttons Bar */}
+      <div className="border-b bg-background">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <Button variant="outline" size="sm">
+              <Mail className="w-4 h-4 mr-2" />
+              Email User
+            </Button>
+            <Button variant="outline" size="sm">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              ChatGPT Response
+            </Button>
+            <Button variant="outline" size="sm">
+              <X className="w-4 h-4 mr-2" />
+              Close with Response
+            </Button>
+            <Button variant="outline" size="sm">
+              <Phone className="w-4 h-4 mr-2" />
+              SMS User
+            </Button>
+            <Button variant="outline" size="sm">
+              <StickyNote className="w-4 h-4 mr-2" />
+              Private Note
+            </Button>
+            <Button variant="outline" size="sm">
+              <Package className="w-4 h-4 mr-2" />
+              Issue Item
+            </Button>
+            <Button variant="outline" size="sm">
+              <UserCog className="w-4 h-4 mr-2" />
+              Re-Assign
+            </Button>
+            <Button variant="outline" size="sm">
+              <Calendar className="w-4 h-4 mr-2" />
+              Create Appointment
+            </Button>
+          </div>
+        </div>
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Requester</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Name</p>
-              <p>{request.profile?.full_name || 'N/A'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Email</p>
-              <p>{request.profile?.email || 'N/A'}</p>
-            </div>
-            {!isDepartmentRequest && (
-              <>
-                <div>
-                  <p className="text-sm text-muted-foreground">Location</p>
-                  <p>{request.locations?.name || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Brand</p>
-                  <p>{request.brands?.display_name || 'N/A'}</p>
-                </div>
-              </>
-            )}
-            {isDepartmentRequest && request.department && (
-              <div>
-                <p className="text-sm text-muted-foreground">Department</p>
-                <p>{request.department}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {isDepartmentRequest && request.form_data && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Request Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {Object.entries(request.form_data as Record<string, any>).map(([key, value]) => (
-                <div key={key}>
-                  <p className="text-sm text-muted-foreground capitalize">
-                    {key.replace(/_/g, ' ')}
-                  </p>
-                  <p>{String(value)}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        {!isDepartmentRequest && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Business Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Business Justification</p>
-                {(() => {
-                  try {
-                    // Try to parse as JSON
-                    const parsed = JSON.parse(request.business_justification || '{}');
-                    
-                    // If it has form_data, display that
-                    if (parsed.form_data) {
-                      return (
-                        <div className="space-y-3">
-                          {Object.entries(parsed.form_data as Record<string, any>).map(([key, value]) => (
-                            <div key={key} className="pl-4 border-l-2 border-muted">
-                              <p className="text-xs text-muted-foreground capitalize mb-1">
-                                {key.replace(/_/g, ' ')}
-                              </p>
-                              <p className="text-sm">{String(value)}</p>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    }
-                    
-                    // Otherwise display all key-value pairs
-                    return (
-                      <div className="space-y-3">
-                        {Object.entries(parsed).map(([key, value]) => (
-                          <div key={key} className="pl-4 border-l-2 border-muted">
-                            <p className="text-xs text-muted-foreground capitalize mb-1">
-                              {key.replace(/_/g, ' ')}
-                            </p>
-                            <p className="text-sm">{String(value)}</p>
-                          </div>
-                        ))}
+      {/* Main Content Area */}
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left: Email-style Message View */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Ticket Header */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {request.profile?.full_name?.substring(0, 2).toUpperCase() || 'VR'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <div>
+                        <h3 className="font-semibold text-lg">{request.profile?.full_name || 'Unknown User'}</h3>
+                        <p className="text-sm text-muted-foreground">First User Email</p>
                       </div>
-                    );
-                  } catch {
-                    // If not JSON, display as plain text
-                    return <p>{request.business_justification}</p>;
-                  }
-                })()}
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Clinic Name</p>
-                <p>{request.clinic_name || 'N/A'}</p>
-              </div>
-              {request.total_amount && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Amount</p>
-                  <p>{request.currency} {request.total_amount.toLocaleString()}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {(request.manager_approved_at || request.admin_approved_at || request.declined_at) && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Approval Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {request.manager_approved_at && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Manager Approved</p>
-                  <p>{format(new Date(request.manager_approved_at), 'PPpp')}</p>
-                </div>
-              )}
-              {request.manager_approval_notes && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Manager Notes</p>
-                  <p>{request.manager_approval_notes}</p>
-                </div>
-              )}
-              {request.admin_approved_at && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Admin Approved</p>
-                  <p>{format(new Date(request.admin_approved_at), 'PPpp')}</p>
-                </div>
-              )}
-              {request.admin_approval_notes && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Admin Notes</p>
-                  <p>{request.admin_approval_notes}</p>
-                </div>
-              )}
-              {request.declined_at && (
-                <>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Declined</p>
-                    <p>{format(new Date(request.declined_at), 'PPpp')}</p>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(request.created_at), 'dd/MM/yyyy h:mm a')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-sm text-muted-foreground">To:</span>
+                      <span className="text-sm">{request.profile?.email || 'support@crowdit.com.au'}</span>
+                    </div>
                   </div>
+                </div>
+
+                <Separator className="my-4" />
+
+                {/* Ticket Content */}
+                <div className="space-y-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Decline Reason</p>
-                    <p>{request.decline_reason || 'N/A'}</p>
+                    <h2 className="text-xl font-semibold mb-2">{request.title}</h2>
+                    {request.description && (
+                      <p className="text-muted-foreground whitespace-pre-wrap">{request.description}</p>
+                    )}
                   </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Timeline</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Created</p>
-              <p>{format(new Date(request.created_at), 'PPpp')}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Last Updated</p>
-              <p>{format(new Date(request.updated_at), 'PPpp')}</p>
-            </div>
-            {request.expected_delivery_date && (
-              <div>
-                <p className="text-sm text-muted-foreground">Expected Delivery</p>
-                <p>{format(new Date(request.expected_delivery_date), 'PP')}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  {request.business_justification && (
+                    <div className="bg-muted/50 p-4 rounded-lg">
+                      <div className="text-sm whitespace-pre-wrap">
+                        {(() => {
+                          try {
+                            const parsed = JSON.parse(request.business_justification);
+                            if (parsed.form_data) {
+                              return (
+                                <div className="space-y-2">
+                                  {Object.entries(parsed.form_data as Record<string, any>).map(([key, value]) => (
+                                    <div key={key}>
+                                      <span className="font-medium capitalize">{key.replace(/_/g, ' ')}: </span>
+                                      <span>{String(value)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            }
+                            return <pre className="text-sm">{JSON.stringify(parsed, null, 2)}</pre>;
+                          } catch {
+                            return <p>{request.business_justification}</p>;
+                          }
+                        })()}
+                      </div>
+                    </div>
+                  )}
 
-        <RequestActivity requestId={request.id} requestType={request.type} />
+                  {!isDepartmentRequest && request.clinic_name && (
+                    <div className="text-sm">
+                      <span className="font-medium">Clinic: </span>
+                      <span>{request.clinic_name}</span>
+                    </div>
+                  )}
+
+                  {!isDepartmentRequest && (
+                    <div className="flex gap-4 text-sm">
+                      {request.brands?.display_name && (
+                        <div>
+                          <span className="font-medium">Brand: </span>
+                          <span>{request.brands.display_name}</span>
+                        </div>
+                      )}
+                      {request.locations?.name && (
+                        <div>
+                          <span className="font-medium">Location: </span>
+                          <span>{request.locations.name}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {isDepartmentRequest && request.department && (
+                    <div className="text-sm">
+                      <span className="font-medium">Department: </span>
+                      <span>{request.department}</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Comments/Activity Section */}
+            <RequestComments requestId={request.id} requestType={request.type} />
+          </div>
+
+          {/* Right Sidebar: Ticket Information */}
+          <div className="space-y-4">
+            {/* Service Level Agreement */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold mb-2">Service Level Agreement</h3>
+                <div className="bg-green-500 text-white p-3 rounded-lg text-center">
+                  <div className="text-sm">Default SLA</div>
+                  <div className="text-xs">Low</div>
+                  <div className="text-lg font-bold mt-1">07:28</div>
+                </div>
+                <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                  <div>Response Target: {format(new Date(request.created_at), 'dd/MM/yyyy h:mm a')}</div>
+                  <div>Resolution Target: {format(new Date(request.created_at), 'dd/MM/yyyy h:mm a')}</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Timer */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold mb-2">Timer</h3>
+                <div className="text-center">
+                  <div className="text-2xl font-mono">00:00:00</div>
+                  <Button size="sm" variant="outline" className="mt-2 w-full">
+                    <Clock className="w-4 h-4 mr-2" />
+                    Start Timer
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Ticket Information */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <h3 className="font-semibold">Ticket Information</h3>
+                
+                <div>
+                  <p className="text-xs text-muted-foreground">Date Reported</p>
+                  <p className="text-sm">{format(new Date(request.created_at), 'dd/MM/yyyy h:mm a')}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Ticket Type</p>
+                  <p className="text-sm capitalize">{request.type || 'Incident'}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Workflow</p>
+                  <p className="text-sm">*None*</p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <Badge variant={getStatusColor(request.status) as any} className="mt-1">
+                    {getStatusLabel(request.status)}
+                  </Badge>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Priority</p>
+                  <Badge variant="outline" className="mt-1 uppercase">
+                    {request.priority}
+                  </Badge>
+                </div>
+
+                {request.total_amount && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Amount</p>
+                    <p className="text-sm font-semibold">{request.currency} {request.total_amount.toLocaleString()}</p>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Team</p>
+                  <p className="text-sm">Support</p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Assigned Agent</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="text-xs bg-purple-500 text-white">AM</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">Auto Assigned</span>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Category</p>
+                  <p className="text-sm">{isDepartmentRequest ? request.department : 'Hardware Request'}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* End-User Details */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <h3 className="font-semibold">End-User Details</h3>
+                
+                <div>
+                  <p className="text-xs text-muted-foreground">Client</p>
+                  <p className="text-sm text-primary">{request.profile?.full_name || 'Unknown'}</p>
+                </div>
+
+                {!isDepartmentRequest && request.brands?.display_name && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Site</p>
+                    <p className="text-sm text-primary">{request.brands.display_name}</p>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Email Address</p>
+                  <p className="text-sm">{request.profile?.email || 'N/A'}</p>
+                </div>
+
+                <div className="pt-2">
+                  <Button size="sm" variant="outline" className="w-full mb-2">
+                    <Phone className="w-4 h-4 mr-2" />
+                    Call on Microsoft Teams
+                  </Button>
+                  <Button size="sm" variant="outline" className="w-full">
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Message Directly on Teams
+                  </Button>
+                </div>
+
+                {!isDepartmentRequest && request.locations?.name && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Contact Address</p>
+                    <p className="text-sm">{request.locations.name}</p>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Client Notes</p>
+                  <div className="text-sm bg-muted/50 p-2 rounded mt-1 min-h-[80px]">
+                    {request.description || 'No notes'}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
