@@ -14,6 +14,10 @@ import { formatRequestId } from '@/lib/requestUtils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
+import { EmailUserDialog } from './EmailUserDialog';
+import { CloseRequestDialog } from './CloseRequestDialog';
+import { PrivateNoteDialog } from './PrivateNoteDialog';
+import { ReassignDialog } from './ReassignDialog';
 
 interface Request {
   id: string;
@@ -43,6 +47,10 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
   const id = propRequestId || paramId;
   const [request, setRequest] = useState<Request | null>(null);
   const [loading, setLoading] = useState(true);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
   const { toast } = useToast();
   const { userRole } = useAuth();
   const navigate = useNavigate();
@@ -135,25 +143,57 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
       <div className="border-b bg-background mb-4">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-2 overflow-x-auto">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => setEmailDialogOpen(true)}>
               <Mail className="w-4 h-4 mr-2" />
               Email User
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => setCloseDialogOpen(true)}>
               <X className="w-4 h-4 mr-2" />
               Close with Response
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => setNoteDialogOpen(true)}>
               <StickyNote className="w-4 h-4 mr-2" />
               Private Note
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => setReassignDialogOpen(true)}>
               <UserCog className="w-4 h-4 mr-2" />
               Re-Assign
             </Button>
           </div>
         </div>
       </div>
+
+      {/* Dialogs */}
+      <EmailUserDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        requestId={request.id}
+        userEmail="user@example.com"
+        requestTitle={request.title}
+      />
+      
+      <CloseRequestDialog
+        open={closeDialogOpen}
+        onOpenChange={setCloseDialogOpen}
+        requestId={request.id}
+        requestType="hardware"
+        onSuccess={loadRequest}
+      />
+      
+      <PrivateNoteDialog
+        open={noteDialogOpen}
+        onOpenChange={setNoteDialogOpen}
+        requestId={request.id}
+        onSuccess={loadRequest}
+      />
+      
+      <ReassignDialog
+        open={reassignDialogOpen}
+        onOpenChange={setReassignDialogOpen}
+        requestId={request.id}
+        requestType="hardware"
+        onSuccess={loadRequest}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Email-style Message View */}

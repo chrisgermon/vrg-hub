@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +13,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { RequestComments } from '@/components/requests/RequestComments';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { EmailUserDialog } from '@/components/requests/EmailUserDialog';
+import { CloseRequestDialog } from '@/components/requests/CloseRequestDialog';
+import { PrivateNoteDialog } from '@/components/requests/PrivateNoteDialog';
+import { ReassignDialog } from '@/components/requests/ReassignDialog';
 
 type UnifiedRequest = {
   id: string;
@@ -46,6 +51,11 @@ export default function RequestDetail() {
   const { requestNumber, id } = useParams<{ requestNumber?: string; id?: string }>();
   const navigate = useNavigate();
   const requestParam = requestNumber || id;
+  
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
 
   // Query to find request by the formatted ID or UUID
   const { data: request, isLoading, error } = useQuery<UnifiedRequest | null>({
@@ -213,25 +223,54 @@ export default function RequestDetail() {
       <div className="border-b bg-background">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-2 overflow-x-auto">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => setEmailDialogOpen(true)}>
               <Mail className="w-4 h-4 mr-2" />
               Email User
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => setCloseDialogOpen(true)}>
               <X className="w-4 h-4 mr-2" />
               Close with Response
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => setNoteDialogOpen(true)}>
               <StickyNote className="w-4 h-4 mr-2" />
               Private Note
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => setReassignDialogOpen(true)}>
               <UserCog className="w-4 h-4 mr-2" />
               Re-Assign
             </Button>
           </div>
         </div>
       </div>
+
+      {/* Dialogs */}
+      <EmailUserDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        requestId={request.id}
+        userEmail={request.profile?.email || 'user@example.com'}
+        requestTitle={request.title || 'Request'}
+      />
+      
+      <CloseRequestDialog
+        open={closeDialogOpen}
+        onOpenChange={setCloseDialogOpen}
+        requestId={request.id}
+        requestType={request.type}
+      />
+      
+      <PrivateNoteDialog
+        open={noteDialogOpen}
+        onOpenChange={setNoteDialogOpen}
+        requestId={request.id}
+      />
+      
+      <ReassignDialog
+        open={reassignDialogOpen}
+        onOpenChange={setReassignDialogOpen}
+        requestId={request.id}
+        requestType={request.type}
+      />
 
       {/* Main Content Area */}
       <div className="container mx-auto px-4 py-6">
