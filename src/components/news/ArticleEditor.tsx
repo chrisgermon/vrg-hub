@@ -123,6 +123,40 @@ export default function ArticleEditor({ articleId: propArticleId, onSave }: Arti
     setFeaturedImageUrl('');
   };
 
+  const generateSlug = (text: string): string => {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+      .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+  };
+
+  const ensureUniqueSlug = async (baseSlug: string, excludeId?: string): Promise<string> => {
+    let slug = baseSlug;
+    let counter = 1;
+
+    while (true) {
+      const { data, error } = await supabase
+        .from('news_articles')
+        .select('id')
+        .eq('slug', slug)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      // If no article found with this slug, or it's the current article, use it
+      if (!data || (excludeId && data.id === excludeId)) {
+        return slug;
+      }
+
+      // Otherwise, append counter and try again
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
 
@@ -137,9 +171,14 @@ export default function ArticleEditor({ articleId: propArticleId, onSave }: Arti
 
     setSaving(true);
     try {
+      // Generate slug from title
+      const baseSlug = generateSlug(title);
+      const slug = await ensureUniqueSlug(baseSlug, id);
+
       const articleData = {
         title,
         content,
+        slug,
         is_published: isPublished,
         featured_image_url: featuredImageUrl || null,
         author_id: user.id,
