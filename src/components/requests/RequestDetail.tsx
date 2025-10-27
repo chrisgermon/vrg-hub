@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Mail, X, StickyNote, UserCog } from 'lucide-react';
+import { Loader2, X, StickyNote, UserCog } from 'lucide-react';
 import { formatAUDateTimeFull } from '@/lib/dateUtils';
 import { RequestStatus } from '@/types/request';
 import { RequestComments } from './RequestComments';
@@ -14,7 +14,6 @@ import { formatRequestId } from '@/lib/requestUtils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
-import { EmailUserDialog } from './EmailUserDialog';
 import { CloseRequestDialog } from './CloseRequestDialog';
 import { PrivateNoteDialog } from './PrivateNoteDialog';
 import { ReassignDialog } from './ReassignDialog';
@@ -47,7 +46,6 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
   const id = propRequestId || paramId;
   const [request, setRequest] = useState<Request | null>(null);
   const [loading, setLoading] = useState(true);
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
@@ -143,10 +141,6 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
       <div className="border-b bg-background mb-4">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-2 overflow-x-auto">
-            <Button variant="outline" size="sm" onClick={() => setEmailDialogOpen(true)}>
-              <Mail className="w-4 h-4 mr-2" />
-              Email User
-            </Button>
             <Button variant="outline" size="sm" onClick={() => setCloseDialogOpen(true)}>
               <X className="w-4 h-4 mr-2" />
               Close with Response
@@ -164,14 +158,6 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
       </div>
 
       {/* Dialogs */}
-      <EmailUserDialog
-        open={emailDialogOpen}
-        onOpenChange={setEmailDialogOpen}
-        requestId={request.id}
-        userEmail="user@example.com"
-        requestTitle={request.title}
-      />
-      
       <CloseRequestDialog
         open={closeDialogOpen}
         onOpenChange={setCloseDialogOpen}

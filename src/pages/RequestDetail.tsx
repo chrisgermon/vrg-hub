@@ -13,7 +13,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { RequestComments } from '@/components/requests/RequestComments';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { EmailUserDialog } from '@/components/requests/EmailUserDialog';
 import { CloseRequestDialog } from '@/components/requests/CloseRequestDialog';
 import { PrivateNoteDialog } from '@/components/requests/PrivateNoteDialog';
 import { ReassignDialog } from '@/components/requests/ReassignDialog';
@@ -52,7 +51,6 @@ export default function RequestDetail() {
   const navigate = useNavigate();
   const requestParam = requestNumber || id;
   
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
@@ -223,10 +221,6 @@ export default function RequestDetail() {
       <div className="border-b bg-background">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-2 overflow-x-auto">
-            <Button variant="outline" size="sm" onClick={() => setEmailDialogOpen(true)}>
-              <Mail className="w-4 h-4 mr-2" />
-              Email User
-            </Button>
             <Button variant="outline" size="sm" onClick={() => setCloseDialogOpen(true)}>
               <X className="w-4 h-4 mr-2" />
               Close with Response
@@ -244,14 +238,6 @@ export default function RequestDetail() {
       </div>
 
       {/* Dialogs */}
-      <EmailUserDialog
-        open={emailDialogOpen}
-        onOpenChange={setEmailDialogOpen}
-        requestId={request.id}
-        userEmail={request.profile?.email || 'user@example.com'}
-        requestTitle={request.title || 'Request'}
-      />
-      
       <CloseRequestDialog
         open={closeDialogOpen}
         onOpenChange={setCloseDialogOpen}
