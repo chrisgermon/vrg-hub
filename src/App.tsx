@@ -121,6 +121,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/phone-directory", element: <CompanyDirectory /> },
   { path: "/company-directory", element: <CompanyDirectory /> },
   { path: "/external-providers", element: <ExternalProviders /> },
+  { path: "/knowledge-base", element: <KnowledgeBase /> },
   { path: "/marketing-campaigns", element: <MarketingCampaigns /> },
   { path: "/fax-campaigns", element: <Navigate to="/marketing-campaigns" replace /> },
   { path: "/mailchimp-campaigns", element: <Navigate to="/marketing-campaigns" replace /> },

@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { VideoLibrary } from '@/components/knowledge-base/VideoLibrary';
 
 export default function KnowledgeBase() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,20 +50,27 @@ export default function KnowledgeBase() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Knowledge Base</h1>
-        <p className="text-muted-foreground">Find answers and documentation</p>
+        <p className="text-muted-foreground">Find answers, documentation, and how-to videos</p>
       </div>
 
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search articles..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-      </div>
+      <Tabs defaultValue="articles" className="w-full">
+        <TabsList>
+          <TabsTrigger value="articles">Articles</TabsTrigger>
+          <TabsTrigger value="videos">Video Library</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="articles" className="space-y-6">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search articles..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
 
       {!searchQuery && categories.length > 0 && (
         <div>
@@ -115,7 +124,13 @@ export default function KnowledgeBase() {
             ))
           )}
         </div>
-      </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="videos">
+          <VideoLibrary />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
