@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Loader2, Send, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 interface RequestCommentsProps {
   requestId: string;
@@ -31,6 +32,18 @@ export function RequestComments({ requestId, requestType }: RequestCommentsProps
   const queryClient = useQueryClient();
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const quillRef = useRef<ReactQuill>(null);
+
+  const quillModules = useMemo(() => ({
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'color': [] }, { 'background': [] }],
+      ['link'],
+      ['clean']
+    ],
+  }), []);
 
   // Fetch comments
   const { data: comments, isLoading } = useQuery({
@@ -112,61 +125,59 @@ export function RequestComments({ requestId, requestType }: RequestCommentsProps
   }
 
   return (
-    <Card className="p-6">
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5" />
-          <h3 className="text-lg font-semibold">Request Activity</h3>
-        </div>
+    <Card className="p-4">
+      <div className="space-y-4">
+        <h3 className="font-semibold text-sm">Activity & Updates</h3>
 
         {/* Comments list */}
-        <div className="space-y-4">
+        <div className="space-y-3 max-h-[400px] overflow-y-auto">
           {comments && comments.length > 0 ? (
             comments.map((comment) => (
-              <div key={comment.id} className="flex gap-3 p-4 bg-muted/50 rounded-lg">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback>
-                    {comment.author_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{comment.author_name}</span>
-                      {comment.is_internal && (
-                        <span className="text-xs bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded">
-                          Internal
-                        </span>
-                      )}
+              <div key={comment.id} className="group cursor-pointer hover:bg-muted/50 p-2 rounded transition-colors">
+                <div className="flex gap-2 items-start">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="text-xs">
+                      {comment.author_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">{comment.author_name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(comment.created_at), 'MMM d, HH:mm')}
+                      </span>
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      {format(new Date(comment.created_at), 'MMM d, yyyy HH:mm')}
-                    </span>
+                    <div 
+                      className="text-sm text-muted-foreground line-clamp-2"
+                      dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }}
+                    />
                   </div>
-                  <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
                 </div>
               </div>
             ))
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No comments yet. Be the first to add a comment.
+            <p className="text-xs text-muted-foreground text-center py-4">
+              No activity yet
             </p>
           )}
         </div>
 
         {/* Add comment form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Textarea
+        <form onSubmit={handleSubmit} className="space-y-3 border-t pt-4">
+          <ReactQuill
+            ref={quillRef}
+            theme="snow"
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={setContent}
+            modules={quillModules}
             placeholder="Add a comment or update..."
-            className="min-h-[100px]"
-            disabled={isSubmitting}
+            className="min-h-[120px]"
           />
           <div className="flex justify-end">
             <Button
               type="submit"
-              disabled={!content.trim() || isSubmitting}
+              size="sm"
+              disabled={!content.trim() || content === '<p><br></p>' || isSubmitting}
               className="gap-2"
             >
               {isSubmitting ? (
@@ -174,7 +185,7 @@ export function RequestComments({ requestId, requestType }: RequestCommentsProps
               ) : (
                 <Send className="h-4 w-4" />
               )}
-              Add Comment
+              Add Update
             </Button>
           </div>
         </form>

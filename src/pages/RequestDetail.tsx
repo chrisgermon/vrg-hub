@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, Mail, X, StickyNote, UserCog } from 'lucide-react';
+import { ArrowLeft, Loader2, Mail, X, StickyNote, UserCog, Edit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { formatRequestId } from '@/lib/requestUtils';
@@ -16,6 +16,8 @@ import { Separator } from '@/components/ui/separator';
 import { CloseRequestDialog } from '@/components/requests/CloseRequestDialog';
 import { PrivateNoteDialog } from '@/components/requests/PrivateNoteDialog';
 import { ReassignDialog } from '@/components/requests/ReassignDialog';
+import { EditRequestDialog } from '@/components/requests/EditRequestDialog';
+import { useAuth } from '@/hooks/useAuth';
 
 type UnifiedRequest = {
   id: string;
@@ -51,9 +53,13 @@ export default function RequestDetail() {
   const navigate = useNavigate();
   const requestParam = requestNumber || id;
   
+  const { user, userRole } = useAuth();
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  const isManagerOrAdmin = ['manager', 'marketing_manager', 'tenant_admin', 'super_admin'].includes(userRole || '');
 
   // Query to find request by the formatted ID or UUID
   const { data: request, isLoading, error } = useQuery<UnifiedRequest | null>({
@@ -64,29 +70,36 @@ export default function RequestDetail() {
       // Check if it's a UUID (starts with a hex pattern)
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestParam);
 
+      // Try tickets table (unified system)
+      const numericPart = requestParam.replace('VRG-', '');
+      const targetNumber = parseInt(numericPart, 10);
+      
+      const { data: ticket } = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          requester:profiles!tickets_user_id_fkey(full_name, email),
+          assigned_user:profiles!tickets_assigned_to_fkey(full_name, email),
+          request_type:request_types(name),
+          brand:brands(display_name),
+          location:locations(name)
+        `)
+        .eq(isUUID ? 'id' : 'request_number', isUUID ? requestParam : targetNumber)
+        .maybeSingle();
+
+      if (ticket) {
+        return {
+          ...ticket,
+          type: 'hardware' as const,
+          profile: ticket.requester,
+          assigned_profile: ticket.assigned_user,
+          brands: ticket.brand ? { display_name: ticket.brand.display_name } : undefined,
+          locations: ticket.location ? { name: ticket.location.name } : undefined,
+        } as any;
+      }
+
+      // Fallback to old hardware_requests table
       if (isUUID) {
-        // Direct UUID lookup - try department_requests first
-        const { data: deptRequest } = await supabase
-          .from('department_requests' as any)
-          .select('*')
-          .eq('id', requestParam)
-          .maybeSingle();
-
-        if (deptRequest) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, email')
-            .eq('id', (deptRequest as any).user_id)
-            .maybeSingle();
-          
-          return { 
-            ...(deptRequest as any), 
-            type: 'department' as const, 
-            profile: profile || undefined 
-          } as UnifiedRequest;
-        }
-
-        // Try hardware_requests
         const { data: hwRequest } = await supabase
           .from('hardware_requests')
           .select(`
@@ -111,44 +124,39 @@ export default function RequestDetail() {
             profile: profile || undefined 
           };
         }
-
-        return null;
-      }
-
-      // Format VRG-##### lookup
-      const numericPart = requestParam.replace('VRG-', '');
-      const targetNumber = parseInt(numericPart, 10);
-      
-      // Try hardware requests by request_number
-      const { data: hwRequest } = await supabase
-        .from('hardware_requests')
-        .select(`
-          *,
-          request_number,
-          brands:brand_id(display_name),
-          locations:location_id(name)
-        `)
-        .eq('request_number', targetNumber)
-        .maybeSingle();
-
-      if (hwRequest) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name, email')
-          .eq('id', hwRequest.user_id)
+      } else {
+        const { data: hwRequest } = await supabase
+          .from('hardware_requests')
+          .select(`
+            *,
+            request_number,
+            brands:brand_id(display_name),
+            locations:location_id(name)
+          `)
+          .eq('request_number', targetNumber)
           .maybeSingle();
-        
-        return { 
-          ...hwRequest, 
-          type: 'hardware' as const, 
-          profile: profile || undefined 
-        };
+
+        if (hwRequest) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', hwRequest.user_id)
+            .maybeSingle();
+          
+          return { 
+            ...hwRequest, 
+            type: 'hardware' as const, 
+            profile: profile || undefined 
+          };
+        }
       }
 
       return null;
     },
     enabled: !!requestParam,
   });
+
+  const canEdit = isManagerOrAdmin || user?.id === request?.user_id;
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -221,6 +229,12 @@ export default function RequestDetail() {
       <div className="border-b bg-background">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-2 overflow-x-auto">
+            {canEdit && (
+              <Button variant="outline" size="sm" onClick={() => setEditDialogOpen(true)}>
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Request
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => setCloseDialogOpen(true)}>
               <X className="w-4 h-4 mr-2" />
               Close with Response
@@ -238,6 +252,12 @@ export default function RequestDetail() {
       </div>
 
       {/* Dialogs */}
+      <EditRequestDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        request={request}
+      />
+      
       <CloseRequestDialog
         open={closeDialogOpen}
         onOpenChange={setCloseDialogOpen}
@@ -363,8 +383,6 @@ export default function RequestDetail() {
               </CardContent>
             </Card>
 
-            {/* Comments/Activity Section */}
-            <RequestComments requestId={request.id} requestType={request.type} />
           </div>
 
           {/* Right Sidebar: Ticket Information */}
@@ -384,10 +402,6 @@ export default function RequestDetail() {
                   <p className="text-sm capitalize">{request.type || 'Incident'}</p>
                 </div>
 
-                <div>
-                  <p className="text-xs text-muted-foreground">Workflow</p>
-                  <p className="text-sm">*None*</p>
-                </div>
 
                 <div>
                   <p className="text-xs text-muted-foreground">Status</p>
@@ -416,13 +430,19 @@ export default function RequestDetail() {
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground">Assigned Agent</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs bg-purple-500 text-white">AM</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm">Auto Assigned</span>
-                  </div>
+                  <p className="text-xs text-muted-foreground">Assigned To</p>
+                  {(request as any).assigned_profile ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback className="text-xs bg-purple-500 text-white">
+                          {(request as any).assigned_profile.full_name?.substring(0, 2).toUpperCase() || 'NA'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm">{(request as any).assigned_profile.full_name || 'Assigned'}</span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Unassigned</p>
+                  )}
                 </div>
 
                 <div>
@@ -469,6 +489,9 @@ export default function RequestDetail() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Activity Feed */}
+            <RequestComments requestId={request.id} requestType={request.type} />
           </div>
         </div>
       </div>
