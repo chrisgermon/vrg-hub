@@ -4,11 +4,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BrandLocationSelect } from '@/components/ui/brand-location-select';
+import { DynamicFormRenderer } from '@/components/form-builder/DynamicFormRenderer';
+import { FormTemplate } from '@/types/form-builder';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
@@ -16,81 +14,87 @@ interface UnifiedRequestFormProps {
   requestTypeId: string;
   requestTypeName: string;
   departmentId?: string;
+  formTemplateId?: string;
 }
 
-interface FormData {
-  title: string;
-  description: string;
-  priority: string;
-  brand_id: string;
-  location_id: string;
-  metadata: Record<string, any>;
-}
-
-export function UnifiedRequestForm({ requestTypeId, requestTypeName, departmentId }: UnifiedRequestFormProps) {
+export function UnifiedRequestForm({ requestTypeId, requestTypeName, departmentId, formTemplateId }: UnifiedRequestFormProps) {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
-    title: '',
-    description: '',
-    priority: 'medium',
-    brand_id: profile?.brand_id || '',
-    location_id: profile?.location_id || '',
-    metadata: {},
-  });
+  const [loadingTemplate, setLoadingTemplate] = useState(true);
+  const [formTemplate, setFormTemplate] = useState<FormTemplate | null>(null);
+  const [brandId, setBrandId] = useState(profile?.brand_id || '');
+  const [locationId, setLocationId] = useState(profile?.location_id || '');
 
   useEffect(() => {
     if (profile) {
-      setFormData(prev => ({
-        ...prev,
-        brand_id: profile.brand_id || '',
-        location_id: profile.location_id || '',
-      }));
+      setBrandId(profile.brand_id || '');
+      setLocationId(profile.location_id || '');
     }
   }, [profile]);
 
-  const handleChange = (field: keyof FormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  useEffect(() => {
+    const fetchTemplate = async () => {
+      if (!formTemplateId) {
+        setLoadingTemplate(false);
+        return;
+      }
 
-  const handleBrandLocationChange = (brandId: string, locationId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      brand_id: brandId,
-      location_id: locationId,
-    }));
-  };
+      try {
+        const { data, error } = await supabase
+          .from('form_templates')
+          .select('*')
+          .eq('id', formTemplateId)
+          .eq('is_active', true)
+          .single();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+        if (error) throw error;
+        
+        // Parse JSON fields if they're coming as strings
+        const parsedData: FormTemplate = {
+          ...data,
+          fields: Array.isArray(data.fields) ? data.fields : JSON.parse(data.fields as string),
+          settings: data.settings && typeof data.settings === 'string' 
+            ? JSON.parse(data.settings) 
+            : (data.settings || undefined),
+        };
+        
+        setFormTemplate(parsedData);
+      } catch (error) {
+        console.error('Error fetching form template:', error);
+      } finally {
+        setLoadingTemplate(false);
+      }
+    };
+
+    fetchTemplate();
+  }, [formTemplateId]);
+
+  const handleSubmit = async (formData: any) => {
     if (!user) {
       toast.error('You must be logged in to submit a request');
-      return;
-    }
-
-    if (!formData.title.trim()) {
-      toast.error('Please enter a title');
       return;
     }
 
     setLoading(true);
 
     try {
+      // Extract standard fields
+      const { title, description, priority, ...customFields } = formData;
+
       const { data, error } = await supabase
         .from('tickets')
         .insert({
-          title: formData.title,
-          description: formData.description || null,
-          priority: formData.priority,
+          title: title || 'Untitled Request',
+          description: description || null,
+          priority: priority || 'medium',
           status: 'inbox',
           user_id: user.id,
           request_type_id: requestTypeId,
           department_id: departmentId || null,
-          brand_id: formData.brand_id || null,
-          location_id: formData.location_id || null,
-          metadata: formData.metadata,
+          brand_id: brandId || null,
+          location_id: locationId || null,
+          metadata: customFields, // Store all custom fields in metadata
         })
         .select('request_number')
         .single();
@@ -107,61 +111,49 @@ export function UnifiedRequestForm({ requestTypeId, requestTypeName, departmentI
     }
   };
 
+  if (loadingTemplate) {
+    return (
+      <Card>
+        <CardContent className="py-12 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{requestTypeName} Request</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => handleChange('title', e.target.value)}
-              placeholder="Brief description of your request"
-              required
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>{requestTypeName}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Brand and Location Selection */}
+          <div className="pb-6 border-b">
+            <h3 className="text-sm font-medium mb-4">Location Information</h3>
+            <BrandLocationSelect
+              selectedBrandId={brandId}
+              selectedLocationId={locationId}
+              onBrandChange={setBrandId}
+              onLocationChange={setLocationId}
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="Provide detailed information about your request"
-              rows={6}
+          {/* Custom Form Fields */}
+          {formTemplate ? (
+            <DynamicFormRenderer
+              template={formTemplate}
+              onSubmit={handleSubmit}
+              isSubmitting={loading}
             />
-          </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No custom form configured for this request type.
+            </div>
+          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="priority">Priority</Label>
-            <Select
-              value={formData.priority}
-              onValueChange={(value) => handleChange('priority', value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <BrandLocationSelect
-            selectedBrandId={formData.brand_id}
-            selectedLocationId={formData.location_id}
-            onBrandChange={(brandId) => handleBrandLocationChange(brandId, formData.location_id)}
-            onLocationChange={(locationId) => handleBrandLocationChange(formData.brand_id, locationId)}
-          />
-
-          <div className="flex gap-4">
+          {/* Cancel button outside the form */}
+          <div className="flex gap-4 pt-4 border-t">
             <Button
               type="button"
               variant="outline"
@@ -169,13 +161,9 @@ export function UnifiedRequestForm({ requestTypeId, requestTypeName, departmentI
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Submit Request
-            </Button>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

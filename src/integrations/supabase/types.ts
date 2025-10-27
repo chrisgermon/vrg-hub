@@ -2561,6 +2561,7 @@ export type Database = {
           created_at: string | null
           department_id: string | null
           description: string | null
+          form_template_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -2571,6 +2572,7 @@ export type Database = {
           created_at?: string | null
           department_id?: string | null
           description?: string | null
+          form_template_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -2581,6 +2583,7 @@ export type Database = {
           created_at?: string | null
           department_id?: string | null
           description?: string | null
+          form_template_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
@@ -2593,6 +2596,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_types_form_template_id_fkey"
+            columns: ["form_template_id"]
+            isOneToOne: false
+            referencedRelation: "form_templates"
             referencedColumns: ["id"]
           },
         ]

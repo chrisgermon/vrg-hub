@@ -14,6 +14,7 @@ interface RequestType {
   slug: string;
   description: string | null;
   department_id: string;
+  form_template_id: string | null;
 }
 
 export default function NewDynamicRequest() {
@@ -34,7 +35,7 @@ export default function NewDynamicRequest() {
       try {
         const { data, error: fetchError } = await supabase
           .from('request_types')
-          .select('id, name, slug, description, department_id')
+          .select('id, name, slug, description, department_id, form_template_id')
           .eq('slug', slug)
           .eq('is_active', true)
           .maybeSingle();
@@ -109,6 +110,7 @@ export default function NewDynamicRequest() {
         requestTypeId={requestType.id}
         requestTypeName={requestType.name}
         departmentId={requestType.department_id}
+        formTemplateId={requestType.form_template_id || undefined}
       />
     </div>
   );
