@@ -30,12 +30,16 @@ serve(async (req) => {
       );
     }
 
+    console.log(`Using SendFrom: ${sendFrom}`);
+
     // Sanitize recipients to GoFax expected format: numeric with country code (e.g., 613..., 614...)
     const sanitizeNumber = (num: string) => {
-      const digits = String(num).replace(/\D/g, '');
-      if (digits.startsWith('61')) return digits;
-      if (digits.startsWith('0')) return `61${digits.slice(1)}`;
-      return digits; // assume already in international without '+'
+      const cleaned = String(num).replace(/[^\d+]/g, '');
+      if (cleaned.startsWith('+')) return cleaned;
+      const digits = cleaned.replace(/\D/g, '');
+      if (digits.startsWith('61')) return `+${digits}`;
+      if (digits.startsWith('0')) return `+61${digits.slice(1)}`;
+      return `+${digits}`;
     };
     const cleanedRecipients: string[] = recipients.map((r: string) => sanitizeNumber(r));
 
@@ -84,14 +88,15 @@ serve(async (req) => {
 
     const isSingle = cleanedRecipients.length === 1;
     const url = isSingle
-      ? `https://restful-api.gofax.com.au/v1.0/SendFax?token=${GOFAX_API_KEY}`
-      : `https://restful-api.gofax.com.au/v1.0/SendFaxes?token=${GOFAX_API_KEY}`;
+      ? `https://restful-api.gofax.com.au/v2.0/SendFax`
+      : `https://restful-api.gofax.com.au/v2.0/SendFaxes`;
+
 
     const payload = isSingle ? makeFax(cleanedRecipients[0]) : cleanedRecipients.map((r: string) => makeFax(r));
 
     const response = await fetch(url, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GOFAX_API_KEY}` },
       body: JSON.stringify(payload),
     });
 
