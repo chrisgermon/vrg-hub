@@ -23,7 +23,7 @@ export default function KnowledgeBase() {
   const { isTenantAdmin, isSuperAdmin } = useAccessControl();
   const isAdmin = isTenantAdmin || isSuperAdmin;
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [], refetch: refetchCategories } = useQuery({
     queryKey: ['kb-categories'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -175,6 +175,7 @@ export default function KnowledgeBase() {
         open={categoryDialogOpen}
         onOpenChange={setCategoryDialogOpen}
         onSuccess={() => {
+          refetchCategories();
           refetchPages();
         }}
       />
