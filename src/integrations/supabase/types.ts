@@ -3202,39 +3202,66 @@ export type Database = {
       }
       tickets: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           assigned_to: string | null
+          attachments: Json | null
+          brand_id: string | null
+          completed_at: string | null
           created_at: string
+          deadline: string | null
           department_id: string | null
           description: string | null
           id: string
+          location_id: string | null
+          metadata: Json | null
           priority: string
           request_number: number
+          request_type_id: string | null
           status: string
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           assigned_to?: string | null
+          attachments?: Json | null
+          brand_id?: string | null
+          completed_at?: string | null
           created_at?: string
+          deadline?: string | null
           department_id?: string | null
           description?: string | null
           id?: string
+          location_id?: string | null
+          metadata?: Json | null
           priority?: string
           request_number?: never
+          request_type_id?: string | null
           status?: string
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           assigned_to?: string | null
+          attachments?: Json | null
+          brand_id?: string | null
+          completed_at?: string | null
           created_at?: string
+          deadline?: string | null
           department_id?: string | null
           description?: string | null
           id?: string
+          location_id?: string | null
+          metadata?: Json | null
           priority?: string
           request_number?: never
+          request_type_id?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -3246,6 +3273,27 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_request_type_id_fkey"
+            columns: ["request_type_id"]
+            isOneToOne: false
+            referencedRelation: "request_types"
             referencedColumns: ["id"]
           },
         ]
