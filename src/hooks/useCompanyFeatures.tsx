@@ -10,7 +10,6 @@ type FeatureKey =
   | 'monthly_newsletter'
   | 'modality_management'
   | 'print_ordering'
-  | 'front_chat'
   | 'fax_campaigns'
   | 'knowledge_base'
   | 'approvals';

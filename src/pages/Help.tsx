@@ -1205,21 +1205,6 @@ const Help = () => {
                       </ul>
                     </AccordionContent>
                   </AccordionItem>
-
-                  <AccordionItem value="canned-responses">
-                    <AccordionTrigger>Canned Responses (Admin)</AccordionTrigger>
-                    <AccordionContent className="space-y-3">
-                      <p className="text-muted-foreground">
-                        Create reusable response templates for comments.
-                      </p>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                        <li>Create canned response templates</li>
-                        <li>Quick-insert responses in comments</li>
-                        <li>Share responses across team</li>
-                        <li>Update and manage templates</li>
-                      </ul>
-                    </AccordionContent>
-                  </AccordionItem>
                 </Accordion>
               </CardContent>
             </Card>

@@ -18,7 +18,6 @@ import {
 
 import { CriticalSystemsBar } from "./CriticalSystemsBar";
 import { Footer } from "./Footer";
-import { FrontChatWidget } from "./FrontChatWidget";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 import { useRoleImpersonation } from "@/hooks/useRoleImpersonation";
 import { RouteLoading } from "./RouteLoading";
@@ -95,7 +94,6 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <>
-      {/* <FrontChatWidget /> */}
       <FirstTimeSetupDialog />
       <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background">

@@ -8,7 +8,6 @@ import { SystemBannerManager } from '@/components/banners/SystemBannerManager';
 import { ApprovalWorkflowManager } from '@/components/workflows/ApprovalWorkflowManager';
 import { CompanySettings } from '@/components/CompanySettings';
 import { MenuEditor } from '@/components/settings/MenuEditor';
-import { CannedResponsesManager } from '@/components/settings/CannedResponsesManager';
 import { BrandsManager } from '@/components/settings/BrandsManager';
 import { LocationsManager } from '@/components/settings/LocationsManager';
 import { NotificationSettingsManager } from '@/components/settings/NotificationSettingsManager';
@@ -140,7 +139,6 @@ export default function Settings() {
         <Fragment>
           <CompanyDomainsManager />
           <PrintBrandsManager />
-          <CannedResponsesManager />
         </Fragment>
       ),
     },
