@@ -12,6 +12,7 @@ import { FieldPalette } from './FieldPalette';
 import { SortableField } from './SortableField';
 import { FieldEditor } from './FieldEditor';
 import { NotificationSettings } from './NotificationSettings';
+import { ApprovalSettings } from './ApprovalSettings';
 import { Save, X, Bell } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
@@ -31,6 +32,12 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
   );
   const [enableSmsNotifications, setEnableSmsNotifications] = useState(
     template?.settings?.enable_sms_notifications ?? false
+  );
+  const [requireApproval, setRequireApproval] = useState(
+    template?.settings?.require_approval ?? false
+  );
+  const [approverId, setApproverId] = useState<string | null>(
+    template?.settings?.approver_id || null
   );
 
   const handleAddField = (type: FieldType) => {
@@ -89,6 +96,8 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
         notification_user_ids: notificationUserIds,
         notification_level: notificationLevel,
         enable_sms_notifications: enableSmsNotifications,
+        require_approval: requireApproval,
+        approver_id: approverId,
       },
     });
   };
@@ -167,6 +176,17 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
             onNotificationUserIdsChange={setNotificationUserIds}
             onNotificationLevelChange={setNotificationLevel}
             onEnableSmsNotificationsChange={setEnableSmsNotifications}
+          />
+        </div>
+
+        <Separator />
+
+        <div>
+          <ApprovalSettings
+            requireApproval={requireApproval}
+            approverId={approverId}
+            onRequireApprovalChange={setRequireApproval}
+            onApproverIdChange={setApproverId}
           />
         </div>
 

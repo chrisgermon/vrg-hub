@@ -91,13 +91,19 @@ export function UnifiedRequestForm({ requestTypeId, requestTypeName, departmentI
       let approvalStatus = 'none';
 
       if (requiresApproval) {
-        const { data: approverData } = await supabase.rpc('get_request_approver', {
-          p_brand_id: brandId || null,
-          p_location_id: locationId || null,
-          p_request_type_id: requestTypeId
-        });
+        // Use form template's specified approver or auto-assign
+        if (formTemplate?.settings?.approver_id) {
+          approverId = formTemplate.settings.approver_id;
+        } else {
+          // Auto-assign based on brand/location
+          const { data: approverData } = await supabase.rpc('get_request_approver', {
+            p_brand_id: brandId || null,
+            p_location_id: locationId || null,
+            p_request_type_id: requestTypeId
+          });
+          approverId = approverData;
+        }
         
-        approverId = approverData;
         initialStatus = 'pending_manager_approval';
         approvalStatus = 'pending';
       }

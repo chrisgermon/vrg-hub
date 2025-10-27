@@ -59,6 +59,7 @@ export interface FormTemplate {
     enable_sms_notifications?: boolean;
     auto_assign?: boolean;
     require_approval?: boolean;
+    approver_id?: string | null;
   };
   is_active: boolean;
   created_by?: string;

@@ -5,9 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, RefreshCw } from 'lucide-react';
 import { RequestsList } from '@/components/requests/RequestsList';
 import { useAuth } from '@/hooks/useAuth';
-import { usePermissions } from '@/hooks/usePermissions';
 import { DetailsPanel, DetailsSection, DetailsField } from '@/components/ui/details-panel';
-import { TicketQueueManager } from '@/components/requests/admin/TicketQueueManager';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,13 +16,11 @@ export default function Requests() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { userRole } = useAuth();
-  const { hasPermission } = usePermissions();
   const queryClient = useQueryClient();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(id || null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const isManagerOrAdmin = ['manager', 'marketing_manager', 'tenant_admin', 'super_admin'].includes(userRole || '');
-  const canViewTicketQueue = hasPermission('view_ticket_queue');
 
   // Fetch selected request details
   const { data: selectedRequest } = useQuery({
@@ -109,7 +105,6 @@ export default function Requests() {
             <TabsTrigger value="all">All Requests</TabsTrigger>
             <TabsTrigger value="my-requests">My Requests</TabsTrigger>
             {isManagerOrAdmin && <TabsTrigger value="pending">Pending Approval</TabsTrigger>}
-            {canViewTicketQueue && <TabsTrigger value="ticket-queue">Ticket Queue</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="all" className="space-y-6">
@@ -123,12 +118,6 @@ export default function Requests() {
           {isManagerOrAdmin && (
             <TabsContent value="pending" className="space-y-6">
               <RequestsList onRequestSelect={handleRequestSelect} selectedRequestId={selectedRequestId} filterType="pending" />
-            </TabsContent>
-          )}
-
-          {canViewTicketQueue && (
-            <TabsContent value="ticket-queue" className="space-y-6">
-              <TicketQueueManager />
             </TabsContent>
           )}
         </Tabs>
