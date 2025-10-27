@@ -161,50 +161,6 @@ export default function NewRequest() {
       bgColor: 'bg-rose-50 dark:bg-rose-950/30',
       hoverColor: 'hover:bg-rose-100 dark:hover:bg-rose-900/40'
     },
-    {
-      title: 'Finance',
-      description: 'Statements and payroll issues',
-      icon: TrendingUp,
-      path: '/finance/new',
-      featureKey: 'department_requests',
-      permissionKey: 'create_department_request',
-      color: 'text-lime-600',
-      bgColor: 'bg-lime-50 dark:bg-lime-950/30',
-      hoverColor: 'hover:bg-lime-100 dark:hover:bg-lime-900/40'
-    },
-    {
-      title: 'Technology Training',
-      description: 'System and application training',
-      icon: GraduationCap,
-      path: '/technology-training/new',
-      featureKey: 'department_requests',
-      permissionKey: 'create_department_request',
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-50 dark:bg-indigo-950/30',
-      hoverColor: 'hover:bg-indigo-100 dark:hover:bg-indigo-900/40'
-    },
-    {
-      title: 'IT Service Desk',
-      description: 'Computer and IT support',
-      icon: HelpCircle,
-      path: '/it-service-desk/new',
-      featureKey: 'department_requests',
-      permissionKey: 'create_department_request',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50 dark:bg-blue-950/30',
-      hoverColor: 'hover:bg-blue-100 dark:hover:bg-blue-900/40'
-    },
-    {
-      title: 'HR',
-      description: 'HR support and compliance',
-      icon: Users,
-      path: '/hr/new',
-      featureKey: 'department_requests',
-      permissionKey: 'create_department_request',
-      color: 'text-rose-600',
-      bgColor: 'bg-rose-50 dark:bg-rose-950/30',
-      hoverColor: 'hover:bg-rose-100 dark:hover:bg-rose-900/40'
-    },
   ];
 
   const availableRequests = requestTypes.filter(request => 
