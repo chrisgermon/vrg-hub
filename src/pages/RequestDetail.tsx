@@ -10,7 +10,8 @@ import { formatRequestId } from '@/lib/requestUtils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { RequestComments } from '@/components/requests/RequestComments';
+import { RequestActivityFeed } from '@/components/requests/RequestActivityFeed';
+import { RequestUpdateForm } from '@/components/requests/RequestUpdateForm';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { CloseRequestDialog } from '@/components/requests/CloseRequestDialog';
@@ -383,6 +384,8 @@ export default function RequestDetail() {
               </CardContent>
             </Card>
 
+            {/* Update Form */}
+            <RequestUpdateForm requestId={request.id} />
           </div>
 
           {/* Right Sidebar: Ticket Information */}
@@ -491,7 +494,7 @@ export default function RequestDetail() {
             </Card>
 
             {/* Activity Feed */}
-            <RequestComments requestId={request.id} requestType={request.type} />
+            <RequestActivityFeed requestId={request.id} />
           </div>
         </div>
       </div>
