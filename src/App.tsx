@@ -151,7 +151,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/install", element: <Install /> },
   { path: "/mission-statement", element: <MissionStatement /> },
   { path: "/email-test", element: <EmailTest />, requiredRole: ["super_admin", "tenant_admin", "manager"] },
-  { path: "/gofax-test", element: <GoFaxTest />, requiredRole: ["super_admin", "tenant_admin"] },
+  { path: "/gofax-test", element: <GoFaxTest /> },
   ];
 
 const queryClient = new QueryClient();
