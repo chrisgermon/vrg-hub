@@ -36,14 +36,3 @@ verify_jwt = false
 [functions.fetch-mailchimp-campaign-content]
 verify_jwt = true
 
-[functions.gofax-send-fax]
-verify_jwt = false
-
-[functions.gofax-get-details]
-verify_jwt = false
-
-[functions.gofax-credit-balance]
-verify_jwt = false
-
-[functions.gofax-format-numbers]
-verify_jwt = false
