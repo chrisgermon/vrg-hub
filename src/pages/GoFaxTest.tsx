@@ -24,6 +24,8 @@ export default function GoFaxTest() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [subject, setSubject] = useState("");
+  const [bulkNumbers, setBulkNumbers] = useState("");
+  const [formatting, setFormatting] = useState(false);
 
   const fetchCreditBalance = async () => {
     setLoading(true);
@@ -118,6 +120,49 @@ export default function GoFaxTest() {
 
   const removeRecipient = (number: string) => {
     setRecipients(recipients.filter(r => r !== number));
+  };
+
+  const handleCSVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      setBulkNumbers(text);
+    };
+    reader.readAsText(file);
+  };
+
+  const formatBulkNumbers = async () => {
+    if (!bulkNumbers.trim()) {
+      toast.error("Please enter some numbers to format");
+      return;
+    }
+
+    setFormatting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('gofax-format-numbers', {
+        body: { numbers: bulkNumbers }
+      });
+      
+      if (error) throw error;
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      const newNumbers = data.formattedNumbers || [];
+      const uniqueNumbers = [...new Set([...recipients, ...newNumbers])];
+      setRecipients(uniqueNumbers);
+      setBulkNumbers("");
+      toast.success(`Added ${newNumbers.length} formatted numbers`);
+    } catch (error) {
+      console.error('Error formatting numbers:', error);
+      toast.error("Failed to format numbers");
+    } finally {
+      setFormatting(false);
+    }
   };
 
   const sendFax = async () => {
@@ -258,6 +303,32 @@ export default function GoFaxTest() {
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
+                  
+                  <div className="space-y-2 mb-2">
+                    <Label>Bulk Add Numbers (paste or upload CSV)</Label>
+                    <textarea
+                      className="w-full min-h-[100px] p-2 border rounded-md text-sm"
+                      placeholder="Paste phone numbers here in any format... AI will clean and format them automatically"
+                      value={bulkNumbers}
+                      onChange={(e) => setBulkNumbers(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <Input
+                        type="file"
+                        accept=".csv,.txt,.xlsx"
+                        onChange={handleCSVUpload}
+                        className="flex-1"
+                      />
+                      <Button 
+                        onClick={formatBulkNumbers} 
+                        disabled={formatting || !bulkNumbers.trim()}
+                        type="button"
+                      >
+                        {formatting ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Format & Add"}
+                      </Button>
+                    </div>
+                  </div>
+
                   {recipients.length > 0 && (
                     <div className="border rounded-md p-2 max-h-40 overflow-y-auto space-y-1">
                       {recipients.map((number, index) => (
