@@ -215,7 +215,7 @@ export default function ArticleEditor({ articleId: propArticleId, onSave }: Arti
       if (onSave) {
         onSave();
       } else {
-        navigate('/news-management');
+        navigate('/news');
       }
     } catch (error) {
       console.error('Error saving article:', error);
@@ -313,7 +313,7 @@ export default function ArticleEditor({ articleId: propArticleId, onSave }: Arti
           <div className="flex gap-4">
             <Button
               variant="outline"
-              onClick={() => onSave ? onSave() : navigate('/news-management')}
+              onClick={() => onSave ? onSave() : navigate('/news')}
               disabled={saving}
             >
               Cancel
