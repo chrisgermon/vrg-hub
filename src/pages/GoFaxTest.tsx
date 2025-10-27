@@ -6,13 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Send, DollarSign, FileText, Upload, X, Plus } from "lucide-react";
+import { RefreshCw, Send, FileText, X, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export default function GoFaxTest() {
   const [loading, setLoading] = useState(false);
-  const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [faxDetails, setFaxDetails] = useState<any[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -27,26 +26,6 @@ export default function GoFaxTest() {
   const [bulkNumbers, setBulkNumbers] = useState("");
   const [formatting, setFormatting] = useState(false);
 
-  const fetchCreditBalance = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('gofax-credit-balance');
-      
-      if (error) throw error;
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      setCreditBalance(data.result);
-      toast.success(`Credit Balance: $${data.result}`);
-    } catch (error) {
-      console.error('Error fetching credit balance:', error);
-      toast.error("Failed to fetch credit balance");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchFaxDetails = async (page = 1) => {
     setLoading(true);
@@ -227,25 +206,6 @@ export default function GoFaxTest() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Account Balance
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Button onClick={fetchCreditBalance} disabled={loading}>
-              {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              <span className="ml-2">Fetch Balance</span>
-            </Button>
-            {creditBalance !== null && (
-              <div className="text-2xl font-bold">${creditBalance.toFixed(2)}</div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       <Tabs defaultValue="send" className="w-full">
         <TabsList className="grid w-full grid-cols-2">

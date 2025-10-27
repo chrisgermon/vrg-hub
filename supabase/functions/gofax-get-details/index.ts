@@ -21,7 +21,7 @@ serve(async (req) => {
 
     console.log(`Fetching fax details - Page: ${page}, Size: ${pageSize}`);
 
-    let url = `https://restful-api.gofax.com.au/v2.0/SendFaxes/Detail?page=${page}&pageSize=${pageSize}`;
+    let url = `https://restful-api.gofax.com.au/v2.0/SendFaxes/Detail?token=${GOFAX_API_KEY}&page=${page}&pageSize=${pageSize}`;
     
     if (startDate) {
       url += `&startDate=${encodeURIComponent(startDate)}`;

@@ -25,7 +25,7 @@ serve(async (req) => {
 
     console.log(`Sending fax to ${recipients.length} recipient(s) with document ${fileName || 'untitled'}`);
 
-    const url = 'https://restful-api.gofax.com.au/v2.0/SendFaxes';
+    const url = `https://restful-api.gofax.com.au/v2.0/SendFaxes?token=${GOFAX_API_KEY}`;
     
     // Create a fax request for each recipient
     const faxData = recipients.map((faxNumber: string) => ({
