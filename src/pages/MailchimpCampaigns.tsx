@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, Mail, Send, XCircle, FileText, Eye, CheckCircle } from "lucide-react";
+import { RefreshCw, Mail, Send, XCircle, FileText, Eye, CheckCircle, ArrowUpDown, Download } from "lucide-react";
+import * as XLSX from 'xlsx';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -42,6 +43,8 @@ const MailchimpCampaigns = () => {
   const [selectedCampaign, setSelectedCampaign] = React.useState<Campaign | null>(null);
   const [recipients, setRecipients] = React.useState<RecipientDetail[]>([]);
   const [loadingRecipients, setLoadingRecipients] = React.useState(false);
+  const [sortField, setSortField] = React.useState<keyof RecipientDetail>('email_address');
+  const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
 
   const { data: campaigns, isLoading, refetch } = useQuery({
     queryKey: ['mailchimp-campaigns'],
@@ -78,7 +81,69 @@ const MailchimpCampaigns = () => {
 
   const handleCampaignClick = (campaign: Campaign) => {
     setSelectedCampaign(campaign);
+    setSortField('email_address');
+    setSortDirection('asc');
     fetchRecipients(campaign.id);
+  };
+
+  const handleSort = (field: keyof RecipientDetail) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedRecipients = React.useMemo(() => {
+    return [...recipients].sort((a, b) => {
+      const aVal = a[sortField];
+      const bVal = b[sortField];
+      
+      if (aVal === undefined || aVal === null) return 1;
+      if (bVal === undefined || bVal === null) return -1;
+      
+      const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [recipients, sortField, sortDirection]);
+
+  const handleExport = () => {
+    if (!selectedCampaign) return;
+
+    const campaignInfo = [
+      ['Campaign Details'],
+      ['Title', selectedCampaign.settings.title],
+      ['Subject', selectedCampaign.settings.subject_line],
+      ['Status', selectedCampaign.status],
+      ['Emails Sent', selectedCampaign.emails_sent],
+      ['Send Date', selectedCampaign.send_time ? new Date(selectedCampaign.send_time).toLocaleString() : 'Not sent'],
+      [],
+      ['Recipients']
+    ];
+
+    const recipientData = sortedRecipients.map(r => ({
+      'Email': r.email_address,
+      'Status': r.status,
+      'Opens': r.open_count,
+      'Clicks': r.click_count,
+      'Last Activity': r.last_open 
+        ? new Date(r.last_open).toLocaleString()
+        : r.last_click
+        ? new Date(r.last_click).toLocaleString()
+        : 'No activity'
+    }));
+
+    const ws = XLSX.utils.aoa_to_sheet(campaignInfo);
+    XLSX.utils.sheet_add_json(ws, recipientData, { origin: -1 });
+    
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Campaign Details');
+    
+    const fileName = `${selectedCampaign.settings.title.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    
+    toast.success("Campaign details exported!");
   };
 
   const getStatusBadge = (status: string) => {
@@ -205,7 +270,13 @@ const MailchimpCampaigns = () => {
       <Dialog open={!!selectedCampaign} onOpenChange={(open) => !open && setSelectedCampaign(null)}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedCampaign?.settings.title}</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>{selectedCampaign?.settings.title}</DialogTitle>
+              <Button onClick={handleExport} size="sm" variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export to Excel
+              </Button>
+            </div>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -249,22 +320,62 @@ const MailchimpCampaigns = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Opens</TableHead>
-                      <TableHead>Clicks</TableHead>
-                      <TableHead>Last Activity</TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('email_address')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Email
+                          <ArrowUpDown className="h-3 w-3" />
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('status')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Status
+                          <ArrowUpDown className="h-3 w-3" />
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('open_count')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Opens
+                          <ArrowUpDown className="h-3 w-3" />
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('click_count')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Clicks
+                          <ArrowUpDown className="h-3 w-3" />
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('last_open')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Last Activity
+                          <ArrowUpDown className="h-3 w-3" />
+                        </div>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recipients.length === 0 ? (
+                    {sortedRecipients.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center text-muted-foreground">
                           No recipient details available
                         </TableCell>
                       </TableRow>
                     ) : (
-                      recipients.map((recipient) => (
+                      sortedRecipients.map((recipient) => (
                         <TableRow key={recipient.email_address}>
                           <TableCell className="font-medium">{recipient.email_address}</TableCell>
                           <TableCell>
