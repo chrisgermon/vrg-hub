@@ -9,6 +9,7 @@ import { DynamicFormRenderer } from '@/components/form-builder/DynamicFormRender
 import { FormTemplate } from '@/types/form-builder';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { CCEmailsInput } from './CCEmailsInput';
 
 interface UnifiedRequestFormProps {
   requestTypeId: string;
@@ -25,6 +26,7 @@ export function UnifiedRequestForm({ requestTypeId, requestTypeName, departmentI
   const [formTemplate, setFormTemplate] = useState<FormTemplate | null>(null);
   const [brandId, setBrandId] = useState(profile?.brand_id || '');
   const [locationId, setLocationId] = useState(profile?.location_id || '');
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
 
   useEffect(() => {
     if (profile) {
@@ -123,6 +125,7 @@ export function UnifiedRequestForm({ requestTypeId, requestTypeName, departmentI
           brand_id: brandId || null,
           location_id: locationId || null,
           metadata: customFields, // Store all custom fields in metadata
+          cc_emails: ccEmails, // Add CC emails
         })
         .select('id, request_number')
         .single();
@@ -175,6 +178,15 @@ export function UnifiedRequestForm({ requestTypeId, requestTypeName, departmentI
               selectedLocationId={locationId}
               onBrandChange={setBrandId}
               onLocationChange={setLocationId}
+            />
+          </div>
+
+          {/* CC Emails */}
+          <div className="pb-6 border-b">
+            <CCEmailsInput
+              emails={ccEmails}
+              onChange={setCcEmails}
+              disabled={loading}
             />
           </div>
 

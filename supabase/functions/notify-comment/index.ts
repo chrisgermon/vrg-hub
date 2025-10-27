@@ -43,15 +43,32 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Get request details (currently only hardware_requests)
-    const { data: requestData, error: requestError } = await supabase
-      .from('hardware_requests')
-      .select('user_id, title, request_number')
+    // Get request details - try tickets table first, then fallback to hardware_requests
+    let requestData: any = null;
+    let ccEmails: string[] = [];
+    
+    const { data: ticketData, error: ticketError } = await supabase
+      .from('tickets')
+      .select('user_id, title, request_number, cc_emails')
       .eq('id', requestId)
-      .single();
+      .maybeSingle();
 
-    if (requestError || !requestData) {
-      throw new Error(`Failed to fetch request: ${requestError?.message}`);
+    if (ticketData) {
+      requestData = ticketData;
+      ccEmails = ticketData.cc_emails || [];
+    } else {
+      const { data: hwData, error: hwError } = await supabase
+        .from('hardware_requests')
+        .select('user_id, title, request_number, cc_emails')
+        .eq('id', requestId)
+        .single();
+
+      if (hwError || !hwData) {
+        throw new Error(`Failed to fetch request: ${hwError?.message}`);
+      }
+      
+      requestData = hwData;
+      ccEmails = hwData.cc_emails || [];
     }
 
     // Get requester profile
@@ -81,10 +98,12 @@ const handler = async (req: Request): Promise<Response> => {
     };
 
     console.log('[notify-comment] Sending email to:', recipientEmail);
+    console.log('[notify-comment] CC emails:', ccEmails);
 
     const emailResult = await supabase.functions.invoke('send-notification-email', {
       body: {
         to: recipientEmail,
+        cc: ccEmails.length > 0 ? ccEmails : undefined,
         subject,
         template: 'request_comment_reply',
         data: emailData,

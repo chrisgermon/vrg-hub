@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
+import { CCEmailsInput } from './CCEmailsInput';
 
 interface EditRequestDialogProps {
   open: boolean;
@@ -38,17 +39,19 @@ export function EditRequestDialog({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
 
   useEffect(() => {
     if (request) {
       setTitle(request.title || '');
       setDescription(request.description || '');
       setPriority(request.priority || 'medium');
+      setCcEmails(request.cc_emails || []);
     }
   }, [request]);
 
   const updateRequest = useMutation({
-    mutationFn: async (data: { title: string; description: string; priority: string }) => {
+    mutationFn: async (data: { title: string; description: string; priority: string; cc_emails: string[] }) => {
       // Try tickets table first
       const { error: ticketError } = await supabase
         .from('tickets')
@@ -56,6 +59,7 @@ export function EditRequestDialog({
           title: data.title,
           description: data.description,
           priority: data.priority,
+          cc_emails: data.cc_emails,
           updated_at: new Date().toISOString(),
         })
         .eq('id', request.id);
@@ -68,6 +72,7 @@ export function EditRequestDialog({
             title: data.title,
             description: data.description,
             priority: data.priority,
+            cc_emails: data.cc_emails,
             updated_at: new Date().toISOString(),
           })
           .eq('id', request.id);
@@ -88,7 +93,7 @@ export function EditRequestDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateRequest.mutate({ title, description, priority });
+    updateRequest.mutate({ title, description, priority, cc_emails: ccEmails });
   };
 
   return (
@@ -138,6 +143,12 @@ export function EditRequestDialog({
               </SelectContent>
             </Select>
           </div>
+
+          <CCEmailsInput
+            emails={ccEmails}
+            onChange={setCcEmails}
+            disabled={updateRequest.isPending}
+          />
 
           <DialogFooter>
             <Button

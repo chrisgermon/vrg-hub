@@ -855,6 +855,7 @@ export type Database = {
           assigned_to: string | null
           brand_id: string | null
           business_justification: string
+          cc_emails: string[] | null
           clinic_name: string | null
           created_at: string | null
           currency: string | null
@@ -883,6 +884,7 @@ export type Database = {
           assigned_to?: string | null
           brand_id?: string | null
           business_justification: string
+          cc_emails?: string[] | null
           clinic_name?: string | null
           created_at?: string | null
           currency?: string | null
@@ -911,6 +913,7 @@ export type Database = {
           assigned_to?: string | null
           brand_id?: string | null
           business_justification?: string
+          cc_emails?: string[] | null
           clinic_name?: string | null
           created_at?: string | null
           currency?: string | null
@@ -3220,6 +3223,7 @@ export type Database = {
           assigned_to: string | null
           attachments: Json | null
           brand_id: string | null
+          cc_emails: string[] | null
           completed_at: string | null
           created_at: string
           deadline: string | null
@@ -3246,6 +3250,7 @@ export type Database = {
           assigned_to?: string | null
           attachments?: Json | null
           brand_id?: string | null
+          cc_emails?: string[] | null
           completed_at?: string | null
           created_at?: string
           deadline?: string | null
@@ -3272,6 +3277,7 @@ export type Database = {
           assigned_to?: string | null
           attachments?: Json | null
           brand_id?: string | null
+          cc_emails?: string[] | null
           completed_at?: string | null
           created_at?: string
           deadline?: string | null

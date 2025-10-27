@@ -47,6 +47,7 @@ type UnifiedRequest = {
   brands?: { display_name: string };
   profile?: { full_name: string; email: string };
   type: 'hardware' | 'department';
+  cc_emails?: string[];
 };
 
 export default function RequestDetail() {
@@ -490,6 +491,19 @@ export default function RequestDetail() {
                     {request.description || 'No notes'}
                   </div>
                 </div>
+
+                {request.cc_emails && request.cc_emails.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">CC Notifications</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {request.cc_emails.map((email: string) => (
+                        <Badge key={email} variant="secondary" className="text-xs">
+                          {email}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

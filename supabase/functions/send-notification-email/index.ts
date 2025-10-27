@@ -11,6 +11,7 @@ const mailgunDomain = Deno.env.get('MAILGUN_DOMAIN');
 
 interface EmailRequest {
   to: string;
+  cc?: string | string[];
   subject: string;
   template: string;
   data: any;
@@ -451,13 +452,13 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { to, subject, template, data, requestId, requestType, inReplyTo, references }: EmailRequest = await req.json();
+    const { to, cc, subject, template, data, requestId, requestType, inReplyTo, references }: EmailRequest = await req.json();
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    console.log(`[send-notification-email] Sending ${template} to ${to}`);
+    console.log(`[send-notification-email] Sending ${template} to ${to}`, cc ? `with CC: ${cc}` : '');
 
     const { html, text } = getEmailTemplate(template, data);
 
@@ -478,6 +479,17 @@ const handler = async (req: Request): Promise<Response> => {
       const formData = new FormData();
       formData.append('from', `VisionRadiology Hub <noreply@${ticketDomain}>`);
       formData.append('to', to);
+      
+      // Add CC recipients if provided
+      if (cc) {
+        const ccEmails = Array.isArray(cc) ? cc : [cc];
+        ccEmails.forEach(email => {
+          if (email && email.trim()) {
+            formData.append('cc', email.trim());
+          }
+        });
+      }
+      
       formData.append('subject', subject);
       formData.append('html', html);
       formData.append('text', text);
