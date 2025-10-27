@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,26 +26,39 @@ serve(async (req) => {
 
     console.log(`Sending fax to ${recipients.length} recipient(s) with document ${fileName || 'untitled'}`);
 
-    const url = `https://restful-api.gofax.com.au/v2.0/SendFaxes?token=${GOFAX_API_KEY}`;
-    
-    // Create a fax request for each recipient
-    const faxData = recipients.map((faxNumber: string) => ({
-      ToFaxNumber: faxNumber,
-      Documents: [{
-        FileLocation: documentUrl,
-        FileName: fileName || 'document.pdf',
-        Order: 0
-      }],
-      Subject: subject || 'Fax Document'
-    }));
+    // Download the document and convert to base64 per GoFax v1.0 API requirements
+    const fileResp = await fetch(documentUrl);
+    if (!fileResp.ok) {
+      const errText = await fileResp.text();
+      throw new Error(`Failed to fetch document: ${fileResp.status} - ${errText}`);
+    }
+    const arrayBuffer = await fileResp.arrayBuffer();
+    const base64Data = base64Encode(arrayBuffer);
+
+    // Build payload(s) for v1.0 endpoints
+    const makeFax = (to: string) => ({
+      SendTo: to,
+      Documents: [
+        {
+          Filename: fileName || 'document.pdf',
+          Data: base64Data,
+        },
+      ],
+    });
+
+    const isSingle = recipients.length === 1;
+    const url = isSingle
+      ? `https://restful-api.gofax.com.au/v1.0/SendFax?token=${GOFAX_API_KEY}`
+      : `https://restful-api.gofax.com.au/v1.0/SendFaxes?token=${GOFAX_API_KEY}`;
+
+    const payload = isSingle ? makeFax(recipients[0]) : recipients.map((r: string) => makeFax(r));
 
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${GOFAX_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(faxData),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
