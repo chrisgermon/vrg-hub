@@ -57,8 +57,7 @@ const Notifications = lazy(() => import("./pages/Notifications"));
 const CompanyAdmin = lazy(() => import("./pages/CompanyAdmin"));
 const CompanyDirectory = lazy(() => import("./pages/CompanyDirectory"));
 const KnowledgeBase = lazy(() => import("./pages/KnowledgeBase"));
-const NotifyreFaxLogs = lazy(() => import("./pages/NotifyreFaxLogs"));
-const MailchimpCampaigns = lazy(() => import("./pages/MailchimpCampaigns"));
+const MarketingCampaigns = lazy(() => import("./pages/MarketingCampaigns"));
 const PermissionManager = lazy(() => import("./pages/PermissionManager"));
 const NewsletterSubmit = lazy(() => import("./pages/NewsletterSubmit"));
 const AdvancedNotifications = lazy(() => import("./pages/AdvancedNotifications"));
@@ -122,7 +121,9 @@ const protectedLayoutRoutes: Array<{
   { path: "/phone-directory", element: <CompanyDirectory /> },
   { path: "/company-directory", element: <CompanyDirectory /> },
   { path: "/external-providers", element: <ExternalProviders /> },
-  { path: "/fax-campaigns", element: <NotifyreFaxLogs /> },
+  { path: "/marketing-campaigns", element: <MarketingCampaigns /> },
+  { path: "/fax-campaigns", element: <Navigate to="/marketing-campaigns" replace /> },
+  { path: "/mailchimp-campaigns", element: <Navigate to="/marketing-campaigns" replace /> },
   { path: "/requests/support", element: <ContactSupport /> },
   { path: "/contact-support", element: <Navigate to="/requests/support" replace /> },
   { path: "/help-ticket", element: <Navigate to="/requests/help" replace /> },
@@ -139,7 +140,6 @@ const protectedLayoutRoutes: Array<{
   { path: "/form-templates", element: <FormTemplates />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/form-templates/seed", element: <SeedFormTemplates />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/integrations", element: <Integrations />, requiredRole: ["super_admin"] },
-  { path: "/mailchimp-campaigns", element: <MailchimpCampaigns /> },
   { path: "/reminders", element: <Reminders /> },
   { path: "/reminders/new", element: <NewReminder /> },
   { path: "/reminders/edit/:id", element: <ReminderEdit /> },

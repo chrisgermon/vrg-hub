@@ -403,7 +403,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             : null,
           admin: [
             ...(hasPermission('view_fax_campaigns') && isFeatureEnabled('fax_campaigns')
-              ? [{ title: "Fax Campaigns", url: "/fax-campaigns", icon: Send }]
+              ? [{ title: "Marketing Campaigns", url: "/marketing-campaigns", icon: Mail }]
               : []),
           ],
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
@@ -438,7 +438,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             : null,
           admin: [
             ...(hasPermission('view_fax_campaigns') && isFeatureEnabled('fax_campaigns')
-              ? [{ title: "Fax Campaigns", url: "/fax-campaigns", icon: Send }]
+              ? [{ title: "Marketing Campaigns", url: "/marketing-campaigns", icon: Mail }]
               : []),
           ],
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
@@ -472,7 +472,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             : null,
           admin: [
             ...(hasPermission('view_fax_campaigns') && isFeatureEnabled('fax_campaigns')
-              ? [{ title: "Fax Campaigns", url: "/fax-campaigns", icon: Send }]
+              ? [{ title: "Marketing Campaigns", url: "/marketing-campaigns", icon: Mail }]
               : []),
           ],
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
@@ -508,10 +508,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           admin: [
             { title: "Audit Log", url: "/audit-log", icon: ScrollText },
             { title: "Integrations", url: "/integrations", icon: Plug },
-            ...(hasPermission('view_fax_campaigns') && isFeatureEnabled('fax_campaigns')
-              ? [{ title: "Fax Campaigns", url: "/fax-campaigns", icon: Send }]
-              : []),
-            { title: "Mailchimp Campaigns", url: "/mailchimp-campaigns", icon: Mail },
+            { title: "Marketing Campaigns", url: "/marketing-campaigns", icon: Mail },
           ],
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
             ? { title: "Monthly Newsletter", url: "/newsletter", icon: Newspaper } 
