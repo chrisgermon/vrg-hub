@@ -1,6 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { MarketingCalendarView } from '@/components/marketing/MarketingCalendarView';
 
 export default function MarketingCalendar() {
   return (
@@ -8,23 +6,11 @@ export default function MarketingCalendar() {
       <div>
         <h1 className="text-3xl font-bold">Marketing Calendar</h1>
         <p className="text-muted-foreground">
-          View and manage scheduled marketing requests
+          View scheduled Notifyre fax campaigns and Mailchimp email campaigns
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Marketing Calendar</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Marketing calendar is not available in single-tenant mode.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+      <MarketingCalendarView />
     </div>
   );
 }

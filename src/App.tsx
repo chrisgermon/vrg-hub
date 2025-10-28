@@ -47,6 +47,7 @@ const CompanyAdmin = lazy(() => import("./pages/CompanyAdmin"));
 const CompanyDirectory = lazy(() => import("./pages/CompanyDirectory"));
 const KnowledgeBase = lazy(() => import("./pages/KnowledgeBase"));
 const MarketingCampaigns = lazy(() => import("./pages/MarketingCampaigns"));
+const MarketingCalendar = lazy(() => import("./pages/MarketingCalendar"));
 const PermissionManager = lazy(() => import("./pages/PermissionManager"));
 const NewsletterSubmit = lazy(() => import("./pages/NewsletterSubmit"));
 const AdvancedNotifications = lazy(() => import("./pages/AdvancedNotifications"));
@@ -101,6 +102,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/external-providers", element: <ExternalProviders /> },
   { path: "/knowledge-base", element: <KnowledgeBase /> },
   { path: "/marketing-campaigns", element: <MarketingCampaigns /> },
+  { path: "/marketing-calendar", element: <MarketingCalendar /> },
   { path: "/fax-campaigns", element: <Navigate to="/marketing-campaigns" replace /> },
   { path: "/mailchimp-campaigns", element: <Navigate to="/marketing-campaigns" replace /> },
   { path: "/requests/support", element: <ContactSupport /> },
