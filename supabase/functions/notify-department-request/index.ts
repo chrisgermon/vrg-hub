@@ -33,7 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('[notify-department-request] Fetching request details...');
     const { data: requestData, error: requestError } = await supabase
       .from('hardware_requests')
-      .select('*, request_number')
+      .select('*, request_number, cc_emails')
       .eq('id', requestId)
       .single();
 
@@ -136,6 +136,7 @@ const handler = async (req: Request): Promise<Response> => {
             const emailResult = await supabase.functions.invoke('send-notification-email', {
               body: {
                 to: recipientEmail,
+                cc: requestData.cc_emails || [],
                 subject,
                 template: 'department_request_submitted',
                 data: emailData,
@@ -233,6 +234,7 @@ const handler = async (req: Request): Promise<Response> => {
                 const emailResult = await supabase.functions.invoke('send-notification-email', {
                   body: {
                     to: recipientEmail,
+                    cc: requestData.cc_emails || [],
                     subject,
                     template: 'department_request_submitted',
                     data: emailData,
