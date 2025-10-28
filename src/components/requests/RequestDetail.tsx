@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, X, StickyNote, UserCog } from 'lucide-react';
+import { Loader2, X, StickyNote, UserCog, Trash2 } from 'lucide-react';
 import { formatAUDateTimeFull } from '@/lib/dateUtils';
 import { RequestStatus } from '@/types/request';
 import { RequestComments } from './RequestComments';
@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { CloseRequestDialog } from './CloseRequestDialog';
 import { PrivateNoteDialog } from './PrivateNoteDialog';
 import { ReassignDialog } from './ReassignDialog';
+import { RequestStatusChanger } from './RequestStatusChanger';
 
 interface Request {
   id: string;
@@ -55,10 +56,11 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
   const { toast } = useToast();
-  const { userRole } = useAuth();
+  const { user, userRole } = useAuth();
   const navigate = useNavigate();
 
   const isManagerOrAdmin = ['manager', 'marketing_manager', 'tenant_admin', 'super_admin'].includes(userRole || '');
+  const isCreator = user?.id === request?.user_id;
 
   useEffect(() => {
     if (id) {
@@ -116,20 +118,42 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
 
   const getStatusBadge = (status: RequestStatus) => {
     const variants: Record<string, { variant: any; label: string }> = {
-      draft: { variant: 'secondary', label: 'Draft' },
       submitted: { variant: 'default', label: 'Submitted' },
-      pending_manager_approval: { variant: 'warning', label: 'Pending Manager' },
-      pending_admin_approval: { variant: 'warning', label: 'Pending Admin' },
-      approved: { variant: 'success', label: 'Approved' },
-      declined: { variant: 'destructive', label: 'Declined' },
-      ordered: { variant: 'default', label: 'Ordered' },
-      delivered: { variant: 'success', label: 'Delivered' },
-      cancelled: { variant: 'destructive', label: 'Cancelled' },
-      completed: { variant: 'success', label: 'Completed' },
+      in_progress: { variant: 'warning', label: 'In Progress' },
+      completed: { variant: 'success', label: 'Complete' },
     };
 
-    const config = variants[status] || variants.draft;
+    const config = variants[status] || variants.submitted;
     return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const handleDeleteRequest = async () => {
+    if (!confirm('Are you sure you want to delete this request? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .delete()
+        .eq('id', request!.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Request Deleted',
+        description: 'The request has been permanently deleted',
+      });
+
+      navigate('/requests');
+    } catch (error) {
+      console.error('Error deleting request:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete request',
+        variant: 'destructive',
+      });
+    }
   };
 
   const getPriorityBadge = (priority: string) => {
@@ -161,6 +185,12 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
               <UserCog className="w-4 h-4 mr-2" />
               Re-Assign
             </Button>
+            {isManagerOrAdmin && (
+              <Button variant="outline" size="sm" onClick={handleDeleteRequest} className="text-destructive hover:text-destructive">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -291,6 +321,15 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
                 <p className="text-xs text-muted-foreground">Status</p>
                 {getStatusBadge(request.status)}
               </div>
+
+              {/* Status Changer */}
+              <Separator />
+              <RequestStatusChanger
+                requestId={request.id}
+                currentStatus={request.status}
+                requestUserId={request.user_id}
+                onStatusChanged={loadRequest}
+              />
 
               <div>
                 <p className="text-xs text-muted-foreground">Priority</p>

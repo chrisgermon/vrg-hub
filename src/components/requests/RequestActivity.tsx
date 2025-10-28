@@ -40,16 +40,9 @@ interface AssignableUser {
 }
 
 const STATUS_OPTIONS: { value: RequestStatus; label: string }[] = [
-  { value: 'draft', label: 'Draft' },
   { value: 'submitted', label: 'Submitted' },
-  { value: 'inbox', label: 'Inbox' },
   { value: 'in_progress', label: 'In Progress' },
-  { value: 'awaiting_information', label: 'Awaiting Information' },
-  { value: 'on_hold', label: 'On Hold' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'declined', label: 'Declined' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'completed', label: 'Complete' },
 ];
 
 export function RequestActivity({ requestId, requestType }: RequestActivityProps) {

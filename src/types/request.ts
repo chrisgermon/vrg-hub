@@ -1,19 +1,8 @@
 export type UserRole = 'super_admin' | 'tenant_admin' | 'manager' | 'marketing_manager' | 'requester' | 'marketing';
 
 export type RequestStatus = 
-  | 'draft'
   | 'submitted'
-  | 'pending_manager_approval'
-  | 'pending_admin_approval'
-  | 'approved'
-  | 'declined'
-  | 'ordered'
-  | 'delivered'
-  | 'cancelled'
-  | 'inbox'
   | 'in_progress'
-  | 'awaiting_information'
-  | 'on_hold'
   | 'completed';
 
 export type RequestPriority = 'low' | 'medium' | 'high' | 'urgent';
