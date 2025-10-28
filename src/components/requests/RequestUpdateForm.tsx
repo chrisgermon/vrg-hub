@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2, Send } from 'lucide-react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 interface RequestUpdateFormProps {
   requestId: string;
@@ -18,18 +17,6 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
   const queryClient = useQueryClient();
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const quillRef = useRef<ReactQuill>(null);
-
-  const quillModules = useMemo(() => ({
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      [{ 'color': [] }, { 'background': [] }],
-      ['link'],
-      ['clean']
-    ],
-  }), []);
 
   // Add comment mutation
   const addComment = useMutation({
@@ -92,12 +79,9 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <ReactQuill
-            ref={quillRef}
-            theme="snow"
+          <RichTextEditor
             value={content}
             onChange={setContent}
-            modules={quillModules}
             placeholder="Add a comment or update..."
             className="min-h-[200px]"
           />

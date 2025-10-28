@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,8 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { Loader2, Send, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 interface RequestCommentsProps {
   requestId: string;
@@ -32,18 +31,6 @@ export function RequestComments({ requestId, requestType }: RequestCommentsProps
   const queryClient = useQueryClient();
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const quillRef = useRef<ReactQuill>(null);
-
-  const quillModules = useMemo(() => ({
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      [{ 'color': [] }, { 'background': [] }],
-      ['link'],
-      ['clean']
-    ],
-  }), []);
 
   // Fetch comments
   const { data: comments, isLoading } = useQuery({
@@ -164,12 +151,9 @@ export function RequestComments({ requestId, requestType }: RequestCommentsProps
 
         {/* Add comment form */}
         <form onSubmit={handleSubmit} className="space-y-3 border-t pt-4">
-          <ReactQuill
-            ref={quillRef}
-            theme="snow"
+          <RichTextEditor
             value={content}
             onChange={setContent}
-            modules={quillModules}
             placeholder="Add a comment or update..."
             className="min-h-[120px]"
           />
