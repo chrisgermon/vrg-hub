@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Eye, Edit, Trash2, CheckCircle, Clock } from 'lucide-react';
+import { Loader2, Eye, Edit, Trash2, CheckCircle, Clock, Newspaper } from 'lucide-react';
 import { formatAUDate } from '@/lib/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,7 @@ interface Article {
   published_at?: string;
   created_at: string;
   updated_at: string;
+  featured_image_url?: string;
 }
 
 export default function ArticlesList() {
@@ -115,6 +116,7 @@ export default function ArticlesList() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-16"></TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Published</TableHead>
@@ -125,6 +127,19 @@ export default function ArticlesList() {
               <TableBody>
                 {articles.map((article) => (
                   <TableRow key={article.id}>
+                    <TableCell className="p-2">
+                      {article.featured_image_url ? (
+                        <img 
+                          src={article.featured_image_url} 
+                          alt={article.title}
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
+                          <Newspaper className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">{article.title}</TableCell>
                     <TableCell>
                       <Badge variant={article.is_published ? 'success' : 'secondary'}>
