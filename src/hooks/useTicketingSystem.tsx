@@ -45,7 +45,7 @@ export function useCategories(requestTypeId?: string) {
         .select(`
           *, 
           request_type:request_types(name),
-          assigned_user:profiles!request_categories_assigned_to_fkey(full_name, email)
+          assigned_user:profiles(full_name, email)
         `)
         .order('sort_order');
       
