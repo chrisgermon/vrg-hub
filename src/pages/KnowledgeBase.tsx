@@ -13,12 +13,19 @@ import { KnowledgeBasePageDialog } from '@/components/knowledge-base/KnowledgeBa
 import { ArticleManagement } from '@/components/knowledge-base/ArticleManagement';
 import { ArticleEditor } from '@/components/knowledge-base/ArticleEditor';
 import { useAccessControl } from '@/hooks/useAccessControl';
+import { EditCategoryDialog } from '@/components/knowledge-base/EditCategoryDialog';
+import { DeleteCategoryDialog } from '@/components/knowledge-base/DeleteCategoryDialog';
+import { Edit, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MoreVertical } from 'lucide-react';
 
 export default function KnowledgeBase() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [pageDialogOpen, setPageDialogOpen] = useState(false);
   const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = useState<{ id: string; name: string; description?: string; icon?: string } | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<{ id: string; name: string } | null>(null);
   const navigate = useNavigate();
   const { isTenantAdmin, isSuperAdmin } = useAccessControl();
   const isAdmin = isTenantAdmin || isSuperAdmin;
@@ -110,10 +117,45 @@ export default function KnowledgeBase() {
             {categories.map((category) => (
               <Card key={category.id} className="cursor-pointer hover:shadow-md transition-shadow">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5" />
-                    {category.name}
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <BookOpen className="h-5 w-5" />
+                      {category.name}
+                    </CardTitle>
+                    {isAdmin && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingCategory({
+                              id: category.id,
+                              name: category.name,
+                              description: category.description,
+                              icon: category.icon
+                            });
+                          }}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingCategory({ id: category.id, name: category.name });
+                            }}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </CardHeader>
                 {category.description && (
                   <CardContent>
@@ -190,6 +232,34 @@ export default function KnowledgeBase() {
           setEditingArticleId(pageId);
         }}
       />
+
+      {editingCategory && (
+        <EditCategoryDialog
+          open={!!editingCategory}
+          onOpenChange={(open) => !open && setEditingCategory(null)}
+          categoryId={editingCategory.id}
+          categoryName={editingCategory.name}
+          categoryDescription={editingCategory.description}
+          categoryIcon={editingCategory.icon}
+          onSuccess={() => {
+            refetchCategories();
+            setEditingCategory(null);
+          }}
+        />
+      )}
+
+      {deletingCategory && (
+        <DeleteCategoryDialog
+          open={!!deletingCategory}
+          onOpenChange={(open) => !open && setDeletingCategory(null)}
+          categoryId={deletingCategory.id}
+          categoryName={deletingCategory.name}
+          onSuccess={() => {
+            refetchCategories();
+            setDeletingCategory(null);
+          }}
+        />
+      )}
     </div>
   );
 }
