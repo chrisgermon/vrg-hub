@@ -69,8 +69,9 @@ export default function NewRequestCategory() {
       if (categoriesError) throw categoriesError;
 
       if (!categoriesData || categoriesData.length === 0) {
-        // No categories, go directly to form
-        navigate(`/requests/new/${slug}/form`);
+        // No categories configured - stay on this page and show a message
+        setCategories([]);
+        setLoading(false);
         return;
       }
 
@@ -175,6 +176,19 @@ export default function NewRequestCategory() {
           <CardContent className="py-8 text-center">
             <p className="text-muted-foreground">
               No categories match your search. Try a different search term.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {categories.length === 0 && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground mb-2">
+              No categories have been configured for this request type yet.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Please contact your administrator to add form categories for {requestType?.name || 'this request type'}.
             </p>
           </CardContent>
         </Card>

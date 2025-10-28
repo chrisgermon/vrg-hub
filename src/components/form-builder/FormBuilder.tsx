@@ -13,10 +13,11 @@ import { SortableField } from './SortableField';
 import { FieldEditor } from './FieldEditor';
 import { NotificationSettings } from './NotificationSettings';
 import { ApprovalSettings } from './ApprovalSettings';
-import { Save, X, Bell } from 'lucide-react';
+import { Save, X, Bell, Info } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
   const [name, setName] = useState(template?.name || '');
@@ -123,6 +124,12 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
   };
 
   const handleSave = () => {
+    // Validate that if request type is selected, category name must be provided
+    if (requestTypeId && !categoryName) {
+      alert('Please provide a category name for this form');
+      return;
+    }
+
     onSave({
       name,
       description,
@@ -150,6 +157,13 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
         <div>
           <h3 className="text-lg font-semibold mb-4">Form Settings</h3>
           
+          <Alert className="mb-4">
+            <Info className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              Link this form to a parent Request Type to make it appear as a clickable category option. Parent types don't have forms - only their categories do.
+            </AlertDescription>
+          </Alert>
+          
           <div className="space-y-4">
             <div>
               <Label htmlFor="form-name">Form Name</Label>
@@ -162,10 +176,10 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
             </div>
 
             <div>
-              <Label htmlFor="form-request-type">Request Type (Optional)</Label>
+              <Label htmlFor="form-request-type">Parent Request Type</Label>
               <Select value={requestTypeId || undefined} onValueChange={(value) => setRequestTypeId(value)}>
                 <SelectTrigger id="form-request-type">
-                  <SelectValue placeholder="Select request type (optional)..." />
+                  <SelectValue placeholder="Select parent request type..." />
                 </SelectTrigger>
                 <SelectContent>
                   {requestTypes.map((type) => (
@@ -176,14 +190,14 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                Link this form to a request type to create a category option
+                Select which request type this form belongs under (e.g., "IT Service Desk")
               </p>
             </div>
 
             {requestTypeId && (
               <>
                 <div>
-                  <Label htmlFor="category-name">Category Name</Label>
+                  <Label htmlFor="category-name">Category Display Name</Label>
                   <Input
                     id="category-name"
                     value={categoryName}
@@ -192,23 +206,25 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
                       // Auto-generate slug from name
                       setCategorySlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
                     }}
-                    placeholder="e.g., Cleaning, IT Support"
+                    placeholder="e.g., New User Account, Hardware Request"
+                    required
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    This will appear as a clickable category in the request form
+                    This is what users will click to access this form
                   </p>
                 </div>
 
                 <div>
-                  <Label htmlFor="category-slug">Category Slug</Label>
+                  <Label htmlFor="category-slug">Category Slug (auto-generated)</Label>
                   <Input
                     id="category-slug"
                     value={categorySlug}
                     onChange={(e) => setCategorySlug(e.target.value)}
-                    placeholder="e.g., cleaning, it-support"
+                    placeholder="e.g., new-user-account"
+                    disabled
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    URL-friendly version (auto-generated from name)
+                    URL-friendly version, generated automatically
                   </p>
                 </div>
               </>

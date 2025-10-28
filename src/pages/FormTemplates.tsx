@@ -17,8 +17,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CategoryManager } from '@/components/requests/admin/CategoryManager';
+import { Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function FormTemplates() {
   const [templates, setTemplates] = useState<FormTemplate[]>([]);
@@ -50,13 +50,48 @@ export default function FormTemplates() {
 
   const loadTemplates = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: templatesData, error } = await supabase
         .from('form_templates')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTemplates((data as any) || []);
+
+      // Fetch request type names for templates that have them
+      const requestTypeIds = (templatesData || [])
+        .map(t => {
+          const settings = t.settings as any;
+          return settings?.request_type_id;
+        })
+        .filter(Boolean);
+
+      let requestTypesMap: Record<string, string> = {};
+      if (requestTypeIds.length > 0) {
+        const { data: requestTypesData } = await supabase
+          .from('request_types')
+          .select('id, name')
+          .in('id', requestTypeIds);
+
+        if (requestTypesData) {
+          requestTypesMap = requestTypesData.reduce((acc, rt) => {
+            acc[rt.id] = rt.name;
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
+
+      // Attach request type names to templates
+      const enrichedTemplates = (templatesData || []).map(t => {
+        const settings = t.settings as any;
+        return {
+          ...t,
+          request_type_name: settings?.request_type_id 
+            ? requestTypesMap[settings.request_type_id] 
+            : null
+        };
+      });
+
+      setTemplates(enrichedTemplates as any);
     } catch (error) {
       console.error('Error loading templates:', error);
       toast({
@@ -196,9 +231,18 @@ export default function FormTemplates() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this form template?')) return;
+    if (!confirm('Are you sure you want to delete this form template? This will also remove its category link.')) return;
 
     try {
+      // First delete any associated request categories
+      const { error: categoryError } = await supabase
+        .from('request_categories')
+        .delete()
+        .eq('form_template_id', id);
+
+      if (categoryError) throw categoryError;
+
+      // Then delete the form template
       const { error } = await supabase
         .from('form_templates')
         .delete()
@@ -252,98 +296,104 @@ export default function FormTemplates() {
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Form Templates & Categories</h1>
+        <h1 className="text-3xl font-bold">Request Forms & Categories</h1>
         <p className="text-muted-foreground mt-2">
-          Create and manage custom form templates and request categories
+          Create custom forms that become categories under request types
         </p>
       </div>
 
-      <Tabs defaultValue="templates" className="w-full">
-        <TabsList>
-          <TabsTrigger value="templates">Form Templates</TabsTrigger>
-          <TabsTrigger value="categories">Request Categories</TabsTrigger>
-        </TabsList>
+      <Alert className="mb-6">
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          Each form template you create can be linked to a Request Type (like "IT Service Desk"). 
+          When linked, the form becomes a clickable category option for that request type. 
+          Parent request types don't have their own forms - only their categories do.
+        </AlertDescription>
+      </Alert>
 
-        <TabsContent value="templates" className="mt-6">
-          <div className="flex justify-between items-center mb-6">
-            {isAdmin && (
-              <Button onClick={() => setIsCreating(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Template
-              </Button>
-            )}
-          </div>
+      <div className="flex justify-between items-center mb-6">
+        {isAdmin && (
+          <Button onClick={() => setIsCreating(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Create Form
+          </Button>
+        )}
+      </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Available Templates</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {templates.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No form templates found. Create your first template to get started.
-                </div>
-              ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Department</TableHead>
-                        <TableHead>Fields</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Created</TableHead>
-                        {isAdmin && <TableHead className="text-right">Actions</TableHead>}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {templates.map((template) => (
-                        <TableRow key={template.id}>
-                          <TableCell className="font-medium">{template.name}</TableCell>
-                          <TableCell>{template.department || '-'}</TableCell>
-                          <TableCell>{template.fields?.length || 0}</TableCell>
-                          <TableCell>
-                            <Badge variant={template.is_active ? 'success' : 'secondary'}>
-                              {template.is_active ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {new Date(template.created_at).toLocaleDateString()}
-                          </TableCell>
-                          {isAdmin && (
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setEditingTemplate(template)}
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDelete(template.id)}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="categories" className="mt-6">
-          <CategoryManager />
-        </TabsContent>
-      </Tabs>
+      <Card>
+        <CardHeader>
+          <CardTitle>Form Templates</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {templates.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No form templates found. Create your first form to get started.
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Form Name</TableHead>
+                    <TableHead>Request Type</TableHead>
+                    <TableHead>Category Name</TableHead>
+                    <TableHead>Fields</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {templates.map((template) => (
+                    <TableRow key={template.id}>
+                      <TableCell className="font-medium">{template.name}</TableCell>
+                      <TableCell>
+                        {(template as any).request_type_name || (
+                          <span className="text-muted-foreground italic">Not linked</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {template.settings?.category_name || (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{template.fields?.length || 0}</TableCell>
+                      <TableCell>
+                        <Badge variant={template.is_active ? 'success' : 'secondary'}>
+                          {template.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(template.created_at).toLocaleDateString()}
+                      </TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setEditingTemplate(template)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(template.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
