@@ -4,10 +4,7 @@ import 'react-quill/dist/quill.snow.css';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import BlotFormatter from '@enzedonline/quill-blot-formatter2';
-
-// Register blot formatter (supports image resize/drag)
-Quill.register('modules/blotFormatter', BlotFormatter);
+// Image resize/drag temporarily disabled due to module issues
 
 interface RichTextEditorProps {
   value: string;
@@ -99,9 +96,6 @@ export const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
           image: imageHandler
         } : undefined
       },
-      blotFormatter: enableImageUpload ? {
-        // keep defaults; enables resize + align handles
-      } : undefined,
       clipboard: {
         matchVisual: false
       }
