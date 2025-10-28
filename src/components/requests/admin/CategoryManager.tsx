@@ -203,7 +203,7 @@ function CategoryDialog({
       request_type_id: requestTypeId,
       icon: iconKebab,
       slug,
-      assigned_to: assignedTo || null,
+      assigned_to: assignedTo === 'none' ? null : assignedTo,
       is_active: isActive,
       sort_order: sortOrder,
     };
@@ -303,12 +303,12 @@ function CategoryDialog({
 
           <div>
             <Label htmlFor="assigned_to">Assigned User (optional)</Label>
-            <Select value={assignedTo} onValueChange={setAssignedTo}>
+            <Select value={assignedTo || 'none'} onValueChange={setAssignedTo}>
               <SelectTrigger>
                 <SelectValue placeholder="No assignee" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No assignee</SelectItem>
+                <SelectItem value="none">No assignee</SelectItem>
                 {users.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.full_name} ({user.email})
