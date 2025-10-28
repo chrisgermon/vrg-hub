@@ -73,6 +73,50 @@ export function UnifiedRequestForm({
     fetchFormTemplate();
   }, [formTemplateId]);
 
+  // Fetch default CC emails from request type and category
+  useEffect(() => {
+    const fetchDefaultCCEmails = async () => {
+      try {
+        const ccEmailsSet = new Set<string>();
+
+        // Fetch CC emails from request type
+        if (requestTypeId) {
+          const { data: requestType } = await supabase
+            .from('request_types')
+            .select('cc_emails')
+            .eq('id', requestTypeId)
+            .single();
+
+          if (requestType?.cc_emails) {
+            requestType.cc_emails.forEach((email: string) => ccEmailsSet.add(email));
+          }
+        }
+
+        // Fetch CC emails from category
+        if (categoryId) {
+          const { data: category } = await supabase
+            .from('request_categories')
+            .select('cc_emails')
+            .eq('id', categoryId)
+            .single();
+
+          if (category?.cc_emails) {
+            category.cc_emails.forEach((email: string) => ccEmailsSet.add(email));
+          }
+        }
+
+        // Set initial CC emails from defaults
+        if (ccEmailsSet.size > 0) {
+          setCcEmails(Array.from(ccEmailsSet));
+        }
+      } catch (error) {
+        console.error('Error fetching default CC emails:', error);
+      }
+    };
+
+    fetchDefaultCCEmails();
+  }, [requestTypeId, categoryId]);
+
   useEffect(() => {
     if (profile) {
       setBrandId(profile.brand_id || '');

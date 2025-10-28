@@ -39,6 +39,7 @@ interface RequestType {
   description: string;
   is_active: boolean;
   icon?: string | null;
+  cc_emails?: string[];
   departments?: Department;
 }
 
@@ -50,6 +51,7 @@ interface RequestCategory {
   description: string;
   is_active: boolean;
   icon?: string | null;
+  cc_emails?: string[];
   form_template_id: string | null;
 }
 
@@ -181,6 +183,7 @@ export function RequestTypesManager() {
           description: data.description,
           is_active: data.is_active,
           icon: data.icon,
+          cc_emails: data.cc_emails || [],
         };
 
         if (type === 'request_type') {
@@ -203,6 +206,7 @@ export function RequestTypesManager() {
           description: data.description,
           is_active: data.is_active ?? true,
           icon: data.icon,
+          cc_emails: data.cc_emails || [],
         };
 
         if (type === 'request_type') {
@@ -556,6 +560,28 @@ export function RequestTypesManager() {
                   )}
                 </Button>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>CC Emails (comma-separated)</Label>
+              <Textarea
+                value={Array.isArray(editDialog.data?.cc_emails) ? (editDialog.data?.cc_emails as string[]).join(', ') : ''}
+                onChange={(e) => {
+                  const emails = e.target.value
+                    .split(',')
+                    .map(email => email.trim())
+                    .filter(email => email);
+                  setEditDialog((prev) => ({
+                    ...prev,
+                    data: { ...prev.data, cc_emails: emails },
+                  }));
+                }}
+                placeholder="email1@example.com, email2@example.com"
+                rows={2}
+              />
+              <p className="text-xs text-muted-foreground">
+                These emails will automatically receive notifications for all requests of this {editDialog.type === 'request_type' ? 'type' : 'category'}
+              </p>
             </div>
 
             <div className="flex items-center justify-between">

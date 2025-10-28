@@ -66,7 +66,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Attach inline logo image so it displays reliably in email clients
     try {
-      const logoUrl = Deno.env.get('EMAIL_LOGO_URL') || 'https://hub.visionradiology.com.au/vision-radiology-email-logo.png';
+      const logoUrl = 'https://404937c6-0b78-4994-94df-9246989f9d9d.lovableproject.com/vision-radiology-email-logo.png';
       const logoRes = await fetch(logoUrl);
       if (logoRes.ok) {
         const logoBuffer = await logoRes.arrayBuffer();
@@ -74,7 +74,7 @@ const handler = async (req: Request): Promise<Response> => {
         const logoFile = new File([new Blob([logoBuffer], { type: contentType })], 'email-logo.png', { type: contentType });
         formData.append('inline', logoFile);
       } else {
-        console.warn('[send-test-email] Failed to fetch logo:', logoRes.status);
+        console.warn('[send-test-email] Failed to fetch logo:', logoRes.status, logoUrl);
       }
     } catch (logoError) {
       console.warn('[send-test-email] Error fetching logo:', logoError);

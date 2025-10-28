@@ -2416,6 +2416,7 @@ export type Database = {
       request_categories: {
         Row: {
           assigned_to: string | null
+          cc_emails: string[] | null
           created_at: string | null
           description: string | null
           form_template_id: string | null
@@ -2430,6 +2431,7 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          cc_emails?: string[] | null
           created_at?: string | null
           description?: string | null
           form_template_id?: string | null
@@ -2444,6 +2446,7 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          cc_emails?: string[] | null
           created_at?: string | null
           description?: string | null
           form_template_id?: string | null
@@ -2635,6 +2638,7 @@ export type Database = {
       }
       request_types: {
         Row: {
+          cc_emails: string[] | null
           created_at: string | null
           department_id: string | null
           description: string | null
@@ -2647,6 +2651,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          cc_emails?: string[] | null
           created_at?: string | null
           department_id?: string | null
           description?: string | null
@@ -2659,6 +2664,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          cc_emails?: string[] | null
           created_at?: string | null
           department_id?: string | null
           description?: string | null
