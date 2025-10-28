@@ -2402,6 +2402,56 @@ export type Database = {
           },
         ]
       }
+      request_categories: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          request_type_id: string
+          slug: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          request_type_id: string
+          slug: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          request_type_id?: string
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_categories_request_type_id_fkey"
+            columns: ["request_type_id"]
+            isOneToOne: false
+            referencedRelation: "request_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       request_comments: {
         Row: {
           attachments: string[] | null

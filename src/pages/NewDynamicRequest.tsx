@@ -17,15 +17,24 @@ interface RequestType {
   form_template_id: string | null;
 }
 
+interface RequestCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  assigned_to: string | null;
+}
+
 export default function NewDynamicRequest() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, categorySlug } = useParams<{ slug: string; categorySlug?: string }>();
   const navigate = useNavigate();
   const [requestType, setRequestType] = useState<RequestType | null>(null);
+  const [category, setCategory] = useState<RequestCategory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchRequestType = async () => {
+    const fetchRequestData = async () => {
       if (!slug) {
         setError('Invalid request type');
         setLoading(false);
@@ -33,7 +42,8 @@ export default function NewDynamicRequest() {
       }
 
       try {
-        const { data, error: fetchError } = await supabase
+        // Fetch request type
+        const { data: typeData, error: fetchError } = await supabase
           .from('request_types')
           .select('id, name, slug, description, department_id, form_template_id')
           .eq('slug', slug)
@@ -42,24 +52,51 @@ export default function NewDynamicRequest() {
 
         if (fetchError) throw fetchError;
 
-        if (!data) {
+        if (!typeData) {
           setError('Request type not found or inactive');
-        } else {
-          setRequestType(data);
+          setLoading(false);
+          return;
+        }
+
+        setRequestType(typeData);
+
+        // Fetch category if provided
+        if (categorySlug) {
+          const { data: categoryData, error: categoryError } = await supabase
+            .from('request_categories')
+            .select('id, name, slug, description, assigned_to')
+            .eq('request_type_id', typeData.id)
+            .eq('slug', categorySlug)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (categoryError) throw categoryError;
+
+          if (!categoryData) {
+            setError('Category not found or inactive');
+            setLoading(false);
+            return;
+          }
+
+          setCategory(categoryData);
         }
       } catch (err: any) {
-        console.error('Error fetching request type:', err);
-        setError(err.message || 'Failed to load request type');
+        console.error('Error fetching request data:', err);
+        setError(err.message || 'Failed to load request data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRequestType();
-  }, [slug]);
+    fetchRequestData();
+  }, [slug, categorySlug]);
 
   const handleBack = () => {
-    navigate('/requests/new');
+    if (categorySlug) {
+      navigate(`/requests/new/${slug}`);
+    } else {
+      navigate('/requests/new');
+    }
   };
 
   if (loading) {
@@ -96,12 +133,17 @@ export default function NewDynamicRequest() {
       <div className="flex items-center gap-4">
         <Button variant="outline" onClick={handleBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Request Types
+          {categorySlug ? 'Back to Categories' : 'Back to Request Types'}
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{requestType.name}</h1>
-          {requestType.description && (
-            <p className="text-muted-foreground mt-2">{requestType.description}</p>
+          <h1 className="text-3xl font-bold">
+            {requestType.name}
+            {category && ` - ${category.name}`}
+          </h1>
+          {(category?.description || requestType.description) && (
+            <p className="text-muted-foreground mt-2">
+              {category?.description || requestType.description}
+            </p>
           )}
         </div>
       </div>
@@ -111,6 +153,9 @@ export default function NewDynamicRequest() {
         requestTypeName={requestType.name}
         departmentId={requestType.department_id}
         formTemplateId={requestType.form_template_id || undefined}
+        categoryId={category?.id}
+        categoryName={category?.name}
+        assignedTo={category?.assigned_to || undefined}
       />
     </div>
   );

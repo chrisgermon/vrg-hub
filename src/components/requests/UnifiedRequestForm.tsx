@@ -16,9 +16,20 @@ interface UnifiedRequestFormProps {
   requestTypeName: string;
   departmentId?: string;
   formTemplateId?: string;
+  categoryId?: string;
+  categoryName?: string;
+  assignedTo?: string;
 }
 
-export function UnifiedRequestForm({ requestTypeId, requestTypeName, departmentId, formTemplateId }: UnifiedRequestFormProps) {
+export function UnifiedRequestForm({ 
+  requestTypeId, 
+  requestTypeName, 
+  departmentId, 
+  formTemplateId,
+  categoryId,
+  categoryName,
+  assignedTo 
+}: UnifiedRequestFormProps) {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -119,12 +130,17 @@ export function UnifiedRequestForm({ requestTypeId, requestTypeName, departmentI
           status: initialStatus,
           approval_status: approvalStatus,
           approver_id: approverId,
+          assigned_to: assignedTo || null, // Use category assigned user if available
           user_id: user.id,
           request_type_id: requestTypeId,
           department_id: departmentId || null,
           brand_id: brandId || null,
           location_id: locationId || null,
-          metadata: customFields, // Store all custom fields in metadata
+          metadata: {
+            ...customFields,
+            category_id: categoryId || null,
+            category_name: categoryName || null,
+          }, // Store all custom fields and category in metadata
           cc_emails: ccEmails, // Add CC emails
         })
         .select('id, request_number')

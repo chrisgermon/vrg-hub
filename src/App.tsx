@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 
 // Lazy imports for low-traffic pages
 import NewRequest from "./pages/NewRequest";
+import NewRequestCategory from "./pages/NewRequestCategory";
 const NewDynamicRequest = lazy(() => import("./pages/NewDynamicRequest"));
 const NewTicket = lazy(() => import("./pages/NewTicket"));
 const MonthlyNewsletter = lazy(() => import("./pages/MonthlyNewsletter"));
@@ -81,7 +82,8 @@ const protectedLayoutRoutes: Array<{
   { path: "/requests/marketing/:id", element: <Requests /> },
   { path: "/requests/user-account/:id", element: <Requests /> },
   { path: "/requests/new", element: <NewRequest /> },
-  { path: "/requests/new/:slug", element: <NewDynamicRequest /> },
+  { path: "/requests/new/:slug", element: <NewRequestCategory /> },
+  { path: "/requests/new/:slug/:categorySlug", element: <NewDynamicRequest /> },
   { path: "/requests/tickets/new", element: <NewTicket /> },
   { path: "/catalog", element: <Catalog /> },
   { path: "/documentation", element: <Documentation /> },
