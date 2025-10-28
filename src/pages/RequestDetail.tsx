@@ -120,12 +120,23 @@ export default function RequestDetail() {
             .select('full_name, email')
             .eq('id', hwRequest.user_id)
             .maybeSingle();
+
+          let assignedProfile: { full_name: string; email: string } | null = null;
+          if (hwRequest.assigned_to) {
+            const { data: ap } = await supabase
+              .from('profiles')
+              .select('full_name, email')
+              .eq('id', hwRequest.assigned_to)
+              .maybeSingle();
+            assignedProfile = ap;
+          }
           
-          return { 
+          return ({ 
             ...hwRequest, 
             type: 'hardware' as const, 
-            profile: profile || undefined 
-          };
+            profile: profile || undefined,
+            assigned_profile: assignedProfile || undefined,
+          } as any);
         }
       } else {
         const { data: hwRequest } = await supabase
@@ -145,12 +156,23 @@ export default function RequestDetail() {
             .select('full_name, email')
             .eq('id', hwRequest.user_id)
             .maybeSingle();
+
+          let assignedProfile: { full_name: string; email: string } | null = null;
+          if (hwRequest.assigned_to) {
+            const { data: ap } = await supabase
+              .from('profiles')
+              .select('full_name, email')
+              .eq('id', hwRequest.assigned_to)
+              .maybeSingle();
+            assignedProfile = ap;
+          }
           
-          return { 
+          return ({ 
             ...hwRequest, 
             type: 'hardware' as const, 
-            profile: profile || undefined 
-          };
+            profile: profile || undefined,
+            assigned_profile: assignedProfile || undefined,
+          } as any);
         }
       }
 
