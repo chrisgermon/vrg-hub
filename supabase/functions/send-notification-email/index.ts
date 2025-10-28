@@ -525,15 +525,18 @@ const handler = async (req: Request): Promise<Response> => {
       try {
         const logoUrl =
           Deno.env.get('EMAIL_LOGO_URL') ||
-          'https://qnavtvxemndvrutnavvm.supabase.co/storage/v1/object/public/company-assets/vision-radiology-email-logo.png' ||
-          'https://hub.visionradiology.com.au/vision-radiology-email-logo.png' ||
-          'https://404937c6-0b78-4994-94df-9246989f9d9d.lovableproject.com/vision-radiology-email-logo.png';
+          'https://qnavtvxemndvrutnavvm.supabase.co/storage/v1/object/public/company-assets/vision-radiology-email-logo.png';
+        
+        console.log('[send-notification-email] Fetching logo from:', logoUrl);
         const logoRes = await fetch(logoUrl);
+        
         if (logoRes.ok) {
           const logoBuffer = await logoRes.arrayBuffer();
-          const contentType = logoRes.headers.get('content-type') || 'image/png';
-          const logoFile = new File([new Blob([logoBuffer], { type: contentType })], 'email-logo.png', { type: contentType });
-          formData.append('inline', logoFile);
+          const logoBlob = new Blob([logoBuffer], { type: 'image/png' });
+          
+          // Append inline attachment with filename matching the CID reference
+          formData.append('inline', logoBlob, 'email-logo.png');
+          console.log('[send-notification-email] Logo attached successfully');
         } else {
           console.warn('[send-notification-email] Failed to fetch logo:', logoRes.status, logoUrl);
         }
