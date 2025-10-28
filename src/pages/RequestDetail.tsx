@@ -351,6 +351,15 @@ export default function RequestDetail() {
                     <h2 className="text-xl font-semibold mb-2">{request.title}</h2>
                   </div>
 
+                  {request.description && (
+                    <div className="bg-muted/50 p-4 rounded-lg">
+                      <div 
+                        className="text-sm prose prose-sm max-w-none dark:prose-invert"
+                        dangerouslySetInnerHTML={{ __html: request.description }}
+                      />
+                    </div>
+                  )}
+
                   {request.business_justification && (
                     <div className="bg-muted/50 p-4 rounded-lg">
                       <div className="text-sm whitespace-pre-wrap">
