@@ -4,15 +4,10 @@ import 'react-quill/dist/quill.snow.css';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import ImageResize from 'quill-image-resize-module';
 
-// Dynamically import and register image resize module
-if (typeof window !== 'undefined') {
-  import('quill-image-resize-module').then((module) => {
-    Quill.register('modules/imageResize', module.default);
-  }).catch(() => {
-    console.log('Image resize module not available');
-  });
-}
+// Register image resize synchronously to avoid race conditions
+Quill.register('modules/imageResize', ImageResize);
 
 interface RichTextEditorProps {
   value: string;
