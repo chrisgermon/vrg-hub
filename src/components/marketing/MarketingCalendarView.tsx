@@ -80,28 +80,31 @@ export function MarketingCalendarView() {
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   const getCampaignsForDate = (date: Date): Campaign[] => {
-    return allCampaigns.filter(campaign => {
+    const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: userTimeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+
+    const targetKey = formatter.format(date);
+
+    return allCampaigns.filter((campaign) => {
       let campaignDateStr: string | undefined;
-      
+
       if (campaign.type === 'fax') {
         campaignDateStr = (campaign as NotifyreCampaign).sent_at;
       } else if (campaign.type === 'email' && (campaign as MailchimpCampaign).send_time) {
         campaignDateStr = (campaign as MailchimpCampaign).send_time;
       }
-      
+
       if (!campaignDateStr) return false;
-      
-      // Parse the UTC date and convert to local date for comparison
+
       const campaignDate = parseISO(campaignDateStr);
-      
-      // Create a local date from the campaign date to ensure proper timezone handling
-      const localCampaignDate = new Date(
-        campaignDate.getFullYear(),
-        campaignDate.getMonth(),
-        campaignDate.getDate()
-      );
-      
-      return isSameDay(localCampaignDate, date);
+      const campaignKey = formatter.format(campaignDate);
+
+      return campaignKey === targetKey;
     });
   };
 
