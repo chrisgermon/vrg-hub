@@ -2639,6 +2639,7 @@ export type Database = {
           department_id: string | null
           description: string | null
           form_template_id: string | null
+          icon: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -2650,6 +2651,7 @@ export type Database = {
           department_id?: string | null
           description?: string | null
           form_template_id?: string | null
+          icon?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -2661,6 +2663,7 @@ export type Database = {
           department_id?: string | null
           description?: string | null
           form_template_id?: string | null
+          icon?: string | null
           id?: string
           is_active?: boolean | null
           name?: string

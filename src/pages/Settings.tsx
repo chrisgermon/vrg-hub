@@ -19,6 +19,7 @@ import { CompanyFeaturesManager } from '@/components/settings/CompanyFeaturesMan
 import { DepartmentRequestTypeManager } from '@/components/requests/admin/DepartmentRequestTypeManager';
 import { TeamManagement } from '@/components/requests/admin/TeamManagement';
 import { TicketAuditLog } from '@/components/requests/admin/TicketAuditLog';
+import { RequestTypesManager } from '@/components/settings/RequestTypesManager';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Edit } from 'lucide-react';
@@ -171,23 +172,34 @@ export default function Settings() {
       label: 'Request Forms',
       allowed: isAdmin,
       content: (
-        <Card>
-          <CardHeader>
-            <CardTitle>Request Form Templates</CardTitle>
-            <CardDescription>Customize department request forms with advanced form builder</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Edit and customize all department request forms including fields, validation, and layout.
-              </p>
-              <Button onClick={() => navigate('/form-templates')}>
-                <Edit className="w-4 h-4 mr-2" />
-                Open Form Editor
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="types" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="types">Request Types & Categories</TabsTrigger>
+            <TabsTrigger value="templates">Form Templates</TabsTrigger>
+          </TabsList>
+          <TabsContent value="types">
+            <RequestTypesManager />
+          </TabsContent>
+          <TabsContent value="templates">
+            <Card>
+              <CardHeader>
+                <CardTitle>Request Form Templates</CardTitle>
+                <CardDescription>Customize department request forms with advanced form builder</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Edit and customize all department request forms including fields, validation, and layout.
+                  </p>
+                  <Button onClick={() => navigate('/form-templates')}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Open Form Editor
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       ),
     },
     {
