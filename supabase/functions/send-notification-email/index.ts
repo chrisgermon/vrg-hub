@@ -545,6 +545,51 @@ const handler = async (req: Request): Promise<Response> => {
         });
       }
 
+      // Log the email to email_logs table
+      try {
+        // Log primary recipient
+        await supabase.from('email_logs').insert({
+          recipient_email: to,
+          sender_email: `noreply@${ticketDomain}`,
+          subject: subject,
+          email_type: template,
+          status: 'sent',
+          metadata: {
+            template,
+            request_id: requestId,
+            request_type: requestType,
+            message_id: messageId,
+            ...data
+          }
+        });
+
+        // Log CC recipients
+        if (cc) {
+          const ccEmails = Array.isArray(cc) ? cc : [cc];
+          for (const ccEmail of ccEmails) {
+            if (ccEmail && ccEmail.trim()) {
+              await supabase.from('email_logs').insert({
+                recipient_email: ccEmail.trim(),
+                sender_email: `noreply@${ticketDomain}`,
+                subject: subject,
+                email_type: `${template}_cc`,
+                status: 'sent',
+                metadata: {
+                  template,
+                  request_id: requestId,
+                  request_type: requestType,
+                  message_id: messageId,
+                  cc: true,
+                  ...data
+                }
+              });
+            }
+          }
+        }
+      } catch (logError) {
+        console.error('[send-notification-email] Failed to log email:', logError);
+      }
+
       return new Response(
         JSON.stringify({ success: true, messageId }),
         {
