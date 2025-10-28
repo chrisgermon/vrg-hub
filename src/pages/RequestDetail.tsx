@@ -75,28 +75,31 @@ export default function RequestDetail() {
       const numberMatch = requestParam.match(/(\d+)/);
       const targetNumber = numberMatch ? parseInt(numberMatch[1], 10) : NaN;
       
-      const { data: ticket } = await supabase
+      const { data: ticket, error: ticketError } = await supabase
         .from('tickets')
-        .select(`
-          *,
-          requester:profiles!tickets_user_id_fkey(full_name, email),
-          assigned_user:profiles!tickets_assigned_to_fkey(full_name, email),
-          request_type:request_types(name),
-          category:request_categories(name),
-          brand:brand_id(display_name),
-          location:location_id(name)
-        `)
+        .select(`*`)
         .eq(isUUID ? 'id' : 'request_number', isUUID ? requestParam : targetNumber)
         .maybeSingle();
 
       if (ticket) {
+        const [requesterRes, assignedRes, typeRes, categoryRes, brandRes, locationRes] = await Promise.all([
+          ticket.user_id ? supabase.from('profiles').select('full_name, email').eq('id', ticket.user_id).maybeSingle() : Promise.resolve({ data: null } as any),
+          ticket.assigned_to ? supabase.from('profiles').select('full_name, email').eq('id', ticket.assigned_to).maybeSingle() : Promise.resolve({ data: null } as any),
+          (ticket as any).request_type_id ? supabase.from('request_types').select('name').eq('id', (ticket as any).request_type_id).maybeSingle() : Promise.resolve({ data: null } as any),
+          (ticket as any).category_id ? supabase.from('request_categories').select('name').eq('id', (ticket as any).category_id).maybeSingle() : Promise.resolve({ data: null } as any),
+          (ticket as any).brand_id ? supabase.from('brands').select('display_name').eq('id', (ticket as any).brand_id).maybeSingle() : Promise.resolve({ data: null } as any),
+          (ticket as any).location_id ? supabase.from('locations').select('name').eq('id', (ticket as any).location_id).maybeSingle() : Promise.resolve({ data: null } as any),
+        ]);
+
         return {
           ...ticket,
-          type: 'hardware' as const,
-          profile: ticket.requester,
-          assigned_profile: ticket.assigned_user,
-          brands: ticket.brand ? { display_name: ticket.brand.display_name } : undefined,
-          locations: ticket.location ? { name: ticket.location.name } : undefined,
+          type: 'department' as const,
+          profile: requesterRes.data || undefined,
+          assigned_profile: assignedRes.data || undefined,
+          request_type: typeRes.data || undefined,
+          category: categoryRes.data || undefined,
+          brands: brandRes.data ? { display_name: (brandRes.data as any).display_name } : undefined,
+          locations: locationRes.data ? { name: (locationRes.data as any).name } : undefined,
         } as any;
       }
 
@@ -184,6 +187,8 @@ export default function RequestDetail() {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
+      inbox: 'default',
+      open: 'default',
       draft: 'secondary',
       submitted: 'default',
       manager_approved: 'default',
