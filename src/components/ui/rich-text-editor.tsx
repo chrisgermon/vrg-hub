@@ -4,10 +4,10 @@ import 'react-quill/dist/quill.snow.css';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import ImageResize from 'quill-image-resize-module';
+import BlotFormatter from '@enzedonline/quill-blot-formatter2';
 
-// Register image resize synchronously to avoid race conditions
-Quill.register('modules/imageResize', ImageResize);
+// Register blot formatter (supports image resize/drag)
+Quill.register('modules/blotFormatter', BlotFormatter);
 
 interface RichTextEditorProps {
   value: string;
@@ -99,9 +99,8 @@ export const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
           image: imageHandler
         } : undefined
       },
-      imageResize: enableImageUpload ? {
-        parchment: Quill.import('parchment'),
-        modules: ['Resize', 'DisplaySize']
+      blotFormatter: enableImageUpload ? {
+        // keep defaults; enables resize + align handles
       } : undefined,
       clipboard: {
         matchVisual: false

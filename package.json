@@ -14,6 +14,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@enzedonline/quill-blot-formatter2": "^3.0.3",
     "@hookform/resolvers": "^3.10.0",
     "@plasmicapp/host": "^1.0.226",
     "@plasmicapp/loader-react": "^1.0.400",
