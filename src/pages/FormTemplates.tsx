@@ -87,12 +87,15 @@ export default function FormTemplates() {
         return;
       }
 
+      let templateId = editingTemplate?.id;
+
       if (editingTemplate) {
         const updateData: any = {
           name: templateData.name!,
           description: templateData.description,
           fields: templateData.fields as any,
           is_active: templateData.is_active,
+          settings: templateData.settings,
         };
         
         // Only include form_type and department_id if they are set
@@ -115,7 +118,7 @@ export default function FormTemplates() {
           description: 'Form template updated successfully',
         });
       } else {
-        const { error } = await supabase
+        const { data: newTemplate, error } = await supabase
           .from('form_templates')
           .insert({
             name: templateData.name!,
@@ -124,14 +127,59 @@ export default function FormTemplates() {
             department_id: templateData.department_id,
             fields: templateData.fields as any,
             is_active: templateData.is_active ?? true,
-          });
+            settings: templateData.settings,
+          })
+          .select()
+          .single();
 
         if (error) throw error;
+        templateId = newTemplate.id;
 
         toast({
           title: 'Success',
           description: 'Form template created successfully',
         });
+      }
+
+      // If request type and category info provided, create/update request category
+      const requestTypeId = templateData.settings?.request_type_id;
+      const categoryName = templateData.settings?.category_name;
+      const categorySlug = templateData.settings?.category_slug;
+
+      if (requestTypeId && categoryName && categorySlug && templateId) {
+        // Check if category already exists
+        const { data: existingCategory } = await supabase
+          .from('request_categories')
+          .select('id')
+          .eq('request_type_id', requestTypeId)
+          .eq('slug', categorySlug)
+          .maybeSingle();
+
+        if (existingCategory) {
+          // Update existing category
+          const { error: catError } = await supabase
+            .from('request_categories')
+            .update({
+              name: categoryName,
+              form_template_id: templateId,
+            })
+            .eq('id', existingCategory.id);
+
+          if (catError) throw catError;
+        } else {
+          // Create new category
+          const { error: catError } = await supabase
+            .from('request_categories')
+            .insert({
+              request_type_id: requestTypeId,
+              name: categoryName,
+              slug: categorySlug,
+              form_template_id: templateId,
+              is_active: true,
+            });
+
+          if (catError) throw catError;
+        }
       }
 
       setEditingTemplate(null);

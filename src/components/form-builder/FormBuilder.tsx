@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Button } from '@/components/ui/button';
@@ -15,12 +15,18 @@ import { NotificationSettings } from './NotificationSettings';
 import { ApprovalSettings } from './ApprovalSettings';
 import { Save, X, Bell } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
 
 export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
   const [name, setName] = useState(template?.name || '');
   const [description, setDescription] = useState(template?.description || '');
   const [department, setDepartment] = useState(template?.department || '');
   const [subDepartment, setSubDepartment] = useState(template?.sub_department || '');
+  const [requestTypeId, setRequestTypeId] = useState<string>(template?.settings?.request_type_id || '');
+  const [categoryName, setCategoryName] = useState(template?.settings?.category_name || '');
+  const [categorySlug, setCategorySlug] = useState(template?.settings?.category_slug || '');
+  const [requestTypes, setRequestTypes] = useState<Array<{id: string; name: string}>>([]);
   const [fields, setFields] = useState<FormField[]>(template?.fields || []);
   const [selectedField, setSelectedField] = useState<FormField | null>(null);
   const [isActive, setIsActive] = useState(template?.is_active ?? true);
@@ -39,6 +45,38 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
   const [approverId, setApproverId] = useState<string | null>(
     template?.settings?.approver_id || null
   );
+
+  useEffect(() => {
+    const fetchRequestTypes = async () => {
+      const { data } = await supabase
+        .from('request_types')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+      if (data) setRequestTypes(data);
+    };
+    fetchRequestTypes();
+  }, []);
+
+  // Load existing category data if template is linked to a category
+  useEffect(() => {
+    if (template?.id) {
+      const fetchCategory = async () => {
+        const { data } = await supabase
+          .from('request_categories')
+          .select('request_type_id, name, slug')
+          .eq('form_template_id', template.id)
+          .maybeSingle();
+        
+        if (data) {
+          setRequestTypeId(data.request_type_id);
+          setCategoryName(data.name);
+          setCategorySlug(data.slug);
+        }
+      };
+      fetchCategory();
+    }
+  }, [template?.id]);
 
   const handleAddField = (type: FieldType) => {
     const newField: FormField = {
@@ -98,6 +136,9 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
         enable_sms_notifications: enableSmsNotifications,
         require_approval: requireApproval,
         approver_id: approverId,
+        request_type_id: requestTypeId || undefined,
+        category_name: categoryName || undefined,
+        category_slug: categorySlug || undefined,
       },
     });
   };
@@ -121,24 +162,58 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
             </div>
 
             <div>
-              <Label htmlFor="form-department">Department</Label>
-              <Input
-                id="form-department"
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                placeholder="e.g., IT, HR, Finance"
-              />
+              <Label htmlFor="form-request-type">Request Type (Optional)</Label>
+              <Select value={requestTypeId} onValueChange={setRequestTypeId}>
+                <SelectTrigger id="form-request-type">
+                  <SelectValue placeholder="Select request type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {requestTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Link this form to a request type to create a category option
+              </p>
             </div>
 
-            <div>
-              <Label htmlFor="form-subdepartment">Sub-Department (Optional)</Label>
-              <Input
-                id="form-subdepartment"
-                value={subDepartment}
-                onChange={(e) => setSubDepartment(e.target.value)}
-                placeholder="e.g., Services"
-              />
-            </div>
+            {requestTypeId && (
+              <>
+                <div>
+                  <Label htmlFor="category-name">Category Name</Label>
+                  <Input
+                    id="category-name"
+                    value={categoryName}
+                    onChange={(e) => {
+                      setCategoryName(e.target.value);
+                      // Auto-generate slug from name
+                      setCategorySlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+                    }}
+                    placeholder="e.g., Cleaning, IT Support"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This will appear as a clickable category in the request form
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="category-slug">Category Slug</Label>
+                  <Input
+                    id="category-slug"
+                    value={categorySlug}
+                    onChange={(e) => setCategorySlug(e.target.value)}
+                    placeholder="e.g., cleaning, it-support"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    URL-friendly version (auto-generated from name)
+                  </p>
+                </div>
+              </>
+            )}
 
             <div>
               <Label htmlFor="form-description">Description</Label>

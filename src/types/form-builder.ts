@@ -61,6 +61,9 @@ export interface FormTemplate {
     auto_assign?: boolean;
     require_approval?: boolean;
     approver_id?: string | null;
+    request_type_id?: string;
+    category_name?: string;
+    category_slug?: string;
   };
   is_active: boolean;
   created_by?: string;
