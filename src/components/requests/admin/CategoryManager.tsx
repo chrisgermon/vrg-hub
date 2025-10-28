@@ -112,7 +112,13 @@ function CategoryRow({
   users: any[];
 }) {
   const deleteCategory = useDeleteCategory();
-  const IconComponent = (LucideIcons as any)[category.icon] || LucideIcons.HelpCircle;
+  
+  // Convert kebab-case to PascalCase for icon lookup
+  const iconName = category.icon
+    ?.split('-')
+    .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('') || 'HelpCircle';
+  const IconComponent = (LucideIcons as any)[iconName] || LucideIcons.HelpCircle;
 
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this category?')) {
@@ -165,10 +171,16 @@ function CategoryDialog({
   users: any[];
 }) {
   const [open, setOpen] = useState(false);
+  
+  // Convert kebab-case icon from DB to PascalCase for UI
+  const initialIcon = category?.icon
+    ? category.icon.split('-').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join('')
+    : 'HelpCircle';
+  
   const [name, setName] = useState(category?.name || '');
   const [description, setDescription] = useState(category?.description || '');
   const [requestTypeId, setRequestTypeId] = useState(category?.request_type_id || '');
-  const [icon, setIcon] = useState(category?.icon || 'HelpCircle');
+  const [icon, setIcon] = useState(initialIcon);
   const [assignedTo, setAssignedTo] = useState(category?.assigned_to || '');
   const [isActive, setIsActive] = useState(category?.is_active ?? true);
   const [sortOrder, setSortOrder] = useState(category?.sort_order || 0);
@@ -182,11 +194,14 @@ function CategoryDialog({
     
     const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     
+    // Convert PascalCase icon to kebab-case for storage
+    const iconKebab = icon.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '');
+    
     const data = {
       name,
       description,
       request_type_id: requestTypeId,
-      icon,
+      icon: iconKebab,
       slug,
       assigned_to: assignedTo || null,
       is_active: isActive,
