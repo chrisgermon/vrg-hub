@@ -4,9 +4,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BrandLocationSelect } from '@/components/ui/brand-location-select';
-import { DynamicFormRenderer } from '@/components/form-builder/DynamicFormRenderer';
-import { FormTemplate } from '@/types/form-builder';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { FileDropzone } from '@/components/ui/file-dropzone';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { CCEmailsInput } from './CCEmailsInput';
@@ -33,11 +34,14 @@ export function UnifiedRequestForm({
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [loadingTemplate, setLoadingTemplate] = useState(true);
-  const [formTemplate, setFormTemplate] = useState<FormTemplate | null>(null);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [brandId, setBrandId] = useState(profile?.brand_id || '');
   const [locationId, setLocationId] = useState(profile?.location_id || '');
   const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [brands, setBrands] = useState<Array<{ id: string; display_name: string }>>([]);
+  const [locations, setLocations] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
     if (profile) {
@@ -46,65 +50,74 @@ export function UnifiedRequestForm({
     }
   }, [profile]);
 
+  // Fetch brands and locations
   useEffect(() => {
-    const fetchTemplate = async () => {
-      if (!formTemplateId) {
-        setLoadingTemplate(false);
-        return;
-      }
-
+    const fetchBrandsAndLocations = async () => {
       try {
-        const { data, error } = await supabase
-          .from('form_templates')
-          .select('*')
-          .eq('id', formTemplateId)
-          .eq('is_active', true)
-          .single();
+        const [brandsRes, locationsRes] = await Promise.all([
+          supabase.from('brands').select('id, display_name').eq('is_active', true).order('sort_order'),
+          supabase.from('locations').select('id, name').eq('is_active', true).order('sort_order')
+        ]);
 
-        if (error) throw error;
-        
-        // Parse JSON fields if they're coming as strings
-        const parsedData: FormTemplate = {
-          ...data,
-          fields: Array.isArray(data.fields) ? data.fields : JSON.parse(data.fields as string),
-          settings: data.settings && typeof data.settings === 'string' 
-            ? JSON.parse(data.settings) 
-            : (data.settings || undefined),
-        };
-        
-        setFormTemplate(parsedData);
+        if (brandsRes.data) setBrands(brandsRes.data);
+        if (locationsRes.data) setLocations(locationsRes.data);
       } catch (error) {
-        console.error('Error fetching form template:', error);
-      } finally {
-        setLoadingTemplate(false);
+        console.error('Error fetching brands/locations:', error);
       }
     };
 
-    fetchTemplate();
-  }, [formTemplateId]);
+    fetchBrandsAndLocations();
+  }, []);
 
-  const handleSubmit = async (formData: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!user) {
       toast.error('You must be logged in to submit a request');
+      return;
+    }
+
+    if (!title.trim()) {
+      toast.error('Please enter a request title');
+      return;
+    }
+
+    if (!description.trim()) {
+      toast.error('Please enter an issue description');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Extract standard fields
-      const { title, description, priority, ...customFields } = formData;
+      // Upload attachments to storage if any
+      const attachmentUrls: string[] = [];
+      if (attachments.length > 0) {
+        for (const file of attachments) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('request-attachments')
+            .upload(fileName, file);
+
+          if (uploadError) throw uploadError;
+          
+          const { data: { publicUrl } } = supabase.storage
+            .from('request-attachments')
+            .getPublicUrl(fileName);
+            
+          attachmentUrls.push(publicUrl);
+        }
+      }
 
       const { data, error } = await supabase
         .from('tickets')
         .insert({
-          title: title || `${requestTypeName}${categoryName ? `: ${categoryName}` : ''}`,
-          description: description || '',
-          business_justification: JSON.stringify({
-            department: requestTypeName,
-            form_data: customFields,
-          }),
-          priority: priority || 'medium',
+          title: title.trim(),
+          description: description.trim(),
+          business_justification: description.trim(),
+          priority: 'medium',
           status: 'inbox',
           user_id: user.id,
           brand_id: brandId || null,
@@ -113,7 +126,11 @@ export function UnifiedRequestForm({
           category_id: categoryId || null,
           form_template_id: formTemplateId || null,
           request_type_id: requestTypeId || null,
-          metadata: customFields,
+          metadata: {
+            attachments: attachmentUrls,
+            request_type: requestTypeName,
+            category: categoryName
+          },
           cc_emails: ccEmails,
           source: 'form',
         })
@@ -132,66 +149,128 @@ export function UnifiedRequestForm({
     }
   };
 
-  if (loadingTemplate) {
-    return (
-      <Card>
-        <CardContent className="py-12 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>{requestTypeName}</CardTitle>
+          <CardTitle>{requestTypeName}{categoryName ? ` - ${categoryName}` : ''}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Brand and Location Selection */}
-          <div className="pb-6 border-b">
-            <h3 className="text-sm font-medium mb-4">Location Information</h3>
-            <BrandLocationSelect
-              selectedBrandId={brandId}
-              selectedLocationId={locationId}
-              onBrandChange={setBrandId}
-              onLocationChange={setLocationId}
-            />
-          </div>
-
-          {/* CC Emails */}
-          <div className="pb-6 border-b">
-            <CCEmailsInput
-              emails={ccEmails}
-              onChange={setCcEmails}
-              disabled={loading}
-            />
-          </div>
-
-          {/* Custom Form Fields */}
-          {formTemplate ? (
-            <DynamicFormRenderer
-              template={formTemplate}
-              onSubmit={handleSubmit}
-              isSubmitting={loading}
-            />
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No custom form configured for this request type.
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Request Title */}
+            <div className="space-y-2">
+              <Label htmlFor="title">Request Title *</Label>
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter a brief title for your request"
+                required
+                disabled={loading}
+              />
             </div>
-          )}
 
-          {/* Cancel button outside the form */}
-          <div className="flex gap-4 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate('/requests/new')}
-            >
-              Cancel
-            </Button>
-          </div>
+            {/* Issue Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description">Issue Description *</Label>
+              <RichTextEditor
+                value={description}
+                onChange={setDescription}
+                placeholder="Describe the issue in detail..."
+                disabled={loading}
+              />
+            </div>
+
+            {/* Brand and Location - Side by Side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="brand">Brand</Label>
+                <select
+                  id="brand"
+                  value={brandId}
+                  onChange={(e) => setBrandId(e.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  disabled={loading}
+                >
+                  <option value="">Select Brand</option>
+                  {/* Brands will be populated from the database */}
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <select
+                  id="location"
+                  value={locationId}
+                  onChange={(e) => setLocationId(e.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  disabled={loading}
+                >
+                  <option value="">Select Location</option>
+                  {/* Locations will be populated from the database */}
+                </select>
+              </div>
+            </div>
+
+            {/* Attachments */}
+            <div className="space-y-2">
+              <Label>Attachments</Label>
+              <FileDropzone
+                onFilesSelected={setAttachments}
+                multiple={true}
+                maxSize={10}
+              />
+              {attachments.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {attachments.map((file, index) => (
+                    <div key={index} className="text-sm text-muted-foreground flex items-center justify-between bg-muted px-3 py-2 rounded">
+                      <span>{file.name} ({(file.size / 1024).toFixed(2)} KB)</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
+                        disabled={loading}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* CC Emails */}
+            <div className="space-y-2">
+              <CCEmailsInput
+                emails={ccEmails}
+                onChange={setCcEmails}
+                disabled={loading}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-4 pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate('/requests/new')}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Request'
+                )}
+              </Button>
+            </div>
+          </form>
         </CardContent>
       </Card>
     </div>
