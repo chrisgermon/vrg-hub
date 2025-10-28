@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Select,
   SelectContent,
@@ -34,6 +35,7 @@ export function ReassignDialog({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (open) {
@@ -112,6 +114,11 @@ export function ReassignDialog({
         title: 'Request Reassigned',
         description: `Request has been assigned to ${assignedUser?.full_name}`,
       });
+
+      // Invalidate all related queries
+      queryClient.invalidateQueries({ queryKey: ['request-by-identifier'] });
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['hardware-request'] });
 
       onOpenChange(false);
       onSuccess?.();

@@ -279,6 +279,9 @@ export default function RequestDetail() {
         onOpenChange={setReassignDialogOpen}
         requestId={request.id}
         requestType={request.type}
+        onSuccess={() => {
+          // Query will be invalidated by the dialog itself
+        }}
       />
 
       {/* Main Content Area */}
@@ -320,9 +323,6 @@ export default function RequestDetail() {
                 <div className="space-y-4">
                   <div>
                     <h2 className="text-xl font-semibold mb-2">{request.title}</h2>
-                    {request.description && (
-                      <p className="text-muted-foreground whitespace-pre-wrap">{request.description}</p>
-                    )}
                   </div>
 
                   {request.business_justification && (
@@ -352,13 +352,6 @@ export default function RequestDetail() {
                     </div>
                   )}
 
-                  {!isDepartmentRequest && request.clinic_name && (
-                    <div className="text-sm">
-                      <span className="font-medium">Clinic: </span>
-                      <span>{request.clinic_name}</span>
-                    </div>
-                  )}
-
                   {!isDepartmentRequest && (
                     <div className="flex gap-4 text-sm">
                       {request.brands?.display_name && (
@@ -373,13 +366,6 @@ export default function RequestDetail() {
                           <span>{request.locations.name}</span>
                         </div>
                       )}
-                    </div>
-                  )}
-
-                  {isDepartmentRequest && request.department && (
-                    <div className="text-sm">
-                      <span className="font-medium">Department: </span>
-                      <span>{request.department}</span>
                     </div>
                   )}
                 </div>
