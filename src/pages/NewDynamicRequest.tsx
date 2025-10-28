@@ -74,12 +74,17 @@ export default function NewDynamicRequest() {
           if (categoryError) throw categoryError;
 
           if (!categoryData) {
-            setError('Category not found or inactive');
-            setLoading(false);
-            return;
+            // If navigated with fallback "/form" and no categories exist, proceed with request type form
+            if (categorySlug === 'form') {
+              // No category selected; continue without category
+            } else {
+              setError('Category not found or inactive');
+              setLoading(false);
+              return;
+            }
+          } else {
+            setCategory(categoryData);
           }
-
-          setCategory(categoryData);
         }
       } catch (err: any) {
         console.error('Error fetching request data:', err);
