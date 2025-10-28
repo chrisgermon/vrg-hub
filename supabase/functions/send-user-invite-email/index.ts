@@ -124,7 +124,11 @@ If you didn't expect this invitation, you can safely ignore this email.
 
     // Attach inline logo image so it displays reliably in email clients
     try {
-      const logoUrl = 'https://404937c6-0b78-4994-94df-9246989f9d9d.lovableproject.com/vision-radiology-email-logo.png';
+      const logoUrl =
+        Deno.env.get('EMAIL_LOGO_URL') ||
+        'https://qnavtvxemndvrutnavvm.supabase.co/storage/v1/object/public/company-assets/vision-radiology-email-logo.png' ||
+        'https://hub.visionradiology.com.au/vision-radiology-email-logo.png' ||
+        'https://404937c6-0b78-4994-94df-9246989f9d9d.lovableproject.com/vision-radiology-email-logo.png';
       const logoRes = await fetch(logoUrl);
       if (logoRes.ok) {
         const logoBuffer = await logoRes.arrayBuffer();
