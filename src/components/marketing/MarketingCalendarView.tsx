@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ChevronLeft, ChevronRight, Mail, FileText, RefreshCw } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO, addMonths, subMonths } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface NotifyreCampaign {
   id: string;
@@ -46,6 +47,9 @@ export function MarketingCalendarView() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedCampaigns, setSelectedCampaigns] = useState<Campaign[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: notifyreCampaigns = [], isLoading: loadingNotifyre, refetch: refetchNotifyre } = useQuery({
     queryKey: ['notifyre-campaigns-calendar'],
@@ -70,7 +74,26 @@ export function MarketingCalendarView() {
   });
 
   const handleRefresh = async () => {
-    await Promise.all([refetchNotifyre(), refetchMailchimp()]);
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['notifyre-campaigns-calendar'] }),
+        queryClient.invalidateQueries({ queryKey: ['mailchimp-campaigns-calendar'] })
+      ]);
+      toast({
+        title: 'Refreshed',
+        description: 'Campaign data has been refreshed successfully',
+      });
+    } catch (error) {
+      console.error('Error refreshing campaigns:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to refresh campaign data',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const allCampaigns: Campaign[] = [...notifyreCampaigns, ...mailchimpCampaigns];
@@ -134,8 +157,8 @@ export function MarketingCalendarView() {
             Today
           </Button>
         </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing || isLoading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
