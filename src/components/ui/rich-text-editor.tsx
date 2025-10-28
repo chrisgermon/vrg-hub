@@ -5,6 +5,15 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// Dynamically import and register image resize module
+if (typeof window !== 'undefined') {
+  import('quill-image-resize-module').then((module) => {
+    Quill.register('modules/imageResize', module.default);
+  }).catch(() => {
+    console.log('Image resize module not available');
+  });
+}
+
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -95,6 +104,10 @@ export const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
           image: imageHandler
         } : undefined
       },
+      imageResize: enableImageUpload ? {
+        parchment: Quill.import('parchment'),
+        modules: ['Resize', 'DisplaySize']
+      } : undefined,
       clipboard: {
         matchVisual: false
       }
@@ -252,10 +265,11 @@ export const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
             max-width: 100%;
             height: auto;
             cursor: pointer;
-            transition: transform 0.2s;
           }
-          .rich-text-editor .ql-editor img:hover {
-            transform: scale(1.02);
+          .image-resize-handle {
+            background-color: hsl(var(--primary)) !important;
+            border: 2px solid white !important;
+            border-radius: 2px !important;
           }
         `}</style>
         <ReactQuill
