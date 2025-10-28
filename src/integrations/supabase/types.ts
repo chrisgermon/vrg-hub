@@ -3278,6 +3278,9 @@ export type Database = {
       }
       tickets: {
         Row: {
+          admin_approval_notes: string | null
+          admin_approved_at: string | null
+          admin_id: string | null
           approval_notes: string | null
           approval_status: string | null
           approved_at: string | null
@@ -3286,25 +3289,42 @@ export type Database = {
           assigned_to: string | null
           attachments: Json | null
           brand_id: string | null
+          business_justification: string | null
+          category_id: string | null
           cc_emails: string[] | null
+          clinic_name: string | null
           completed_at: string | null
           created_at: string
+          currency: string | null
           deadline: string | null
+          decline_reason: string | null
+          declined_at: string | null
+          declined_by: string | null
           declined_reason: string | null
           department_id: string | null
           description: string | null
+          expected_delivery_date: string | null
+          form_template_id: string | null
           id: string
           location_id: string | null
+          manager_approval_notes: string | null
+          manager_approved_at: string | null
+          manager_id: string | null
           metadata: Json | null
           priority: string
           request_number: number
           request_type_id: string | null
+          source: string | null
           status: string
           title: string
+          total_amount: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          admin_approval_notes?: string | null
+          admin_approved_at?: string | null
+          admin_id?: string | null
           approval_notes?: string | null
           approval_status?: string | null
           approved_at?: string | null
@@ -3313,25 +3333,42 @@ export type Database = {
           assigned_to?: string | null
           attachments?: Json | null
           brand_id?: string | null
+          business_justification?: string | null
+          category_id?: string | null
           cc_emails?: string[] | null
+          clinic_name?: string | null
           completed_at?: string | null
           created_at?: string
+          currency?: string | null
           deadline?: string | null
+          decline_reason?: string | null
+          declined_at?: string | null
+          declined_by?: string | null
           declined_reason?: string | null
           department_id?: string | null
           description?: string | null
+          expected_delivery_date?: string | null
+          form_template_id?: string | null
           id?: string
           location_id?: string | null
+          manager_approval_notes?: string | null
+          manager_approved_at?: string | null
+          manager_id?: string | null
           metadata?: Json | null
           priority?: string
           request_number?: never
           request_type_id?: string | null
+          source?: string | null
           status?: string
           title: string
+          total_amount?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          admin_approval_notes?: string | null
+          admin_approved_at?: string | null
+          admin_id?: string | null
           approval_notes?: string | null
           approval_status?: string | null
           approved_at?: string | null
@@ -3340,21 +3377,35 @@ export type Database = {
           assigned_to?: string | null
           attachments?: Json | null
           brand_id?: string | null
+          business_justification?: string | null
+          category_id?: string | null
           cc_emails?: string[] | null
+          clinic_name?: string | null
           completed_at?: string | null
           created_at?: string
+          currency?: string | null
           deadline?: string | null
+          decline_reason?: string | null
+          declined_at?: string | null
+          declined_by?: string | null
           declined_reason?: string | null
           department_id?: string | null
           description?: string | null
+          expected_delivery_date?: string | null
+          form_template_id?: string | null
           id?: string
           location_id?: string | null
+          manager_approval_notes?: string | null
+          manager_approved_at?: string | null
+          manager_id?: string | null
           metadata?: Json | null
           priority?: string
           request_number?: never
           request_type_id?: string | null
+          source?: string | null
           status?: string
           title?: string
+          total_amount?: number | null
           updated_at?: string
           user_id?: string
         }
@@ -3371,6 +3422,20 @@ export type Database = {
             columns: ["brand_id"]
             isOneToOne: false
             referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "request_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_form_template_id_fkey"
+            columns: ["form_template_id"]
+            isOneToOne: false
+            referencedRelation: "form_templates"
             referencedColumns: ["id"]
           },
           {
