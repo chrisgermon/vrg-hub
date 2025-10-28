@@ -82,6 +82,7 @@ export default function RequestDetail() {
           requester:profiles!tickets_user_id_fkey(full_name, email),
           assigned_user:profiles!tickets_assigned_to_fkey(full_name, email),
           request_type:request_types(name),
+          category:request_categories(name),
           brand:brand_id(display_name),
           location:location_id(name)
         `)
@@ -411,10 +412,9 @@ export default function RequestDetail() {
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground">Ticket Type</p>
-                  <p className="text-sm capitalize">{request.type || 'Incident'}</p>
+                  <p className="text-xs text-muted-foreground">Request Type</p>
+                  <p className="text-sm">{(request as any).request_type?.name || 'General Request'}</p>
                 </div>
-
 
                 <div>
                   <p className="text-xs text-muted-foreground">Status</p>
@@ -458,10 +458,12 @@ export default function RequestDetail() {
                   )}
                 </div>
 
-                <div>
-                  <p className="text-xs text-muted-foreground">Category</p>
-                  <p className="text-sm">{isDepartmentRequest ? request.department : 'Hardware Request'}</p>
-                </div>
+                {((request as any).category || isDepartmentRequest) && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Category</p>
+                    <p className="text-sm">{(request as any).category?.name || request.department || 'Uncategorized'}</p>
+                  </div>
+                )}
 
                 <Separator />
 
