@@ -44,7 +44,8 @@ export function useCategories(requestTypeId?: string) {
         .from('request_categories')
         .select(`
           *, 
-          request_type:request_types(name)
+          request_type:request_types(name),
+          form_template:form_templates(id, name, fields)
         `)
         .order('sort_order');
       

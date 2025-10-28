@@ -2407,6 +2407,7 @@ export type Database = {
           assigned_to: string | null
           created_at: string | null
           description: string | null
+          form_template_id: string | null
           icon: string | null
           id: string
           is_active: boolean | null
@@ -2420,6 +2421,7 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string | null
           description?: string | null
+          form_template_id?: string | null
           icon?: string | null
           id?: string
           is_active?: boolean | null
@@ -2433,6 +2435,7 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string | null
           description?: string | null
+          form_template_id?: string | null
           icon?: string | null
           id?: string
           is_active?: boolean | null
@@ -2443,6 +2446,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "request_categories_form_template_id_fkey"
+            columns: ["form_template_id"]
+            isOneToOne: false
+            referencedRelation: "form_templates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "request_categories_request_type_id_fkey"
             columns: ["request_type_id"]

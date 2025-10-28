@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, FileText } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -111,6 +112,7 @@ function CategoryRow({
   requestTypes: any[];
   users: any[];
 }) {
+  const navigate = useNavigate();
   const deleteCategory = useDeleteCategory();
   
   // Convert kebab-case to PascalCase for icon lookup
@@ -132,17 +134,36 @@ function CategoryRow({
         <IconComponent className="h-5 w-5 text-muted-foreground" />
         <div className="flex-1">
           <div className="text-sm font-medium">{category.name}</div>
-          {category.assigned_user && (
-            <div className="text-xs text-muted-foreground">
-              Assigned: {category.assigned_user.full_name}
-            </div>
-          )}
+          <div className="flex items-center gap-2 mt-1">
+            {category.form_template && (
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <FileText className="h-3 w-3" />
+                {category.form_template.name}
+              </div>
+            )}
+            {category.assigned_user && (
+              <div className="text-xs text-muted-foreground">
+                • Assigned: {category.assigned_user.full_name}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-2">
         <Badge variant={category.is_active ? 'outline' : 'secondary'} className="text-xs">
           {category.is_active ? 'Active' : 'Inactive'}
         </Badge>
+        {category.form_template_id && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6"
+            onClick={() => navigate(`/form-templates?edit=${category.form_template_id}`)}
+            title="Edit Form"
+          >
+            <FileText className="h-3 w-3" />
+          </Button>
+        )}
         <CategoryDialog 
           category={category} 
           requestTypes={requestTypes}
