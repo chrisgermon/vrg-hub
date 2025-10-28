@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, FileText } from 'lucide-react';
+import { Plus, Edit2, Trash2, FileText, X } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   useCategories, 
   useRequestTypes, 
@@ -141,9 +142,9 @@ function CategoryRow({
                 {category.form_template.name}
               </div>
             )}
-            {category.assigned_user && (
+            {category.assigned_user_ids && category.assigned_user_ids.length > 0 && (
               <div className="text-xs text-muted-foreground">
-                • Assigned: {category.assigned_user.full_name}
+                • {category.assigned_user_ids.length} {category.assigned_user_ids.length === 1 ? 'user' : 'users'} assigned
               </div>
             )}
           </div>
@@ -202,7 +203,7 @@ function CategoryDialog({
   const [description, setDescription] = useState(category?.description || '');
   const [requestTypeId, setRequestTypeId] = useState(category?.request_type_id || '');
   const [icon, setIcon] = useState(initialIcon);
-  const [assignedTo, setAssignedTo] = useState(category?.assigned_to || '');
+  const [assignedUserIds, setAssignedUserIds] = useState<string[]>(category?.assigned_user_ids || []);
   const [isActive, setIsActive] = useState(category?.is_active ?? true);
   const [sortOrder, setSortOrder] = useState(category?.sort_order || 0);
   const createCategory = useCreateCategory();
@@ -224,7 +225,7 @@ function CategoryDialog({
       request_type_id: requestTypeId,
       icon: iconKebab,
       slug,
-      assigned_to: assignedTo === 'none' ? null : assignedTo,
+      assigned_user_ids: assignedUserIds,
       is_active: isActive,
       sort_order: sortOrder,
     };
@@ -240,7 +241,7 @@ function CategoryDialog({
       setName('');
       setDescription('');
       setIcon('HelpCircle');
-      setAssignedTo('');
+      setAssignedUserIds([]);
       setSortOrder(0);
     }
   };
@@ -323,20 +324,39 @@ function CategoryDialog({
           </div>
 
           <div>
-            <Label htmlFor="assigned_to">Assigned User (optional)</Label>
-            <Select value={assignedTo || 'none'} onValueChange={setAssignedTo}>
-              <SelectTrigger>
-                <SelectValue placeholder="No assignee" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No assignee</SelectItem>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.full_name} ({user.email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Assigned Users (optional)</Label>
+            <div className="border rounded-md p-3 space-y-2 max-h-[200px] overflow-y-auto">
+              {users.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No users available</p>
+              ) : (
+                users.map((user) => (
+                  <div key={user.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`user-${user.id}`}
+                      checked={assignedUserIds.includes(user.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setAssignedUserIds([...assignedUserIds, user.id]);
+                        } else {
+                          setAssignedUserIds(assignedUserIds.filter(id => id !== user.id));
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor={`user-${user.id}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {user.full_name || user.email}
+                    </label>
+                  </div>
+                ))
+              )}
+            </div>
+            {assignedUserIds.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-2">
+                {assignedUserIds.length} {assignedUserIds.length === 1 ? 'user' : 'users'} will receive email notifications for this category
+              </p>
+            )}
           </div>
 
           <div>

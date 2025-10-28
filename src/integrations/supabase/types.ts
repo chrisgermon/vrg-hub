@@ -2416,6 +2416,7 @@ export type Database = {
       request_categories: {
         Row: {
           assigned_to: string | null
+          assigned_user_ids: string[] | null
           cc_emails: string[] | null
           created_at: string | null
           description: string | null
@@ -2431,6 +2432,7 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          assigned_user_ids?: string[] | null
           cc_emails?: string[] | null
           created_at?: string | null
           description?: string | null
@@ -2446,6 +2448,7 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          assigned_user_ids?: string[] | null
           cc_emails?: string[] | null
           created_at?: string | null
           description?: string | null

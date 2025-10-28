@@ -108,6 +108,42 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
 
+        // If no template users, check request_categories for assigned users
+        if (usersToNotify.length === 0) {
+          console.log('[notify-department-request] No template users, checking request categories...');
+          const categorySlug = departmentInfo.category_slug || departmentInfo.sub_department;
+          if (categorySlug) {
+            const { data: category } = await supabase
+              .from('request_categories')
+              .select('assigned_user_ids')
+              .eq('slug', categorySlug)
+              .single();
+
+            if (category?.assigned_user_ids && category.assigned_user_ids.length > 0) {
+              console.log('[notify-department-request] Found category assigned users:', category.assigned_user_ids);
+              const { data: categoryUsers, error: categoryUsersError } = await supabase
+                .from('profiles')
+                .select('id, full_name, email, sms_enabled, phone')
+                .in('id', category.assigned_user_ids)
+                .eq('is_active', true);
+              
+              if (categoryUsersError) {
+                console.error('[notify-department-request] Error fetching category users:', categoryUsersError);
+              } else {
+                usersToNotify = (categoryUsers || []).map((u: any) => ({
+                  user_id: u.id,
+                  name: u.full_name,
+                  email: u.email,
+                  receive_notifications: true,
+                  sms_enabled: u.sms_enabled,
+                  phone: u.phone,
+                }));
+                console.log('[notify-department-request] Category users to notify:', usersToNotify.length);
+              }
+            }
+          }
+        }
+
         if (usersToNotify.length > 0) {
           // Filter users who should receive notifications
           const notificationUsers = usersToNotify.filter((u: any) => u.receive_notifications);

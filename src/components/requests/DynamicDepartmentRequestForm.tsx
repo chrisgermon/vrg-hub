@@ -38,6 +38,8 @@ interface FormTemplate {
     notification_user_ids?: string[];
     notification_level?: 'all' | 'new_only' | 'updates_only';
     enable_sms_notifications?: boolean;
+    category_slug?: string;
+    request_type_id?: string;
   };
 }
 
@@ -170,6 +172,7 @@ export function DynamicDepartmentRequestForm({
           business_justification: JSON.stringify({
             department,
             sub_department: subDepartment,
+            category_slug: template.settings?.category_slug,
             form_data: formData,
           }),
           user_id: user.id,
