@@ -99,7 +99,7 @@ export default function ArticleView() {
           <img
             src={article.featured_image_url}
             alt={article.title}
-            className="w-full h-[400px] object-cover rounded-xl mb-8"
+            className="w-full max-h-[300px] object-contain rounded-xl mb-8 bg-muted"
           />
         )}
 
