@@ -430,6 +430,42 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
         text: `New Update on Your Request\n\nHello ${data.requesterName},\n\nThere's a new update on your request: ${data.requestTitle}\n\nFrom: ${data.commenterName}\nMessage:\n${data.commentText}\n\nView and reply: ${data.requestUrl || appUrl + '/requests?request=' + data.requestId}\n\nReference: ${data.requestNumber || data.requestId}`
       };
 
+    case 'request_reassigned':
+      return {
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            ${emailHeader}
+            <h2 style="color: #2563eb;">Request Assigned to You 📋</h2>
+            <p>Hello ${data.assigneeName},</p>
+            <p>A request has been reassigned to you and requires your attention:</p>
+            
+            <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+              <h3>${data.requestTitle}</h3>
+              <p><strong>Originally Submitted by:</strong> ${data.requesterName}</p>
+              ${data.reassignedBy ? `<p><strong>Reassigned by:</strong> ${data.reassignedBy}</p>` : ''}
+              ${data.requestType ? `<p><strong>Request Type:</strong> ${data.requestType}</p>` : ''}
+              ${data.priority ? `<p><strong>Priority:</strong> <span style="text-transform: uppercase; color: ${data.priority === 'urgent' ? '#dc2626' : data.priority === 'high' ? '#f59e0b' : '#2563eb'};">${data.priority}</span></p>` : ''}
+              ${data.status ? `<p><strong>Status:</strong> ${data.status}</p>` : ''}
+            </div>
+            
+            ${data.description ? `
+              <div style="margin: 20px 0;">
+                <h4>Description:</h4>
+                <p style="background-color: #f8fafc; padding: 15px; border-radius: 4px;">${data.description.substring(0, 300)}${data.description.length > 300 ? '...' : ''}</p>
+              </div>
+            ` : ''}
+            
+            <p style="text-align: center; margin-top: 30px;">
+              <a href="${appUrl}/requests/${data.requestId}" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Request Details</a>
+            </p>
+            
+            <p style="color: #666; font-size: 14px; margin-top: 20px; text-align: center;">Please review this request and provide an update on the status.</p>
+            ${emailFooter(data.requestId, data.requestNumber)}
+          </div>
+        `,
+        text: `Request Assigned to You\n\nHello ${data.assigneeName},\n\nA request has been reassigned to you:\n\nTitle: ${data.requestTitle}\nSubmitted by: ${data.requesterName}${data.reassignedBy ? `\nReassigned by: ${data.reassignedBy}` : ''}${data.requestType ? `\nRequest Type: ${data.requestType}` : ''}${data.priority ? `\nPriority: ${data.priority}` : ''}\n\nView details: ${appUrl}/requests/${data.requestId}\n\nReference: ${data.requestNumber || data.requestId}`
+      };
+
     default:
       throw new Error(`Unknown email template: ${template}`);
   }

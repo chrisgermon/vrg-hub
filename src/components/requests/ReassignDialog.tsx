@@ -120,6 +120,46 @@ export function ReassignDialog({
 
       if (commentError) throw commentError;
 
+      // Send email notification to the newly assigned user
+      try {
+        const { data: requestData } = await supabase
+          .from('tickets')
+          .select('title, description, priority, status, request_number, user_id, request_types(name)')
+          .eq('id', requestId)
+          .single();
+
+        const { data: requesterProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', requestData?.user_id)
+          .single();
+
+        if (assignedUser && requestData) {
+          await supabase.functions.invoke('send-notification-email', {
+            body: {
+              to: assignedUser.email,
+              subject: `Request Assigned: ${requestData.title}`,
+              template: 'request_reassigned',
+              data: {
+                assigneeName: assignedUser.full_name,
+                requestTitle: requestData.title,
+                requesterName: requesterProfile?.full_name || 'Unknown',
+                reassignedBy: profile?.full_name || 'System',
+                requestType: (requestData as any).request_types?.name,
+                priority: requestData.priority,
+                status: requestData.status,
+                description: requestData.description,
+                requestId: requestId,
+                requestNumber: `VRG-${requestData.request_number}`,
+              },
+            },
+          });
+        }
+      } catch (emailError) {
+        console.error('Error sending reassignment email:', emailError);
+        // Don't fail the reassignment if email fails
+      }
+
       toast({
         title: 'Request Reassigned',
         description: `Request has been assigned to ${assignedUser?.full_name}`,
