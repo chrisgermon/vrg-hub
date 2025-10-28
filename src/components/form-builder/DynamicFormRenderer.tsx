@@ -119,45 +119,57 @@ export function DynamicFormRenderer({ template, onSubmit, isSubmitting }: Dynami
                           <SelectValue placeholder={field.placeholder || 'Select an option'} />
                         </SelectTrigger>
                         <SelectContent>
-                          {field.options?.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
+                          {field.options?.map((option) => {
+                            const optionValue = typeof option === 'string' ? option : option.value;
+                            const optionLabel = typeof option === 'string' ? option : option.label;
+                            return (
+                              <SelectItem key={optionValue} value={optionValue}>
+                                {optionLabel}
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     );
                   case 'radio':
                     return (
                       <RadioGroup onValueChange={formField.onChange} value={formField.value}>
-                        {field.options?.map((option) => (
-                          <div key={option.value} className="flex items-center space-x-2">
-                            <RadioGroupItem value={option.value} id={`${field.id}-${option.value}`} />
-                            <label htmlFor={`${field.id}-${option.value}`}>{option.label}</label>
-                          </div>
-                        ))}
+                        {field.options?.map((option) => {
+                          const optionValue = typeof option === 'string' ? option : option.value;
+                          const optionLabel = typeof option === 'string' ? option : option.label;
+                          return (
+                            <div key={optionValue} className="flex items-center space-x-2">
+                              <RadioGroupItem value={optionValue} id={`${field.id}-${optionValue}`} />
+                              <label htmlFor={`${field.id}-${optionValue}`}>{optionLabel}</label>
+                            </div>
+                          );
+                        })}
                       </RadioGroup>
                     );
                   case 'multiselect':
                     return (
                       <div className="space-y-2">
-                        {field.options?.map((option) => (
-                          <div key={option.value} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={(formField.value as string[] || []).includes(option.value)}
-                              onCheckedChange={(checked) => {
-                                const currentValues = (formField.value as string[]) || [];
-                                if (checked) {
-                                  formField.onChange([...currentValues, option.value]);
-                                } else {
-                                  formField.onChange(currentValues.filter(v => v !== option.value));
-                                }
-                              }}
-                              id={`${field.id}-${option.value}`}
-                            />
-                            <label htmlFor={`${field.id}-${option.value}`}>{option.label}</label>
-                          </div>
-                        ))}
+                        {field.options?.map((option) => {
+                          const optionValue = typeof option === 'string' ? option : option.value;
+                          const optionLabel = typeof option === 'string' ? option : option.label;
+                          return (
+                            <div key={optionValue} className="flex items-center space-x-2">
+                              <Checkbox
+                                checked={(formField.value as string[] || []).includes(optionValue)}
+                                onCheckedChange={(checked) => {
+                                  const currentValues = (formField.value as string[]) || [];
+                                  if (checked) {
+                                    formField.onChange([...currentValues, optionValue]);
+                                  } else {
+                                    formField.onChange(currentValues.filter(v => v !== optionValue));
+                                  }
+                                }}
+                                id={`${field.id}-${optionValue}`}
+                              />
+                              <label htmlFor={`${field.id}-${optionValue}`}>{optionLabel}</label>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   case 'checkbox':
