@@ -96,23 +96,26 @@ export function UnifiedRequestForm({
       const { title, description, priority, ...customFields } = formData;
 
       const { data, error } = await supabase
-        .from('hardware_requests')
+        .from('tickets')
         .insert({
           title: title || `${requestTypeName}${categoryName ? `: ${categoryName}` : ''}`,
           description: description || '',
           business_justification: JSON.stringify({
             department: requestTypeName,
             form_data: customFields,
-            category_id: categoryId || null,
-            category_name: categoryName || null,
           }),
           priority: priority || 'medium',
-          status: 'submitted',
+          status: 'inbox',
           user_id: user.id,
           brand_id: brandId || null,
           location_id: locationId || null,
           assigned_to: assignedTo || null,
+          category_id: categoryId || null,
+          form_template_id: formTemplateId || null,
+          request_type_id: requestTypeId || null,
+          metadata: customFields,
           cc_emails: ccEmails,
+          source: 'form',
         })
         .select('id, request_number')
         .single();

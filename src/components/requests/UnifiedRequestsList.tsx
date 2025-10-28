@@ -49,38 +49,41 @@ export function UnifiedRequestsList({ filterType = 'all' }: UnifiedRequestsListP
       
       const isManagerOrAdmin = ['manager', 'marketing_manager', 'tenant_admin', 'super_admin'].includes(userRole || '');
       
-      // Fetch hardware requests
-      let hardwareQuery = supabase
-        .from('hardware_requests')
-        .select('id, request_number, title, status, priority, created_at, user_id, assigned_to');
-
-      // Fetch tickets
-      let ticketQuery = supabase
+      // Fetch from unified tickets table - using any to avoid deep type inference
+      let queryBuilder: any = supabase
         .from('tickets')
-        .select('id, request_number, title, status, priority, created_at, user_id, assigned_to');
+        .select('id, request_number, title, status, priority, created_at, user_id, assigned_to, source');
 
       // Apply filters
       if (filterType === 'my-requests') {
-        hardwareQuery = hardwareQuery.eq('user_id', user?.id);
-        ticketQuery = ticketQuery.eq('user_id', user?.id);
+        queryBuilder = queryBuilder.eq('user_id', user?.id);
       } else if (filterType === 'pending' && isManagerOrAdmin) {
-        hardwareQuery = hardwareQuery.in('status', ['submitted', 'pending_manager_approval', 'pending_admin_approval']);
-        ticketQuery = ticketQuery.in('status', ['inbox', 'in_progress', 'awaiting_information']);
+        queryBuilder = queryBuilder.in('status', ['inbox', 'in_progress', 'awaiting_information', 'submitted', 'pending_manager_approval', 'pending_admin_approval']);
       }
 
-      const [hardwareResult, ticketResult] = await Promise.all([
-        typeFilter === 'ticket' ? { data: [], error: null } : hardwareQuery,
-        typeFilter === 'hardware' ? { data: [], error: null } : ticketQuery,
-      ]);
+      // Apply source filter
+      if (typeFilter === 'hardware') {
+        queryBuilder = queryBuilder.eq('source', 'hardware_request');
+      } else if (typeFilter === 'ticket') {
+        queryBuilder = queryBuilder.in('source', ['ticket', 'form']);
+      }
 
-      if (hardwareResult.error) throw hardwareResult.error;
-      if (ticketResult.error) throw ticketResult.error;
+      const { data, error } = await queryBuilder;
 
-      // Combine and tag requests
-      const allRequests: UnifiedRequest[] = [
-        ...(hardwareResult.data || []).map(r => ({ ...r, type: 'hardware' as const })),
-        ...(ticketResult.data || []).map(r => ({ ...r, type: 'ticket' as const })),
-      ];
+      if (error) throw error;
+
+      // Tag requests based on source
+      const allRequests: UnifiedRequest[] = (data || []).map((r: any) => ({
+        id: r.id,
+        request_number: r.request_number,
+        title: r.title,
+        status: r.status,
+        priority: r.priority,
+        created_at: r.created_at,
+        user_id: r.user_id,
+        assigned_to: r.assigned_to,
+        type: r.source === 'hardware_request' ? ('hardware' as const) : ('ticket' as const)
+      }));
 
       // Sort by created_at descending initially
       allRequests.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());

@@ -17,7 +17,7 @@ interface ReassignDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   requestId: string;
-  requestType: 'hardware' | 'department';
+  requestType: 'hardware' | 'department' | 'ticket';
   currentAssignee?: string;
   onSuccess?: () => void;
 }

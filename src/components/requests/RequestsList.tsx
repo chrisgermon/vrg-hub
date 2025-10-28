@@ -49,7 +49,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
       if (isRefresh) setRefreshing(true);
       
       let query = supabase
-        .from('hardware_requests')
+        .from('tickets')
         .select('*, request_number');
 
       // Apply filters based on tab

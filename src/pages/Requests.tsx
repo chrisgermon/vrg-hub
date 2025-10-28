@@ -30,7 +30,7 @@ export default function Requests() {
       
       // Fetch request
       const { data: request, error: requestError } = await supabase
-        .from('hardware_requests')
+        .from('tickets')
         .select('*, request_number')
         .eq('id', selectedRequestId)
         .single();
@@ -51,7 +51,7 @@ export default function Requests() {
 
   const handleRequestSelect = (requestId: string) => {
     setSelectedRequestId(requestId);
-    navigate(`/requests/hardware/${requestId}`, { replace: true });
+    navigate(`/requests/${requestId}`, { replace: true });
   };
 
   const handleCloseDetails = () => {
@@ -148,7 +148,7 @@ export default function Requests() {
               />
               <DetailsField 
                 label="Total Amount" 
-                value={selectedRequest.total_amount ? `$${selectedRequest.total_amount} ${selectedRequest.currency}` : '-'} 
+                value={(selectedRequest as any).total_amount ? `$${(selectedRequest as any).total_amount} ${(selectedRequest as any).currency || 'USD'}` : '-'} 
               />
             </DetailsSection>
 
@@ -168,10 +168,10 @@ export default function Requests() {
                 label="Created" 
                 value={format(new Date(selectedRequest.created_at), 'PPp')} 
               />
-              {selectedRequest.expected_delivery_date && (
+              {(selectedRequest as any).expected_delivery_date && (
                 <DetailsField 
                   label="Expected Delivery" 
-                  value={format(new Date(selectedRequest.expected_delivery_date), 'PP')} 
+                  value={format(new Date((selectedRequest as any).expected_delivery_date), 'PP')} 
                 />
               )}
             </DetailsSection>
@@ -184,7 +184,7 @@ export default function Requests() {
 
             <div className="pt-4">
               <Button 
-                onClick={() => navigate(`/requests/hardware/${selectedRequestId}`)} 
+                onClick={() => navigate(`/requests/${selectedRequestId}`)} 
                 className="w-full"
               >
                 View Full Details

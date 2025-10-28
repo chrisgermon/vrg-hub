@@ -67,7 +67,7 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
   const loadRequest = async () => {
     try {
       const { data, error } = await supabase
-        .from('hardware_requests')
+        .from('tickets')
         .select(`
           *,
           request_number,
@@ -166,7 +166,7 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
         open={closeDialogOpen}
         onOpenChange={setCloseDialogOpen}
         requestId={request.id}
-        requestType="hardware"
+        requestType="ticket"
         onSuccess={loadRequest}
       />
       
@@ -181,7 +181,7 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
         open={reassignDialogOpen}
         onOpenChange={setReassignDialogOpen}
         requestId={request.id}
-        requestType="hardware"
+        requestType="ticket"
         onSuccess={loadRequest}
       />
 
@@ -263,7 +263,7 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
           </Card>
 
           {/* Comments/Activity Section */}
-          <RequestComments requestId={request.id} requestType="hardware" />
+          <RequestComments requestId={request.id} requestType="ticket" />
         </div>
 
         {/* Right Sidebar: Ticket Information */}

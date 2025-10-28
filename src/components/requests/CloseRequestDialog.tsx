@@ -10,7 +10,7 @@ interface CloseRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   requestId: string;
-  requestType: 'hardware' | 'department';
+  requestType: 'hardware' | 'department' | 'ticket';
   onSuccess?: () => void;
 }
 
@@ -44,7 +44,7 @@ export function CloseRequestDialog({
         .eq('id', user?.id)
         .single();
 
-      const tableName = requestType === 'hardware' ? 'hardware_requests' : 'department_requests';
+      const tableName = requestType === 'department' ? 'department_requests' : 'tickets';
       
       // Update request status to completed
       const { error: updateError } = await supabase
