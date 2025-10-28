@@ -33,12 +33,12 @@ const generateApprovalToken = async (requestId: string, managerEmail: string): P
 const getEmailTemplate = (template: string, data: any): { html: string; text: string } => {
   const appUrl = 'https://hub.visionradiology.com.au';
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://znpjdrmvjfmneotdhwdo.supabase.co';
-  const logoUrl = 'https://hub.visionradiology.com.au/vision-radiology-email-logo.png';
+  const logoCid = 'email-logo.png';
   
-  // Common header with logo
+  // Common header with logo (use CID inline image for reliable rendering)
   const emailHeader = `
     <div style="text-align: center; padding: 20px 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 30px;">
-      <img src="${logoUrl}" alt="Vision Radiology" style="max-width: 200px; height: auto;" />
+      <img src="cid:${logoCid}" alt="Vision Radiology" style="max-width: 200px; height: auto;" />
     </div>
   `;
   
@@ -484,6 +484,22 @@ const handler = async (req: Request): Promise<Response> => {
       formData.append('text', text);
       formData.append('h:Reply-To', replyToAddress);
       formData.append('h:Message-ID', messageId);
+
+      // Attach inline logo image so it displays even when remote images are blocked
+      try {
+        const logoUrl = Deno.env.get('EMAIL_LOGO_URL') || 'https://hub.visionradiology.com.au/vision-radiology-email-logo.png';
+        const logoRes = await fetch(logoUrl);
+        if (logoRes.ok) {
+          const logoBuffer = await logoRes.arrayBuffer();
+          const contentType = logoRes.headers.get('content-type') || 'image/png';
+          const logoFile = new File([new Blob([logoBuffer], { type: contentType })], 'email-logo.png', { type: contentType });
+          formData.append('inline', logoFile);
+        } else {
+          console.warn('[send-notification-email] Failed to fetch logo:', logoRes.status);
+        }
+      } catch (e) {
+        console.warn('[send-notification-email] Error attaching inline logo:', e);
+      }
       
       if (inReplyTo) {
         formData.append('h:In-Reply-To', inReplyTo);
