@@ -201,18 +201,16 @@ export function DynamicDepartmentRequestForm({
         await Promise.all(uploadPromises);
       }
 
-      // Send notifications using template settings if available
+      // Send notifications - always invoke to ensure emails are sent
       const notificationUserIds = template.settings?.notification_user_ids;
-      if (notificationUserIds && notificationUserIds.length > 0) {
-        console.log('Sending notifications to template recipients:', notificationUserIds);
-        await supabase.functions.invoke('notify-department-request', {
-          body: {
-            requestId: request.id,
-            action: 'submitted',
-            notificationUserIds,
-          },
-        });
-      }
+      console.log('Sending notifications for new request:', request.id, 'with notification users:', notificationUserIds);
+      await supabase.functions.invoke('notify-department-request', {
+        body: {
+          requestId: request.id,
+          action: 'submitted',
+          notificationUserIds: notificationUserIds || [],
+        },
+      });
 
       toast.success('Your request has been submitted successfully');
       navigate(`/requests/${request.id}`);
