@@ -38,6 +38,8 @@ interface Request {
   brands?: { display_name: string };
   locations?: { name: string };
   assigned_profile?: { full_name: string; email: string };
+  request_types?: { name: string };
+  request_categories?: { name: string };
 }
 
 interface RequestDetailProps {
@@ -73,7 +75,9 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
           request_number,
           brands:brand_id(display_name),
           locations:location_id(name),
-          assigned_profile:assigned_to(full_name, email)
+          assigned_profile:assigned_to(full_name, email),
+          request_types:request_type_id(name),
+          request_categories:category_id(name)
         `)
         .eq('id', id)
         .single();
@@ -280,7 +284,7 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
 
               <div>
                 <p className="text-xs text-muted-foreground">Request Type</p>
-                <p className="text-sm">Hardware Request</p>
+                <p className="text-sm">{request.request_types?.name || 'General Request'}</p>
               </div>
 
               <div>
@@ -293,12 +297,10 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
                 {getPriorityBadge(request.priority)}
               </div>
 
-              {request.category && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Category</p>
-                  <p className="text-sm">{request.category}</p>
-                </div>
-              )}
+              <div>
+                <p className="text-xs text-muted-foreground">Category</p>
+                <p className="text-sm">{request.request_categories?.name || request.category || 'Uncategorized'}</p>
+              </div>
 
               {request.total_amount && (
                 <div>
