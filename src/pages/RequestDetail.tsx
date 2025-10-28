@@ -183,6 +183,17 @@ export default function RequestDetail() {
     enabled: !!requestParam,
   });
 
+  // Redirect UUID-based URLs to pretty request-number URLs when available
+  useEffect(() => {
+    if (!request) return;
+    const hasNum = (request as any).request_number;
+    const isUuidPath = Boolean(identifier || id);
+    if (hasNum && isUuidPath) {
+      const pretty = `/request/${formatRequestIdShort((request as any).request_number).toLowerCase()}`;
+      navigate(pretty, { replace: true });
+    }
+  }, [request, identifier, id, navigate]);
+
   const canEdit = isManagerOrAdmin || user?.id === request?.user_id;
 
   const getStatusColor = (status: string) => {
@@ -237,17 +248,6 @@ export default function RequestDetail() {
   }
 
   const isDepartmentRequest = request.type === 'department';
-
-  // Redirect UUID-based URLs to pretty request-number URLs when available
-  useEffect(() => {
-    if (!request) return;
-    const hasNum = (request as any).request_number;
-    const isUuidPath = Boolean(identifier || id);
-    if (hasNum && isUuidPath) {
-      const pretty = `/request/${formatRequestIdShort((request as any).request_number).toLowerCase()}`;
-      navigate(pretty, { replace: true });
-    }
-  }, [request, identifier, id, navigate]);
 
   return (
     <div className="min-h-screen bg-muted/30">
