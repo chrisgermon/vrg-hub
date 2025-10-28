@@ -270,13 +270,39 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
                   )}
                 </div>
 
-                {request.business_justification && (
-                  <div className="bg-muted/50 p-4 rounded-lg">
-                    <div className="text-sm whitespace-pre-wrap">
-                      {request.business_justification}
+                {request.business_justification && (() => {
+                  try {
+                    const parsed = JSON.parse(request.business_justification);
+                    if (typeof parsed === 'object' && parsed !== null) {
+                      return (
+                        <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                          <h3 className="font-semibold text-sm text-muted-foreground mb-2">Request Details</h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            {Object.entries(parsed).map(([key, value]) => (
+                              <div key={key}>
+                                <p className="text-xs font-medium text-muted-foreground capitalize">
+                                  {key.replace(/_/g, ' ')}
+                                </p>
+                                <p className="text-sm mt-0.5">
+                                  {Array.isArray(value) ? value.join(', ') : String(value)}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                  } catch (e) {
+                    // Not JSON, display as text
+                  }
+                  return (
+                    <div className="bg-muted/50 p-4 rounded-lg">
+                      <div className="text-sm whitespace-pre-wrap">
+                        {request.business_justification}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 <div className="flex gap-4 text-sm">
                   {request.brands?.display_name && (
