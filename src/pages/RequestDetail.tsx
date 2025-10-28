@@ -407,6 +407,11 @@ export default function RequestDetail() {
                 <h3 className="font-semibold">Request Information</h3>
                 
                 <div>
+                  <p className="text-xs text-muted-foreground">Request ID</p>
+                  <p className="text-sm font-mono">{request.request_number ? formatRequestId(request.request_number) : 'N/A'}</p>
+                </div>
+
+                <div>
                   <p className="text-xs text-muted-foreground">Date Reported</p>
                   <p className="text-sm">{format(new Date(request.created_at), 'dd/MM/yyyy h:mm a')}</p>
                 </div>
@@ -415,6 +420,13 @@ export default function RequestDetail() {
                   <p className="text-xs text-muted-foreground">Request Type</p>
                   <p className="text-sm">{(request as any).request_type?.name || 'General Request'}</p>
                 </div>
+
+                {(request as any).category?.name && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Category</p>
+                    <p className="text-sm">{(request as any).category.name}</p>
+                  </div>
+                )}
 
                 <div>
                   <p className="text-xs text-muted-foreground">Status</p>
@@ -438,11 +450,6 @@ export default function RequestDetail() {
                 )}
 
                 <div>
-                  <p className="text-xs text-muted-foreground">Team</p>
-                  <p className="text-sm">Support</p>
-                </div>
-
-                <div>
                   <p className="text-xs text-muted-foreground">Assigned To</p>
                   {(request as any).assigned_profile ? (
                     <div className="flex items-center gap-2 mt-1">
@@ -457,13 +464,6 @@ export default function RequestDetail() {
                     <p className="text-sm text-muted-foreground">Unassigned</p>
                   )}
                 </div>
-
-                {((request as any).category || isDepartmentRequest) && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">Category</p>
-                    <p className="text-sm">{(request as any).category?.name || request.department || 'Uncategorized'}</p>
-                  </div>
-                )}
 
                 <Separator />
 
