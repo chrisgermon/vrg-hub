@@ -77,7 +77,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/notifications", element: <Notifications /> },
   { path: "/requests", element: <Requests /> },
   { path: "/request/:requestNumber", element: <RequestDetail /> },
-  { path: "/requests/:id", element: <RequestDetail /> },
+  { path: "/requests/:identifier", element: <RequestDetail /> },
   { path: "/requests/hardware/:id", element: <Requests /> },
   { path: "/requests/marketing/:id", element: <Requests /> },
   { path: "/requests/user-account/:id", element: <Requests /> },

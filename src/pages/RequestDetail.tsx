@@ -51,9 +51,9 @@ type UnifiedRequest = {
 };
 
 export default function RequestDetail() {
-  const { requestNumber, id } = useParams<{ requestNumber?: string; id?: string }>();
+  const { requestNumber, id, identifier } = useParams<{ requestNumber?: string; id?: string; identifier?: string }>();
   const navigate = useNavigate();
-  const requestParam = requestNumber || id;
+  const requestParam = identifier || requestNumber || id;
   
   const { user, userRole } = useAuth();
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
@@ -71,9 +71,9 @@ export default function RequestDetail() {
       // Check if it's a UUID (starts with a hex pattern)
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestParam);
 
-      // Try tickets table (unified system)
-      const numericPart = requestParam.replace('VRG-', '');
-      const targetNumber = parseInt(numericPart, 10);
+      // Extract numeric part from identifiers like VRG-23, vrg-00023, etc.
+      const numberMatch = requestParam.match(/(\d+)/);
+      const targetNumber = numberMatch ? parseInt(numberMatch[1], 10) : NaN;
       
       const { data: ticket } = await supabase
         .from('tickets')
