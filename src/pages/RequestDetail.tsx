@@ -253,8 +253,29 @@ export default function RequestDetail() {
   // Helper to detect if content is HTML
   const isHTML = (str: string) => /<[a-z][\s\S]*>/i.test(str);
 
+  // Parse form data from business_justification if it's JSON
+  const parseFormData = () => {
+    if (!request.business_justification) return null;
+    try {
+      const parsed = JSON.parse(request.business_justification);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return parsed;
+      }
+    } catch (e) {
+      // Not JSON
+    }
+    return null;
+  };
+
+  const formData = isDepartmentRequest ? parseFormData() : null;
+
   // Get the primary content to display (prefer description, avoid duplicates)
   const getPrimaryContent = () => {
+    // For department requests with form data, extract description from form
+    if (formData && formData.description) {
+      return formData.description;
+    }
+    
     const desc = request.description?.trim();
     const justification = request.business_justification?.trim();
     
@@ -392,6 +413,7 @@ export default function RequestDetail() {
 
                   {primaryContent && (
                     <div className="bg-muted/50 p-4 rounded-lg">
+                      <h3 className="font-semibold text-sm text-muted-foreground mb-3">Description</h3>
                       {shouldRenderAsHTML ? (
                         <div 
                           className="text-sm prose prose-sm max-w-none dark:prose-invert"
@@ -404,6 +426,30 @@ export default function RequestDetail() {
                           {primaryContent}
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Display form data fields for department requests */}
+                  {formData && (
+                    <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                      <h3 className="font-semibold text-sm text-muted-foreground mb-2">Additional Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {Object.entries(formData).map(([key, value]) => {
+                          // Skip empty values and description (already shown above)
+                          if (!value || value === '' || key === 'description') return null;
+                          
+                          return (
+                            <div key={key}>
+                              <p className="text-xs font-medium text-muted-foreground capitalize">
+                                {key.replace(/_/g, ' ')}
+                              </p>
+                              <p className="text-sm mt-0.5">
+                                {Array.isArray(value) ? value.join(', ') : String(value)}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
