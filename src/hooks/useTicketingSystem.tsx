@@ -36,6 +36,30 @@ export function useRequestTypes(departmentId?: string) {
   });
 }
 
+export function useCategories(requestTypeId?: string) {
+  return useQuery({
+    queryKey: ['request_categories', requestTypeId],
+    queryFn: async () => {
+      let query = supabase
+        .from('request_categories')
+        .select(`
+          *, 
+          request_type:request_types(name),
+          assigned_user:profiles!request_categories_assigned_to_fkey(full_name, email)
+        `)
+        .order('sort_order');
+      
+      if (requestTypeId) {
+        query = query.eq('request_type_id', requestTypeId);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
 export function useTeams() {
   return useQuery({
     queryKey: ['teams'],
@@ -340,6 +364,60 @@ export function useActiveUsers() {
         .order('full_name');
       if (error) throw error;
       return data;
+    },
+  });
+}
+
+export function useCreateCategory() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const { error } = await supabase.from('request_categories').insert(data);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['request_categories'] });
+      toast({ title: 'Category created successfully' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error creating category', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useUpdateCategory() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const { error } = await supabase.from('request_categories').update(data).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['request_categories'] });
+      toast({ title: 'Category updated successfully' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error updating category', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useDeleteCategory() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('request_categories').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['request_categories'] });
+      toast({ title: 'Category deleted successfully' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error deleting category', description: error.message, variant: 'destructive' });
     },
   });
 }

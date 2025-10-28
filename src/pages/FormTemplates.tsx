@@ -17,6 +17,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CategoryManager } from '@/components/requests/admin/CategoryManager';
 
 export default function FormTemplates() {
   const [templates, setTemplates] = useState<FormTemplate[]>([]);
@@ -173,85 +175,99 @@ export default function FormTemplates() {
 
   return (
     <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Form Templates</h1>
-          <p className="text-muted-foreground mt-2">
-            Create and manage custom form templates for different request types
-          </p>
-        </div>
-        {isAdmin && (
-          <Button onClick={() => setIsCreating(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Create Template
-          </Button>
-        )}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Form Templates & Categories</h1>
+        <p className="text-muted-foreground mt-2">
+          Create and manage custom form templates and request categories
+        </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Available Templates</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {templates.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No form templates found. Create your first template to get started.
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Fields</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    {isAdmin && <TableHead className="text-right">Actions</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {templates.map((template) => (
-                    <TableRow key={template.id}>
-                      <TableCell className="font-medium">{template.name}</TableCell>
-                      <TableCell>{template.department || '-'}</TableCell>
-                      <TableCell>{template.fields?.length || 0}</TableCell>
-                      <TableCell>
-                        <Badge variant={template.is_active ? 'success' : 'secondary'}>
-                          {template.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(template.created_at).toLocaleDateString()}
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setEditingTemplate(template)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(template.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="templates" className="w-full">
+        <TabsList>
+          <TabsTrigger value="templates">Form Templates</TabsTrigger>
+          <TabsTrigger value="categories">Request Categories</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="templates" className="mt-6">
+          <div className="flex justify-between items-center mb-6">
+            {isAdmin && (
+              <Button onClick={() => setIsCreating(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Template
+              </Button>
+            )}
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Available Templates</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {templates.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No form templates found. Create your first template to get started.
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Fields</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                        {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {templates.map((template) => (
+                        <TableRow key={template.id}>
+                          <TableCell className="font-medium">{template.name}</TableCell>
+                          <TableCell>{template.department || '-'}</TableCell>
+                          <TableCell>{template.fields?.length || 0}</TableCell>
+                          <TableCell>
+                            <Badge variant={template.is_active ? 'success' : 'secondary'}>
+                              {template.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(template.created_at).toLocaleDateString()}
+                          </TableCell>
+                          {isAdmin && (
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingTemplate(template)}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDelete(template.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="categories" className="mt-6">
+          <CategoryManager />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
