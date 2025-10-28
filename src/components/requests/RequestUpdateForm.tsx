@@ -5,8 +5,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, Send, Paperclip } from 'lucide-react';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { FileDropzone, FileList } from '@/components/ui/file-dropzone';
 
 interface RequestUpdateFormProps {
   requestId: string;
@@ -17,11 +18,29 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
   const queryClient = useQueryClient();
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [showAttachments, setShowAttachments] = useState(false);
 
   // Add comment mutation
   const addComment = useMutation({
     mutationFn: async (newContent: string) => {
       if (!user || !profile) throw new Error('User not authenticated');
+
+      // Upload attachments first if any
+      const uploadedFiles: string[] = [];
+      if (attachments.length > 0) {
+        for (const file of attachments) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${requestId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('request-attachments')
+            .upload(fileName, file);
+
+          if (uploadError) throw uploadError;
+          uploadedFiles.push(fileName);
+        }
+      }
 
       const { data, error } = await supabase
         .from('request_comments')
@@ -33,6 +52,7 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
           content: newContent,
           content_html: newContent,
           is_internal: false,
+          attachments: uploadedFiles.length > 0 ? uploadedFiles : null,
         })
         .select()
         .single();
@@ -52,6 +72,8 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['request-comments', requestId] });
       setContent('');
+      setAttachments([]);
+      setShowAttachments(false);
       toast.success('Update added successfully');
     },
     onError: (error: any) => {
@@ -72,6 +94,10 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
     }
   };
 
+  const handleRemoveAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -85,7 +111,32 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
             placeholder="Add a comment or update..."
             className="min-h-[200px]"
           />
-          <div className="flex justify-end">
+          
+          {showAttachments && (
+            <div className="space-y-2">
+              <FileDropzone
+                onFilesSelected={(files) => setAttachments(prev => [...prev, ...files])}
+                multiple
+                maxSize={10}
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                description="Upload images, PDFs, or documents (max 10MB each)"
+              />
+              <FileList files={attachments} onRemove={handleRemoveAttachment} />
+            </div>
+          )}
+          
+          <div className="flex justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAttachments(!showAttachments)}
+              className="gap-2"
+            >
+              <Paperclip className="h-4 w-4" />
+              {showAttachments ? 'Hide' : 'Add'} Attachments
+            </Button>
+            
             <Button
               type="submit"
               disabled={!content.trim() || content === '<p><br></p>' || isSubmitting}

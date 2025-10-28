@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
 
 interface RequestActivityFeedProps {
   requestId: string;
@@ -18,9 +20,12 @@ interface Comment {
   is_internal: boolean;
   created_at: string;
   user_id: string | null;
+  attachments?: string[] | null;
 }
 
 export function RequestActivityFeed({ requestId }: RequestActivityFeedProps) {
+  const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({});
+
   // Fetch comments
   const { data: comments, isLoading } = useQuery({
     queryKey: ['request-comments', requestId],
@@ -32,6 +37,23 @@ export function RequestActivityFeed({ requestId }: RequestActivityFeedProps) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      
+      // Generate signed URLs for all attachments
+      const urls: Record<string, string> = {};
+      for (const comment of (data as Comment[])) {
+        if (comment.attachments) {
+          for (const attachment of comment.attachments) {
+            const { data: urlData } = await supabase.storage
+              .from('request-attachments')
+              .createSignedUrl(attachment, 3600);
+            if (urlData?.signedUrl) {
+              urls[attachment] = urlData.signedUrl;
+            }
+          }
+        }
+      }
+      setAttachmentUrls(urls);
+      
       return data as Comment[];
     },
   });
@@ -73,6 +95,29 @@ export function RequestActivityFeed({ requestId }: RequestActivityFeedProps) {
                       className="text-sm text-muted-foreground line-clamp-2"
                       dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }}
                     />
+                    {comment.attachments && comment.attachments.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {comment.attachments.map((attachment, idx) => {
+                          const fileName = attachment.split('/').pop() || attachment;
+                          const url = attachmentUrls[attachment];
+                          return (
+                            <Button
+                              key={idx}
+                              variant="outline"
+                              size="sm"
+                              className="h-6 text-xs gap-1"
+                              asChild
+                              disabled={!url}
+                            >
+                              <a href={url} target="_blank" rel="noopener noreferrer">
+                                <Paperclip className="h-3 w-3" />
+                                {fileName}
+                              </a>
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

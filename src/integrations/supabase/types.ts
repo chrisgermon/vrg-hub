@@ -2404,6 +2404,7 @@ export type Database = {
       }
       request_comments: {
         Row: {
+          attachments: string[] | null
           author_email: string
           author_name: string
           content: string
@@ -2417,6 +2418,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          attachments?: string[] | null
           author_email: string
           author_name: string
           content: string
@@ -2430,6 +2432,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          attachments?: string[] | null
           author_email?: string
           author_name?: string
           content?: string

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { Loader2, Send, MessageSquare } from 'lucide-react';
+import { Loader2, Send, MessageSquare, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
@@ -24,6 +24,7 @@ interface Comment {
   is_internal: boolean;
   created_at: string;
   user_id: string | null;
+  attachments?: string[] | null;
 }
 
 export function RequestComments({ requestId, requestType }: RequestCommentsProps) {
@@ -31,6 +32,7 @@ export function RequestComments({ requestId, requestType }: RequestCommentsProps
   const queryClient = useQueryClient();
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({});
 
   // Fetch comments
   const { data: comments, isLoading } = useQuery({
@@ -43,6 +45,23 @@ export function RequestComments({ requestId, requestType }: RequestCommentsProps
         .order('created_at', { ascending: true });
 
       if (error) throw error;
+      
+      // Generate signed URLs for all attachments
+      const urls: Record<string, string> = {};
+      for (const comment of (data as Comment[])) {
+        if (comment.attachments) {
+          for (const attachment of comment.attachments) {
+            const { data: urlData } = await supabase.storage
+              .from('request-attachments')
+              .createSignedUrl(attachment, 3600);
+            if (urlData?.signedUrl) {
+              urls[attachment] = urlData.signedUrl;
+            }
+          }
+        }
+      }
+      setAttachmentUrls(urls);
+      
       return data as Comment[];
     },
   });
@@ -138,6 +157,29 @@ export function RequestComments({ requestId, requestType }: RequestCommentsProps
                       className="text-sm text-muted-foreground line-clamp-2"
                       dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }}
                     />
+                    {comment.attachments && comment.attachments.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {comment.attachments.map((attachment, idx) => {
+                          const fileName = attachment.split('/').pop() || attachment;
+                          const url = attachmentUrls[attachment];
+                          return (
+                            <Button
+                              key={idx}
+                              variant="outline"
+                              size="sm"
+                              className="h-6 text-xs gap-1"
+                              asChild
+                              disabled={!url}
+                            >
+                              <a href={url} target="_blank" rel="noopener noreferrer">
+                                <Paperclip className="h-3 w-3" />
+                                {fileName}
+                              </a>
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
