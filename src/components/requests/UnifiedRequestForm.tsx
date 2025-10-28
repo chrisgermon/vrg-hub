@@ -11,6 +11,8 @@ import { FileDropzone } from '@/components/ui/file-dropzone';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { CCEmailsInput } from './CCEmailsInput';
+import { DynamicFormRenderer } from '@/components/form-builder/DynamicFormRenderer';
+import { FormTemplate } from '@/types/form-builder';
 
 interface UnifiedRequestFormProps {
   requestTypeId: string;
@@ -34,6 +36,8 @@ export function UnifiedRequestForm({
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [formTemplate, setFormTemplate] = useState<FormTemplate | null>(null);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [brandId, setBrandId] = useState(profile?.brand_id || '');
@@ -42,6 +46,32 @@ export function UnifiedRequestForm({
   const [attachments, setAttachments] = useState<File[]>([]);
   const [brands, setBrands] = useState<Array<{ id: string; display_name: string }>>([]);
   const [locations, setLocations] = useState<Array<{ id: string; name: string }>>([]);
+
+  // Fetch form template if formTemplateId is provided
+  useEffect(() => {
+    const fetchFormTemplate = async () => {
+      if (!formTemplateId) return;
+      
+      setLoadingTemplate(true);
+      try {
+        const { data, error } = await supabase
+          .from('form_templates')
+          .select('*')
+          .eq('id', formTemplateId)
+          .single();
+
+        if (error) throw error;
+        setFormTemplate(data as any);
+      } catch (error) {
+        console.error('Error fetching form template:', error);
+        toast.error('Failed to load form template');
+      } finally {
+        setLoadingTemplate(false);
+      }
+    };
+
+    fetchFormTemplate();
+  }, [formTemplateId]);
 
   useEffect(() => {
     if (profile) {
@@ -118,7 +148,7 @@ export function UnifiedRequestForm({
           description: description.trim(),
           business_justification: description.trim(),
           priority: 'medium',
-          status: 'inbox',
+          status: 'submitted',
           user_id: user.id,
           brand_id: brandId || null,
           location_id: locationId || null,
@@ -149,6 +179,185 @@ export function UnifiedRequestForm({
     }
   };
 
+  const handleDynamicFormSubmit = async (formData: Record<string, any>) => {
+    if (!user) {
+      toast.error('You must be logged in to submit a request');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Upload attachments to storage if any
+      const attachmentUrls: string[] = [];
+      if (attachments.length > 0) {
+        for (const file of attachments) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('request-attachments')
+            .upload(fileName, file);
+
+          if (uploadError) throw uploadError;
+          
+          const { data: { publicUrl } } = supabase.storage
+            .from('request-attachments')
+            .getPublicUrl(fileName);
+            
+          attachmentUrls.push(publicUrl);
+        }
+      }
+
+      // Use first field value as title if available
+      const firstFieldValue = Object.values(formData)[0];
+      const requestTitle = typeof firstFieldValue === 'string' ? firstFieldValue : categoryName || requestTypeName;
+
+      const { data, error } = await supabase
+        .from('tickets')
+        .insert({
+          title: requestTitle,
+          description: JSON.stringify(formData, null, 2),
+          business_justification: JSON.stringify(formData, null, 2),
+          priority: 'medium',
+          status: 'submitted',
+          user_id: user.id,
+          brand_id: brandId || null,
+          location_id: locationId || null,
+          assigned_to: assignedTo || null,
+          category_id: categoryId || null,
+          form_template_id: formTemplateId || null,
+          request_type_id: requestTypeId || null,
+          metadata: {
+            form_data: formData,
+            attachments: attachmentUrls,
+            request_type: requestTypeName,
+            category: categoryName
+          },
+          cc_emails: ccEmails,
+          source: 'form',
+        })
+        .select('id, request_number')
+        .single();
+
+      if (error) throw error;
+
+      toast.success(`Request #${data.request_number} submitted successfully!`);
+      navigate('/requests');
+    } catch (error: any) {
+      console.error('Error submitting request:', error);
+      toast.error(error.message || 'Failed to submit request');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loadingTemplate) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
+  }
+
+  // If we have a form template with custom fields, use the dynamic renderer
+  if (formTemplate && formTemplate.fields && formTemplate.fields.length > 0) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>{requestTypeName}{categoryName ? ` - ${categoryName}` : ''}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Brand and Location - Side by Side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="brand">Brand</Label>
+                <select
+                  id="brand"
+                  value={brandId}
+                  onChange={(e) => setBrandId(e.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  disabled={loading}
+                >
+                  <option value="">Select Brand</option>
+                  {brands.map((brand) => (
+                    <option key={brand.id} value={brand.id}>
+                      {brand.display_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <select
+                  id="location"
+                  value={locationId}
+                  onChange={(e) => setLocationId(e.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  disabled={loading}
+                >
+                  <option value="">Select Location</option>
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Dynamic Form Fields */}
+            <DynamicFormRenderer 
+              template={formTemplate}
+              onSubmit={handleDynamicFormSubmit}
+              isSubmitting={loading}
+            />
+
+            {/* Attachments */}
+            <div className="space-y-2">
+              <Label>Attachments (optional)</Label>
+              <FileDropzone
+                onFilesSelected={setAttachments}
+                multiple={true}
+                maxSize={10}
+              />
+              {attachments.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {attachments.map((file, index) => (
+                    <div key={index} className="text-sm text-muted-foreground flex items-center justify-between bg-muted px-3 py-2 rounded">
+                      <span>{file.name} ({(file.size / 1024).toFixed(2)} KB)</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
+                        disabled={loading}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* CC Emails */}
+            <div className="space-y-2">
+              <CCEmailsInput
+                emails={ccEmails}
+                onChange={setCcEmails}
+                disabled={loading}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Default form without custom fields
   return (
     <div className="space-y-6">
       <Card>
