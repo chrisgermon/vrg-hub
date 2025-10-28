@@ -62,6 +62,9 @@ const handler = async (req: Request): Promise<Response> => {
     
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="text-align: center; padding: 20px 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 30px;">
+          <img src="https://hub.visionradiology.com.au/vision-radiology-email-logo.png" alt="Vision Radiology" style="max-width: 200px; height: auto;" />
+        </div>
         <h2 style="color: #2563eb;">You're Invited! 🎉</h2>
         <p>Hello,</p>
         <p>${inviterData.name || 'Someone'} has invited you to join <strong>${inviteData.companies.name}</strong> on CrowdHub.</p>
@@ -110,9 +113,6 @@ To accept this invitation and set up your account, visit: ${signupUrl}
 Important: You must sign up using this email address (${inviteData.email}) to accept this invitation.
 
 If you didn't expect this invitation, you can safely ignore this email.
-
-Best regards,
-CrowdHub Team
     `;
 
     const formData = new FormData();

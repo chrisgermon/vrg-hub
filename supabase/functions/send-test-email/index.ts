@@ -36,6 +36,9 @@ const handler = async (req: Request): Promise<Response> => {
     const emailContent = {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="text-align: center; padding: 20px 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 30px;">
+            <img src="https://hub.visionradiology.com.au/vision-radiology-email-logo.png" alt="Vision Radiology" style="max-width: 200px; height: auto;" />
+          </div>
           <h2 style="color: #2563eb;">Test Email - CrowdHub System</h2>
           <p>Hello,</p>
           <p>This is a test email to verify that the CrowdHub email system is working correctly.</p>
@@ -49,11 +52,9 @@ const handler = async (req: Request): Promise<Response> => {
           </div>
           
           <p>If you received this email, your CrowdHub notification system is properly configured!</p>
-          
-          <p>Best regards,<br>CrowdHub Team</p>
         </div>
       `,
-      text: `Test Email - CrowdHub System\n\nThis is a test email to verify that the email system is working correctly.\n\nTimestamp: ${new Date().toISOString()}\n\nBest regards,\nCrowdHub Team`
+      text: `Test Email - CrowdHub System\n\nThis is a test email to verify that the email system is working correctly.\n\nTimestamp: ${new Date().toISOString()}`
     };
     
     const formData = new FormData();

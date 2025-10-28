@@ -33,12 +33,12 @@ const generateApprovalToken = async (requestId: string, managerEmail: string): P
 const getEmailTemplate = (template: string, data: any): { html: string; text: string } => {
   const appUrl = 'https://hub.visionradiology.com.au';
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://znpjdrmvjfmneotdhwdo.supabase.co';
-  const logoUrl = 'https://znpjdrmvjfmneotdhwdo.supabase.co/storage/v1/object/public/company-assets/crowdhub-logo.png';
+  const logoUrl = 'https://hub.visionradiology.com.au/vision-radiology-email-logo.png';
   
-  // Common header with logo (CID, will fall back to URL if inline attach fails)
+  // Common header with logo
   const emailHeader = `
     <div style="text-align: center; padding: 20px 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 30px;">
-      <img src="cid:crowdhub-logo.png" alt="CrowdHub" style="max-width: 200px; height: auto;" />
+      <img src="${logoUrl}" alt="Vision Radiology" style="max-width: 200px; height: auto;" />
     </div>
   `;
   
@@ -82,11 +82,10 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
               <a href="${appUrl}/requests/${data.requestId}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">View Full Details</a>
             </p>
             
-            <p>Best regards,<br>CrowdHub Team</p>
             ${emailFooter(data.requestId, data.requestNumber)}
           </div>
         `,
-        text: `New Hardware Request Submitted\n\nHello,\n\nA new hardware request has been submitted: ${data.requestTitle}\nSubmitted by: ${data.requesterName}\n\nTo approve: ${supabaseUrl}/functions/v1/approve-request-email?requestId=${data.requestId}&action=approve&managerEmail=${encodeURIComponent(data.managerEmail || '')}&token=${data.approvalToken}\n\nTo decline: ${supabaseUrl}/functions/v1/approve-request-email?requestId=${data.requestId}&action=decline&managerEmail=${encodeURIComponent(data.managerEmail || '')}&token=${data.approvalToken}\n\nReference: ${data.requestNumber || data.requestId}\n\nBest regards,\nCrowdHub Team`
+        text: `New Hardware Request Submitted\n\nHello,\n\nA new hardware request has been submitted: ${data.requestTitle}\nSubmitted by: ${data.requesterName}\n\nTo approve: ${supabaseUrl}/functions/v1/approve-request-email?requestId=${data.requestId}&action=approve&managerEmail=${encodeURIComponent(data.managerEmail || '')}&token=${data.approvalToken}\n\nTo decline: ${supabaseUrl}/functions/v1/approve-request-email?requestId=${data.requestId}&action=decline&managerEmail=${encodeURIComponent(data.managerEmail || '')}&token=${data.approvalToken}\n\nReference: ${data.requestNumber || data.requestId}`
       };
 
     case 'request_approved':
@@ -107,11 +106,10 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
             <p>Your request is now being processed and you'll receive updates on the delivery status.</p>
             <p><a href="${appUrl}/requests/${data.requestId}" style="background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">View Request Details</a></p>
             
-            <p>Best regards,<br>CrowdHub Team</p>
             ${emailFooter(data.requestId, data.requestNumber)}
           </div>
         `,
-        text: `Request Approved\n\nHello ${data.requesterName},\n\nYour hardware request has been approved: ${data.requestTitle}\nApproved by: ${data.managerName || data.adminName}\n\nReference: ${data.requestNumber || data.requestId}\n\nBest regards,\nCrowdHub Team`
+        text: `Request Approved\n\nHello ${data.requesterName},\n\nYour hardware request has been approved: ${data.requestTitle}\nApproved by: ${data.managerName || data.adminName}\n\nReference: ${data.requestNumber || data.requestId}`
       };
 
     case 'request_declined':
@@ -132,11 +130,10 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
             <p>If you have questions about this decision, please contact your manager or IT administrator.</p>
             <p><a href="${appUrl}/requests/${data.requestId}" style="background-color: #dc2626; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">View Request Details</a></p>
             
-            <p>Best regards,<br>CrowdHub Team</p>
             ${emailFooter(data.requestId, data.requestNumber)}
           </div>
         `,
-        text: `Request Declined\n\nHello ${data.requesterName},\n\nYour hardware request has been declined: ${data.requestTitle}\nReason: ${data.declineReason || 'Not specified'}\n\nReference: ${data.requestNumber || data.requestId}\n\nBest regards,\nCrowdHub Team`
+        text: `Request Declined\n\nHello ${data.requesterName},\n\nYour hardware request has been declined: ${data.requestTitle}\nReason: ${data.declineReason || 'Not specified'}\n\nReference: ${data.requestNumber || data.requestId}`
       };
 
     case 'request_ordered':
@@ -156,11 +153,10 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
             <p>You'll receive another notification once your items have been delivered.</p>
             <p><a href="${appUrl}/requests/${data.requestId}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Track Request Status</a></p>
             
-            <p>Best regards,<br>CrowdHub Team</p>
             ${emailFooter(data.requestId, data.requestNumber)}
           </div>
         `,
-        text: `Request Ordered\n\nHello ${data.requesterName},\n\nYour hardware request has been ordered: ${data.requestTitle}\n\nYou'll receive updates on delivery status.\n\nReference: ${data.requestNumber || data.requestId}\n\nBest regards,\nCrowdHub Team`
+        text: `Request Ordered\n\nHello ${data.requesterName},\n\nYour hardware request has been ordered: ${data.requestTitle}\n\nYou'll receive updates on delivery status.\n\nReference: ${data.requestNumber || data.requestId}`
       };
 
     case 'hardware_order_notification':
@@ -224,11 +220,10 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
             
             <p style="color: #666; font-size: 14px; margin-top: 20px;">Click "Mark as Ordered" to confirm the order and optionally add tracking details and delivery date. This will automatically notify the requester.</p>
             
-            <p>Best regards,<br>CrowdHub System</p>
             ${emailFooter(data.requestId, data.requestNumber)}
           </div>
         `,
-        text: `New Hardware Order - Action Required\n\nRequest: ${data.requestTitle}\nRequested by: ${data.requesterName}\nApproved by: ${data.managerName}\nTotal Amount: ${data.currency || 'AUD'} ${data.totalAmount}\n\nMark as ordered: ${appUrl}/confirm-order/${data.confirmToken}\nView details: ${appUrl}/requests/${data.requestId}\n\nReference: ${data.requestNumber || data.requestId}\n\nBest regards,\nCrowdHub System`
+        text: `New Hardware Order - Action Required\n\nRequest: ${data.requestTitle}\nRequested by: ${data.requesterName}\nApproved by: ${data.managerName}\nTotal Amount: ${data.currency || 'AUD'} ${data.totalAmount}\n\nMark as ordered: ${appUrl}/confirm-order/${data.confirmToken}\nView details: ${appUrl}/requests/${data.requestId}\n\nReference: ${data.requestNumber || data.requestId}`
       };
 
     case 'user_account_notification':
@@ -285,11 +280,10 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
             </p>
             
             <p>Please create this user account in Active Directory and grant the necessary permissions.</p>
-            <p>Best regards,<br>CrowdHub System</p>
             ${emailFooter(data.requestId, data.requestNumber)}
           </div>
         `,
-        text: `New User Account Request\n\nName: ${data.firstName} ${data.lastName}\nEmail: ${data.email}\nDepartment: ${data.department || 'N/A'}\nJob Title: ${data.jobTitle || 'N/A'}\n\nRequested by: ${data.requesterName}\n\nView in admin panel: ${appUrl}/admin\n\nReference: ${data.requestNumber || data.requestId}\n\nBest regards,\nCrowdHub System`
+        text: `New User Account Request\n\nName: ${data.firstName} ${data.lastName}\nEmail: ${data.email}\nDepartment: ${data.department || 'N/A'}\nJob Title: ${data.jobTitle || 'N/A'}\n\nRequested by: ${data.requesterName}\n\nView in admin panel: ${appUrl}/admin\n\nReference: ${data.requestNumber || data.requestId}`
       };
 
     case 'marketing_request_submitted':
@@ -323,11 +317,10 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
             </p>
             
             <p>Please review and approve/decline this request at your earliest convenience.</p>
-            <p>Best regards,<br>CrowdHub Team</p>
             ${emailFooter(data.requestId, data.requestNumber)}
           </div>
         `,
-        text: `New Marketing Request Submitted\n\nTitle: ${data.requestTitle}\nType: ${data.requestType}\nSubmitted by: ${data.requesterName}\nPriority: ${data.priority}\n\nView details: ${appUrl}/requests\n\nReference: ${data.requestNumber || data.requestId}\n\nBest regards,\nCrowdHub Team`
+        text: `New Marketing Request Submitted\n\nTitle: ${data.requestTitle}\nType: ${data.requestType}\nSubmitted by: ${data.requesterName}\nPriority: ${data.priority}\n\nView details: ${appUrl}/requests\n\nReference: ${data.requestNumber || data.requestId}`
       };
 
     case 'marketing_request_approved':
@@ -350,11 +343,10 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
             <p>Your request is now being processed by the marketing team.</p>
             <p><a href="${appUrl}/requests" style="background-color: #16a34a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">View Request Status</a></p>
             
-            <p>Best regards,<br>CrowdHub Team</p>
             ${emailFooter(data.requestId, data.requestNumber)}
           </div>
         `,
-        text: `Marketing Request Approved\n\nHello ${data.requesterName},\n\nYour marketing request has been approved: ${data.requestTitle}\nApproved by: ${data.managerName || data.adminName}\n\nView details: ${appUrl}/requests\n\nReference: ${data.requestNumber || data.requestId}\n\nBest regards,\nCrowdHub Team`
+        text: `Marketing Request Approved\n\nHello ${data.requesterName},\n\nYour marketing request has been approved: ${data.requestTitle}\nApproved by: ${data.managerName || data.adminName}\n\nView details: ${appUrl}/requests\n\nReference: ${data.requestNumber || data.requestId}`
       };
 
     case 'marketing_request_declined':
@@ -376,11 +368,10 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
             <p>If you have questions about this decision, please contact your manager or marketing team.</p>
             <p><a href="${appUrl}/requests" style="background-color: #dc2626; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">View Request Details</a></p>
             
-            <p>Best regards,<br>CrowdHub Team</p>
             ${emailFooter(data.requestId, data.requestNumber)}
           </div>
         `,
-        text: `Marketing Request Declined\n\nHello ${data.requesterName},\n\nYour marketing request has been declined: ${data.requestTitle}\nReason: ${data.declineReason || 'Not specified'}\n\nView details: ${appUrl}/requests\n\nReference: ${data.requestNumber || data.requestId}\n\nBest regards,\nCrowdHub Team`
+        text: `Marketing Request Declined\n\nHello ${data.requesterName},\n\nYour marketing request has been declined: ${data.requestTitle}\nReason: ${data.declineReason || 'Not specified'}\n\nView details: ${appUrl}/requests\n\nReference: ${data.requestNumber || data.requestId}`
       };
 
     case 'department_request_submitted':
@@ -405,11 +396,10 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
             </p>
             
             <p>Please review and respond to this request at your earliest convenience.</p>
-            <p>Best regards,<br>CrowdHub Team</p>
             ${emailFooter(data.requestId, data.requestNumber)}
           </div>
         `,
-        text: `New ${data.department || 'Department'} Request Submitted\n\nHello ${data.assigneeName || data.managerName || ''},\n\nA new request has been submitted:\n\nTitle: ${data.requestTitle}\nSubmitted by: ${data.requesterName}${data.subDepartment ? `\nRequest Type: ${data.subDepartment}` : ''}${data.priority ? `\nPriority: ${data.priority}` : ''}\n\nView details: ${data.requestUrl || appUrl + '/requests'}\n\nReference: ${data.requestNumber || data.requestId}\n\nBest regards,\nCrowdHub Team`
+        text: `New ${data.department || 'Department'} Request Submitted\n\nHello ${data.assigneeName || data.managerName || ''},\n\nA new request has been submitted:\n\nTitle: ${data.requestTitle}\nSubmitted by: ${data.requesterName}${data.subDepartment ? `\nRequest Type: ${data.subDepartment}` : ''}${data.priority ? `\nPriority: ${data.priority}` : ''}\n\nView details: ${data.requestUrl || appUrl + '/requests'}\n\nReference: ${data.requestNumber || data.requestId}`
       };
 
     case 'request_comment_reply':
@@ -434,11 +424,10 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
             </p>
             
             <p style="color: #666; font-size: 14px; margin-top: 20px;">You can view the full request details and respond by clicking the button above.</p>
-            <p>Best regards,<br>CrowdHub Team</p>
             ${emailFooter(data.requestId, data.requestNumber)}
           </div>
         `,
-        text: `New Update on Your Request\n\nHello ${data.requesterName},\n\nThere's a new update on your request: ${data.requestTitle}\n\nFrom: ${data.commenterName}\nMessage:\n${data.commentText}\n\nView and reply: ${data.requestUrl || appUrl + '/requests?request=' + data.requestId}\n\nReference: ${data.requestNumber || data.requestId}\n\nBest regards,\nCrowdHub Team`
+        text: `New Update on Your Request\n\nHello ${data.requesterName},\n\nThere's a new update on your request: ${data.requestTitle}\n\nFrom: ${data.commenterName}\nMessage:\n${data.commentText}\n\nView and reply: ${data.requestUrl || appUrl + '/requests?request=' + data.requestId}\n\nReference: ${data.requestNumber || data.requestId}`
       };
 
     default:

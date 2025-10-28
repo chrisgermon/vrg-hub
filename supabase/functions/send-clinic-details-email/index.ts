@@ -61,12 +61,10 @@ const handler = async (req: Request): Promise<Response> => {
         <p style="color: #6b7280; font-size: 14px;">
           The attached Excel file contains all the configuration details in a convenient spreadsheet format.
         </p>
-        
-        <p>Best regards,<br>CrowdHub Team</p>
       </div>
     `;
 
-    const text = `Clinic Network Configuration Details\n\nHello,\n\nPlease find attached the network configuration details for ${clinicName}.\n\nYou can also view these details online at: ${shareUrl}\n\nBest regards,\nCrowdHub Team`;
+    const text = `Clinic Network Configuration Details\n\nHello,\n\nPlease find attached the network configuration details for ${clinicName}.\n\nYou can also view these details online at: ${shareUrl}`;
     
     const formData = new FormData();
     formData.append("from", "Vision Radiology Hub <hub@visionradiology.com.au>");
