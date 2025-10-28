@@ -3,7 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Monitor, Search, Clock, Loader2, FileText } from 'lucide-react';
+import { 
+  Search, Clock, Loader2, 
+  DollarSign, Building2, Calculator, Monitor, Users, 
+  Headphones, Megaphone, UserPlus, Briefcase, GraduationCap, 
+  Printer, UserMinus, FileText 
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const RECENT_REQUEST_KEY = 'recentRequestType';
@@ -59,6 +64,25 @@ export default function NewRequest() {
   );
 
   // Sort: most recent first, then alphabetically
+  const getIconForRequestType = (slug: string) => {
+    const iconMap: Record<string, any> = {
+      'accounts-payable': DollarSign,
+      'facility-services': Building2,
+      'finance-request': Calculator,
+      'hardware-request': Monitor,
+      'hr-request': Users,
+      'it-service-desk': Headphones,
+      'marketing-request': Megaphone,
+      'marketing-service': Megaphone,
+      'new-user-account': UserPlus,
+      'office-services': Briefcase,
+      'technology-training': GraduationCap,
+      'toner-request': Printer,
+      'user-offboarding': UserMinus,
+    };
+    return iconMap[slug] || FileText;
+  };
+
   const sortedRequests = [...filteredRequests].sort((a, b) => {
     if (a.slug === recentRequestSlug) return -1;
     if (b.slug === recentRequestSlug) return 1;
@@ -96,6 +120,7 @@ export default function NewRequest() {
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {sortedRequests.map((request) => {
           const isRecent = request.slug === recentRequestSlug;
+          const IconComponent = getIconForRequestType(request.slug);
           return (
             <Card
               key={request.id}
@@ -107,7 +132,7 @@ export default function NewRequest() {
               <CardHeader className="p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-primary" />
+                    <IconComponent className="h-5 w-5 text-primary" />
                   </div>
                   {isRecent && (
                     <Badge variant="secondary" className="text-xs">
