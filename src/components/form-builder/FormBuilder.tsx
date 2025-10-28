@@ -163,12 +163,11 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
 
             <div>
               <Label htmlFor="form-request-type">Request Type (Optional)</Label>
-              <Select value={requestTypeId} onValueChange={setRequestTypeId}>
+              <Select value={requestTypeId || undefined} onValueChange={(value) => setRequestTypeId(value)}>
                 <SelectTrigger id="form-request-type">
-                  <SelectValue placeholder="Select request type..." />
+                  <SelectValue placeholder="Select request type (optional)..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
                   {requestTypes.map((type) => (
                     <SelectItem key={type.id} value={type.id}>
                       {type.name}
