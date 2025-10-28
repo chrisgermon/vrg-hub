@@ -1,9 +1,17 @@
-import { forwardRef, useEffect, useRef, useMemo } from 'react';
+import { forwardRef, useEffect, useRef, useMemo, useState } from 'react';
 import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+// Register image resize module
+if (typeof window !== 'undefined') {
+  const ImageResize = (window as any).ImageResize;
+  if (ImageResize) {
+    Quill.register('modules/imageResize', ImageResize.default);
+  }
+}
 
 interface RichTextEditorProps {
   value: string;
@@ -34,7 +42,7 @@ const imageHandler = function(this: any) {
     // Show loading state
     const range = this.quill.getSelection(true);
     this.quill.insertText(range.index, 'Uploading image...');
-    this.quill.setSelection(range.index + 19);
+    this.quill.setSelection({ index: range.index + 19, length: 0 });
 
     try {
       // Upload to Supabase Storage
@@ -59,7 +67,7 @@ const imageHandler = function(this: any) {
       // Remove loading text and insert image
       this.quill.deleteText(range.index, 19);
       this.quill.insertEmbed(range.index, 'image', publicUrl);
-      this.quill.setSelection(range.index + 1);
+      this.quill.setSelection({ index: range.index + 1, length: 0 });
 
       toast.success('Image uploaded successfully');
     } catch (error: any) {
@@ -74,6 +82,7 @@ const imageHandler = function(this: any) {
 export const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
   ({ value, onChange, placeholder, className, disabled, enableImageUpload = true }, ref) => {
     const quillRef = useRef<ReactQuill>(null);
+    const [isDragging, setIsDragging] = useState(false);
 
     const modules = useMemo(() => ({
       toolbar: {
@@ -94,6 +103,14 @@ export const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
           image: imageHandler
         } : undefined
       },
+      imageResize: enableImageUpload ? {
+        modules: ['Resize', 'DisplaySize'],
+        handleStyles: {
+          backgroundColor: 'hsl(var(--primary))',
+          border: 'none',
+          color: 'white'
+        }
+      } : false,
       clipboard: {
         matchVisual: false
       }
@@ -116,8 +133,101 @@ export const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
       }
     }, [ref]);
 
+    const uploadImageFile = async (file: File) => {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Only image files are allowed');
+        return null;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return null;
+      }
+
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+        const filePath = `news-images/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('company-assets')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('company-assets')
+          .getPublicUrl(filePath);
+
+        return publicUrl;
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        toast.error('Failed to upload image');
+        return null;
+      }
+    };
+
+    const handleDrop = async (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+
+      if (!enableImageUpload || disabled) return;
+
+      const files = Array.from(e.dataTransfer.files);
+      const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+      if (imageFiles.length === 0) {
+        toast.error('No image files found');
+        return;
+      }
+
+      const quill = quillRef.current?.getEditor();
+      if (!quill) return;
+
+      toast.info(`Uploading ${imageFiles.length} image(s)...`);
+
+      for (const file of imageFiles) {
+        const url = await uploadImageFile(file);
+        if (url) {
+          const range = quill.getSelection(true);
+          quill.insertEmbed(range.index, 'image', url);
+          quill.setSelection({ index: range.index + 1, length: 0 });
+        }
+      }
+
+      toast.success('Images uploaded successfully');
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (enableImageUpload && !disabled) {
+        setIsDragging(true);
+      }
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+    };
+
     return (
-      <div className={cn("rich-text-editor", className)}>
+      <div 
+        className={cn("rich-text-editor relative", className, isDragging && "ring-2 ring-primary")}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
+        {isDragging && (
+          <div className="absolute inset-0 bg-primary/10 z-10 flex items-center justify-center border-2 border-dashed border-primary rounded-lg pointer-events-none">
+            <p className="text-lg font-medium text-primary">Drop images to upload</p>
+          </div>
+        )}
         <style>{`
           .rich-text-editor .ql-container {
             min-height: 300px;
@@ -154,7 +264,12 @@ export const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
           .rich-text-editor .ql-snow .ql-toolbar button.ql-active .ql-stroke {
             stroke: hsl(var(--primary));
           }
+          .rich-text-editor img {
+            max-width: 100%;
+            height: auto;
+          }
         `}</style>
+        <script src="https://unpkg.com/quill-image-resize-module-react@3.0.0/image-resize.min.js"></script>
         <ReactQuill
           ref={quillRef}
           theme="snow"
