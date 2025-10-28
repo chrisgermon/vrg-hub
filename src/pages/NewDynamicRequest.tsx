@@ -23,6 +23,7 @@ interface RequestCategory {
   slug: string;
   description: string | null;
   assigned_to: string | null;
+  form_template_id: string | null;
 }
 
 export default function NewDynamicRequest() {
@@ -64,7 +65,7 @@ export default function NewDynamicRequest() {
         if (categorySlug) {
           const { data: categoryData, error: categoryError } = await supabase
             .from('request_categories')
-            .select('id, name, slug, description, assigned_to')
+            .select('id, name, slug, description, assigned_to, form_template_id')
             .eq('request_type_id', typeData.id)
             .eq('slug', categorySlug)
             .eq('is_active', true)
@@ -152,7 +153,7 @@ export default function NewDynamicRequest() {
         requestTypeId={requestType.id}
         requestTypeName={requestType.name}
         departmentId={requestType.department_id}
-        formTemplateId={requestType.form_template_id || undefined}
+        formTemplateId={category?.form_template_id || requestType.form_template_id || undefined}
         categoryId={category?.id}
         categoryName={category?.name}
         assignedTo={category?.assigned_to || undefined}
