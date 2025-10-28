@@ -30,7 +30,8 @@ import {
   Edit,
   Pencil,
   Plug,
-  Mail
+  Mail,
+  Calendar
 } from "lucide-react";
 import * as Icons from "lucide-react";
 import { NavLink, useLocation, Link } from "react-router-dom";
@@ -403,7 +404,10 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             : null,
           admin: [
             ...(hasPermission('view_fax_campaigns') && isFeatureEnabled('fax_campaigns')
-              ? [{ title: "Marketing Campaigns", url: "/marketing-campaigns", icon: Mail }]
+              ? [
+                  { title: "Marketing Campaigns", url: "/marketing-campaigns", icon: Mail },
+                  { title: "Marketing Calendar", url: "/marketing-calendar", icon: Calendar }
+                ]
               : []),
           ],
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
@@ -438,7 +442,10 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             : null,
           admin: [
             ...(hasPermission('view_fax_campaigns') && isFeatureEnabled('fax_campaigns')
-              ? [{ title: "Marketing Campaigns", url: "/marketing-campaigns", icon: Mail }]
+              ? [
+                  { title: "Marketing Campaigns", url: "/marketing-campaigns", icon: Mail },
+                  { title: "Marketing Calendar", url: "/marketing-calendar", icon: Calendar }
+                ]
               : []),
           ],
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
@@ -472,7 +479,10 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             : null,
           admin: [
             ...(hasPermission('view_fax_campaigns') && isFeatureEnabled('fax_campaigns')
-              ? [{ title: "Marketing Campaigns", url: "/marketing-campaigns", icon: Mail }]
+              ? [
+                  { title: "Marketing Campaigns", url: "/marketing-campaigns", icon: Mail },
+                  { title: "Marketing Calendar", url: "/marketing-calendar", icon: Calendar }
+                ]
               : []),
           ],
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
@@ -509,6 +519,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             { title: "Audit Log", url: "/audit-log", icon: ScrollText },
             { title: "Integrations", url: "/integrations", icon: Plug },
             { title: "Marketing Campaigns", url: "/marketing-campaigns", icon: Mail },
+            { title: "Marketing Calendar", url: "/marketing-calendar", icon: Calendar },
           ],
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
             ? { title: "Monthly Newsletter", url: "/newsletter", icon: Newspaper } 
