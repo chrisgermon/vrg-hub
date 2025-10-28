@@ -18,8 +18,8 @@ interface ArticleEditorProps {
 }
 
 export default function ArticleEditor({ articleId: propArticleId, onSave }: ArticleEditorProps) {
-  const { id: paramId } = useParams();
-  const id = propArticleId || paramId;
+  const { articleId: paramArticleId } = useParams();
+  const id = propArticleId || paramArticleId;
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
