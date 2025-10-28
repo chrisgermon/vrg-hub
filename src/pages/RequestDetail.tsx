@@ -82,8 +82,8 @@ export default function RequestDetail() {
           requester:profiles!tickets_user_id_fkey(full_name, email),
           assigned_user:profiles!tickets_assigned_to_fkey(full_name, email),
           request_type:request_types(name),
-          brand:brands(display_name),
-          location:locations(name)
+          brand:brand_id(display_name),
+          location:location_id(name)
         `)
         .eq(isUUID ? 'id' : 'request_number', isUUID ? requestParam : targetNumber)
         .maybeSingle();
