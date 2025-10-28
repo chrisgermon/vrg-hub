@@ -37,7 +37,7 @@ const handler = async (req: Request): Promise<Response> => {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="text-align: center; padding: 20px 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 30px;">
-            <img src="https://hub.visionradiology.com.au/vision-radiology-email-logo.png" alt="Vision Radiology" style="max-width: 200px; height: auto;" />
+            <img src="cid:email-logo.png" alt="Vision Radiology" style="max-width: 200px; height: auto;" />
           </div>
           <h2 style="color: #2563eb;">Test Email - Vision Radiology Hub</h2>
           <p>Hello,</p>
@@ -63,6 +63,22 @@ const handler = async (req: Request): Promise<Response> => {
     formData.append("subject", "Test Email - Vision Radiology Hub");
     formData.append("html", emailContent.html);
     formData.append("text", emailContent.text);
+
+    // Attach inline logo image so it displays reliably in email clients
+    try {
+      const logoUrl = Deno.env.get('EMAIL_LOGO_URL') || 'https://hub.visionradiology.com.au/vision-radiology-email-logo.png';
+      const logoRes = await fetch(logoUrl);
+      if (logoRes.ok) {
+        const logoBuffer = await logoRes.arrayBuffer();
+        const contentType = logoRes.headers.get('content-type') || 'image/png';
+        const logoFile = new File([new Blob([logoBuffer], { type: contentType })], 'email-logo.png', { type: contentType });
+        formData.append('inline', logoFile);
+      } else {
+        console.warn('[send-test-email] Failed to fetch logo:', logoRes.status);
+      }
+    } catch (logoError) {
+      console.warn('[send-test-email] Error fetching logo:', logoError);
+    }
 
     console.log('Sending email via Mailgun...');
 
