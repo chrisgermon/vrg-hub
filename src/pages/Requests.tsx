@@ -187,7 +187,7 @@ export default function Requests() {
                 onClick={() => {
                   const num = (selectedRequest as any)?.request_number;
                   if (num) {
-                    navigate(`/requests/${formatRequestIdShort(num).toLowerCase()}`);
+                    navigate(`/request/${formatRequestIdShort(num).toLowerCase()}`);
                   } else {
                     navigate(`/requests/${selectedRequestId}`);
                   }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2, Mail, X, UserCog, Edit, Reply } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { formatRequestId } from '@/lib/requestUtils';
+import { formatRequestId, formatRequestIdShort } from '@/lib/requestUtils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -237,6 +237,17 @@ export default function RequestDetail() {
   }
 
   const isDepartmentRequest = request.type === 'department';
+
+  // Redirect UUID-based URLs to pretty request-number URLs when available
+  useEffect(() => {
+    if (!request) return;
+    const hasNum = (request as any).request_number;
+    const isUuidPath = Boolean(identifier || id);
+    if (hasNum && isUuidPath) {
+      const pretty = `/request/${formatRequestIdShort((request as any).request_number).toLowerCase()}`;
+      navigate(pretty, { replace: true });
+    }
+  }, [request, identifier, id, navigate]);
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -516,12 +527,7 @@ export default function RequestDetail() {
                   </div>
                 )}
 
-                <div>
-                  <p className="text-xs text-muted-foreground">Client Notes</p>
-                  <div className="text-sm bg-muted/50 p-2 rounded mt-1 min-h-[80px]">
-                    {request.description || 'No notes'}
-                  </div>
-                </div>
+                {/* Client Notes removed to avoid duplication with main description */}
               </CardContent>
             </Card>
 
