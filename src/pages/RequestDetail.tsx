@@ -19,6 +19,7 @@ import { ReassignDialog } from '@/components/requests/ReassignDialog';
 import { EditRequestDialog } from '@/components/requests/EditRequestDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { CCEmailsManager } from '@/components/requests/CCEmailsManager';
+import DOMPurify from 'dompurify';
 
 type UnifiedRequest = {
   id: string;
@@ -249,6 +250,33 @@ export default function RequestDetail() {
 
   const isDepartmentRequest = request.type === 'department';
 
+  // Helper to detect if content is HTML
+  const isHTML = (str: string) => /<[a-z][\s\S]*>/i.test(str);
+
+  // Get the primary content to display (prefer description, avoid duplicates)
+  const getPrimaryContent = () => {
+    const desc = request.description?.trim();
+    const justification = request.business_justification?.trim();
+    
+    // If both exist and are the same (or one is HTML version of the other), show only one
+    if (desc && justification) {
+      // Strip HTML tags for comparison
+      const descStripped = desc.replace(/<[^>]*>/g, '').trim();
+      const justStripped = justification.replace(/<[^>]*>/g, '').trim();
+      
+      if (descStripped === justStripped) {
+        // They're the same content, prefer the one with HTML
+        return isHTML(desc) ? desc : (isHTML(justification) ? justification : desc);
+      }
+    }
+    
+    // Return whichever exists
+    return desc || justification || '';
+  };
+
+  const primaryContent = getPrimaryContent();
+  const shouldRenderAsHTML = isHTML(primaryContent);
+
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Header with Back Button */}
@@ -362,39 +390,20 @@ export default function RequestDetail() {
                     <h2 className="text-xl font-semibold mb-2">{request.title}</h2>
                   </div>
 
-                  {request.description && (
+                  {primaryContent && (
                     <div className="bg-muted/50 p-4 rounded-lg">
-                      <div 
-                        className="text-sm prose prose-sm max-w-none dark:prose-invert"
-                        dangerouslySetInnerHTML={{ __html: request.description }}
-                      />
-                    </div>
-                  )}
-
-                  {request.business_justification && (
-                    <div className="bg-muted/50 p-4 rounded-lg">
-                      <div className="text-sm whitespace-pre-wrap">
-                        {(() => {
-                          try {
-                            const parsed = JSON.parse(request.business_justification);
-                            if (parsed.form_data) {
-                              return (
-                                <div className="space-y-2">
-                                  {Object.entries(parsed.form_data as Record<string, any>).map(([key, value]) => (
-                                    <div key={key}>
-                                      <span className="font-medium capitalize">{key.replace(/_/g, ' ')}: </span>
-                                      <span>{String(value)}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              );
-                            }
-                            return <pre className="text-sm">{JSON.stringify(parsed, null, 2)}</pre>;
-                          } catch {
-                            return <p>{request.business_justification}</p>;
-                          }
-                        })()}
-                      </div>
+                      {shouldRenderAsHTML ? (
+                        <div 
+                          className="text-sm prose prose-sm max-w-none dark:prose-invert"
+                          dangerouslySetInnerHTML={{ 
+                            __html: DOMPurify.sanitize(primaryContent) 
+                          }}
+                        />
+                      ) : (
+                        <div className="text-sm whitespace-pre-wrap">
+                          {primaryContent}
+                        </div>
+                      )}
                     </div>
                   )}
 
