@@ -17,7 +17,7 @@ interface ReassignDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   requestId: string;
-  requestType: 'hardware' | 'department' | 'ticket';
+  requestType: 'hardware' | 'department';
   currentAssignee?: string;
   onSuccess?: () => void;
 }
@@ -85,12 +85,22 @@ export function ReassignDialog({
         .eq('id', user?.id)
         .single();
 
-      const tableName = requestType === 'hardware' ? 'hardware_requests' : requestType === 'ticket' ? 'tickets' : 'department_requests';
-      
-      const { error: updateError } = await supabase
-        .from(tableName as any)
+      // Try updating tickets table first (unified system)
+      let updateError = null;
+      const { error: ticketError } = await supabase
+        .from('tickets')
         .update({ assigned_to: assignee })
         .eq('id', requestId);
+
+      if (ticketError) {
+        // Fallback to old tables
+        const tableName = requestType === 'hardware' ? 'hardware_requests' : 'department_requests';
+        const { error: legacyError } = await supabase
+          .from(tableName as any)
+          .update({ assigned_to: assignee })
+          .eq('id', requestId);
+        updateError = legacyError;
+      }
 
       if (updateError) throw updateError;
 

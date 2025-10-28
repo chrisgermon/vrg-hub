@@ -67,7 +67,7 @@ const handler = async (req: Request): Promise<Response> => {
         </div>
         <h2 style="color: #2563eb;">You're Invited! 🎉</h2>
         <p>Hello,</p>
-        <p>${inviterData.name || 'Someone'} has invited you to join <strong>${inviteData.companies.name}</strong> on Vision Radiology Hub.</p>`
+        <p>${inviterData.name || 'Someone'} has invited you to join <strong>${inviteData.companies.name}</strong> on Vision Radiology Hub.</p>
         
         <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
           <p><strong>Your Role:</strong> ${inviteData.role.replace(/_/g, ' ')}</p>

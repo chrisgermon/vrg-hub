@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, Mail, X, StickyNote, UserCog, Edit } from 'lucide-react';
+import { ArrowLeft, Loader2, Mail, X, UserCog, Edit, Reply } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { formatRequestId } from '@/lib/requestUtils';
@@ -15,7 +15,6 @@ import { RequestUpdateForm } from '@/components/requests/RequestUpdateForm';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { CloseRequestDialog } from '@/components/requests/CloseRequestDialog';
-import { PrivateNoteDialog } from '@/components/requests/PrivateNoteDialog';
 import { ReassignDialog } from '@/components/requests/ReassignDialog';
 import { EditRequestDialog } from '@/components/requests/EditRequestDialog';
 import { useAuth } from '@/hooks/useAuth';
@@ -47,7 +46,7 @@ type UnifiedRequest = {
   locations?: { name: string };
   brands?: { display_name: string };
   profile?: { full_name: string; email: string };
-  type: 'hardware' | 'department' | 'ticket';
+  type: 'hardware' | 'department';
   cc_emails?: string[];
 };
 
@@ -58,7 +57,6 @@ export default function RequestDetail() {
   
   const { user, userRole } = useAuth();
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
-  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
@@ -93,7 +91,7 @@ export default function RequestDetail() {
       if (ticket) {
         return {
           ...ticket,
-          type: 'ticket' as const,
+          type: 'hardware' as const,
           profile: ticket.requester,
           assigned_profile: ticket.assigned_user,
           brands: ticket.brand ? { display_name: ticket.brand.display_name } : undefined,
@@ -260,13 +258,19 @@ export default function RequestDetail() {
                 Edit Request
               </Button>
             )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                document.getElementById('update-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }}
+            >
+              <Reply className="w-4 h-4 mr-2" />
+              Reply
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setCloseDialogOpen(true)}>
               <X className="w-4 h-4 mr-2" />
               Close with Response
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setNoteDialogOpen(true)}>
-              <StickyNote className="w-4 h-4 mr-2" />
-              Private Note
             </Button>
             <Button variant="outline" size="sm" onClick={() => setReassignDialogOpen(true)}>
               <UserCog className="w-4 h-4 mr-2" />
@@ -288,12 +292,6 @@ export default function RequestDetail() {
         onOpenChange={setCloseDialogOpen}
         requestId={request.id}
         requestType={request.type}
-      />
-      
-      <PrivateNoteDialog
-        open={noteDialogOpen}
-        onOpenChange={setNoteDialogOpen}
-        requestId={request.id}
       />
       
       <ReassignDialog
@@ -395,7 +393,9 @@ export default function RequestDetail() {
             </Card>
 
             {/* Update Form */}
-            <RequestUpdateForm requestId={request.id} />
+            <div id="update-form">
+              <RequestUpdateForm requestId={request.id} />
+            </div>
           </div>
 
           {/* Right Sidebar: Ticket Information */}
