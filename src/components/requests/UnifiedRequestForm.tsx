@@ -193,7 +193,11 @@ export function UnifiedRequestForm({
                   disabled={loading}
                 >
                   <option value="">Select Brand</option>
-                  {/* Brands will be populated from the database */}
+                  {brands.map((brand) => (
+                    <option key={brand.id} value={brand.id}>
+                      {brand.display_name}
+                    </option>
+                  ))}
                 </select>
               </div>
               
@@ -207,7 +211,11 @@ export function UnifiedRequestForm({
                   disabled={loading}
                 >
                   <option value="">Select Location</option>
-                  {/* Locations will be populated from the database */}
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
