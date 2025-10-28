@@ -42,9 +42,10 @@ export function CloseRequestDialog({
         .from('profiles')
         .select('full_name, email')
         .eq('id', user?.id)
-        .single();
+        .maybeSingle();
 
-      const tableName = requestType === 'department' ? 'department_requests' : 'tickets';
+      // Determine which table to update
+      const tableName = requestType === 'hardware' ? 'hardware_requests' : 'tickets';
       
       // Update request status to completed
       const { error: updateError } = await supabase
@@ -54,24 +55,34 @@ export function CloseRequestDialog({
 
       if (updateError) throw updateError;
 
-      // Add closing comment
-      const { error: commentError } = await supabase
+      // Add the response as an update/comment
+      const { data: commentData, error: commentError } = await supabase
         .from('request_comments')
         .insert({
           request_id: requestId,
           user_id: user?.id,
-          author_name: profile?.full_name || 'System',
-          author_email: profile?.email || 'system@example.com',
-          content: `Request closed with response: ${response}`,
-          content_html: `Request closed with response: ${response}`,
+          author_name: profile?.full_name || profile?.email || 'Unknown',
+          author_email: profile?.email || '',
+          content: response,
+          content_html: response,
           is_internal: false,
-        });
+        })
+        .select()
+        .single();
 
       if (commentError) throw commentError;
 
+      // Send email notification about the closing response
+      await supabase.functions.invoke('notify-comment', {
+        body: {
+          requestId,
+          commentId: commentData.id,
+        },
+      });
+
       toast({
         title: 'Request Closed',
-        description: 'The request has been marked as completed',
+        description: 'The request has been marked as completed with your response',
       });
 
       onOpenChange(false);
