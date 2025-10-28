@@ -80,7 +80,7 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
           request_categories:category_id(name)
         `)
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setRequest(data as any);
