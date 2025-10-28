@@ -237,8 +237,8 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
               <TableBody>
                 {filteredAndSortedRequests.map((request) => {
                   const requestNum = request.request_number 
-                    ? formatRequestId(request.request_number)
-                    : `request-${request.id}`;
+                    ? formatRequestIdShort(request.request_number).toLowerCase()
+                    : request.id;
                   return (
                     <TableRow 
                       key={request.id}

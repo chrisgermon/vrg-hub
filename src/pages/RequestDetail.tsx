@@ -185,14 +185,14 @@ export default function RequestDetail() {
 
   // Redirect UUID-based URLs to pretty request-number URLs when available
   useEffect(() => {
-    if (!request) return;
+    if (!request || !requestParam) return;
     const hasNum = (request as any).request_number;
-    const isUuidPath = Boolean(identifier || id);
+    const isUuidPath = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestParam);
     if (hasNum && isUuidPath) {
       const pretty = `/request/${formatRequestIdShort((request as any).request_number).toLowerCase()}`;
       navigate(pretty, { replace: true });
     }
-  }, [request, identifier, id, navigate]);
+  }, [request, requestParam, navigate]);
 
   const canEdit = isManagerOrAdmin || user?.id === request?.user_id;
 
