@@ -33,8 +33,11 @@ interface Request {
   currency: string;
   created_at: string;
   updated_at: string;
+  assigned_to?: string;
+  category?: string;
   brands?: { display_name: string };
   locations?: { name: string };
+  assigned_profile?: { full_name: string; email: string };
 }
 
 interface RequestDetailProps {
@@ -69,7 +72,8 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
           *,
           request_number,
           brands:brand_id(display_name),
-          locations:location_id(name)
+          locations:location_id(name),
+          assigned_profile:assigned_to(full_name, email)
         `)
         .eq('id', id)
         .single();
@@ -289,6 +293,13 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
                 {getPriorityBadge(request.priority)}
               </div>
 
+              {request.category && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Category</p>
+                  <p className="text-sm">{request.category}</p>
+                </div>
+              )}
+
               {request.total_amount && (
                 <div>
                   <p className="text-xs text-muted-foreground">Total Amount</p>
@@ -302,13 +313,19 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
               </div>
 
               <div>
-                <p className="text-xs text-muted-foreground">Assigned Agent</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Avatar className="h-6 w-6">
-                    <AvatarFallback className="text-xs bg-purple-500 text-white">AA</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm">Auto Assigned</span>
-                </div>
+                <p className="text-xs text-muted-foreground">Assigned To</p>
+                {request.assigned_profile ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                        {request.assigned_profile.full_name?.substring(0, 2).toUpperCase() || 'AA'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">{request.assigned_profile.full_name || request.assigned_profile.email}</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Unassigned</p>
+                )}
               </div>
             </CardContent>
           </Card>
