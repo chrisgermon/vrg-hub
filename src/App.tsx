@@ -55,6 +55,7 @@ const AdvancedNotifications = lazy(() => import("./pages/AdvancedNotifications")
 const ContentEditor = lazy(() => import("./pages/ContentEditor"));
 const FormTemplates = lazy(() => import("./pages/FormTemplates"));
 const SeedFormTemplates = lazy(() => import("./pages/SeedFormTemplates"));
+const AssignCategories = lazy(() => import("./pages/AssignCategories"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Install = lazy(() => import("./pages/Install"));
 const Integrations = lazy(() => import("./pages/Integrations"));
@@ -122,6 +123,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/content-editor", element: <ContentEditor />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/form-templates", element: <FormTemplates />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/form-templates/seed", element: <SeedFormTemplates />, requiredRole: ["super_admin", "tenant_admin"] },
+  { path: "/form-templates/assign", element: <AssignCategories />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/integrations", element: <Integrations />, requiredRole: ["super_admin"] },
   { path: "/reminders", element: <Reminders /> },
   { path: "/reminders/new", element: <NewReminder /> },

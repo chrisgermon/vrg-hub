@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { FormBuilder } from '@/components/form-builder/FormBuilder';
 import { FormTemplate } from '@/types/form-builder';
-import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Table,
@@ -311,12 +311,18 @@ export default function FormTemplates() {
         </AlertDescription>
       </Alert>
 
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 gap-2">
         {isAdmin && (
-          <Button onClick={() => setIsCreating(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Create Form
-          </Button>
+          <>
+            <Button onClick={() => setIsCreating(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Create Form
+            </Button>
+            <Button variant="outline" onClick={() => window.location.href = '/form-templates/assign'}>
+              <Sparkles className="w-4 h-4 mr-2" />
+              AI Assign Categories
+            </Button>
+          </>
         )}
       </div>
 
