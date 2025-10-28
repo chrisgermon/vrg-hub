@@ -426,12 +426,10 @@ export default function RequestDetail() {
                   <p className="text-sm">{(request as any).request_type?.name || 'General Request'}</p>
                 </div>
 
-                {(request as any).category?.name && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">Category</p>
-                    <p className="text-sm">{(request as any).category.name}</p>
-                  </div>
-                )}
+                <div>
+                  <p className="text-xs text-muted-foreground">Category</p>
+                  <p className="text-sm">{(request as any).category?.name || 'N/A'}</p>
+                </div>
 
                 <div>
                   <p className="text-xs text-muted-foreground">Status</p>
