@@ -16,13 +16,10 @@ export default function ArticleView() {
       if (!slug) return;
 
       try {
-        // Try to fetch by slug first
+        // Fetch article without join
         let query = supabase
           .from('news_articles')
-          .select(`
-            *,
-            author:profiles!author_id(full_name, email)
-          `)
+          .select('*')
           .eq('is_published', true);
 
         // Check if slug is a UUID (for backward compatibility)
@@ -36,7 +33,19 @@ export default function ArticleView() {
         const { data, error } = await query.single();
 
         if (error) throw error;
-        setArticle(data);
+
+        // Fetch author profile separately if author_id exists
+        if (data && data.author_id) {
+          const { data: authorData } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', data.author_id)
+            .maybeSingle();
+
+          setArticle({ ...data, author: authorData });
+        } else {
+          setArticle(data);
+        }
       } catch (error) {
         console.error('Error fetching article:', error);
       } finally {
