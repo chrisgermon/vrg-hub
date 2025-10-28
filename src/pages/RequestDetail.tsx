@@ -395,7 +395,7 @@ export default function RequestDetail() {
             {/* Ticket Information */}
             <Card>
               <CardContent className="p-4 space-y-3">
-                <h3 className="font-semibold">Ticket Information</h3>
+                <h3 className="font-semibold">Request Information</h3>
                 
                 <div>
                   <p className="text-xs text-muted-foreground">Date Reported</p>
@@ -454,6 +454,14 @@ export default function RequestDetail() {
                   <p className="text-xs text-muted-foreground">Category</p>
                   <p className="text-sm">{isDepartmentRequest ? request.department : 'Hardware Request'}</p>
                 </div>
+
+                <Separator />
+
+                <CCEmailsManager
+                  requestId={request.id}
+                  requestType={request.type}
+                  currentEmails={request.cc_emails || []}
+                />
               </CardContent>
             </Card>
 
@@ -492,12 +500,6 @@ export default function RequestDetail() {
                     {request.description || 'No notes'}
                   </div>
                 </div>
-
-                <CCEmailsManager
-                  requestId={request.id}
-                  requestType={request.type}
-                  currentEmails={request.cc_emails || []}
-                />
               </CardContent>
             </Card>
 

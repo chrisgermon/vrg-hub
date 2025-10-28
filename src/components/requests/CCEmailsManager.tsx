@@ -31,6 +31,7 @@ export function CCEmailsManager({ requestId, requestType, currentEmails }: CCEma
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['request-by-identifier'] });
+      queryClient.invalidateQueries({ queryKey: ['hardware-request', requestId] });
       toast.success('CC emails updated');
     },
     onError: (error: any) => {
