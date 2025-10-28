@@ -17,7 +17,7 @@ interface ReassignDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   requestId: string;
-  requestType: 'hardware' | 'department';
+  requestType: 'hardware' | 'department' | 'ticket';
   currentAssignee?: string;
   onSuccess?: () => void;
 }
@@ -85,7 +85,7 @@ export function ReassignDialog({
         .eq('id', user?.id)
         .single();
 
-      const tableName = requestType === 'hardware' ? 'hardware_requests' : 'department_requests';
+      const tableName = requestType === 'hardware' ? 'hardware_requests' : requestType === 'ticket' ? 'tickets' : 'department_requests';
       
       const { error: updateError } = await supabase
         .from(tableName as any)

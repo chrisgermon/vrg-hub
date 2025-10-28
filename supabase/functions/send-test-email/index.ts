@@ -39,9 +39,9 @@ const handler = async (req: Request): Promise<Response> => {
           <div style="text-align: center; padding: 20px 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 30px;">
             <img src="https://hub.visionradiology.com.au/vision-radiology-email-logo.png" alt="Vision Radiology" style="max-width: 200px; height: auto;" />
           </div>
-          <h2 style="color: #2563eb;">Test Email - CrowdHub System</h2>
+          <h2 style="color: #2563eb;">Test Email - Vision Radiology Hub</h2>
           <p>Hello,</p>
-          <p>This is a test email to verify that the CrowdHub email system is working correctly.</p>
+          <p>This is a test email to verify that the Vision Radiology notification system is working correctly.</p>
           
           <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3>System Test Results:</h3>
@@ -51,16 +51,16 @@ const handler = async (req: Request): Promise<Response> => {
             <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
           </div>
           
-          <p>If you received this email, your CrowdHub notification system is properly configured!</p>
+          <p>If you received this email, your Vision Radiology notification system is properly configured!</p>
         </div>
       `,
-      text: `Test Email - CrowdHub System\n\nThis is a test email to verify that the email system is working correctly.\n\nTimestamp: ${new Date().toISOString()}`
+      text: `Test Email - Vision Radiology Hub\n\nThis is a test email to verify that the email system is working correctly.\n\nTimestamp: ${new Date().toISOString()}`
     };
     
     const formData = new FormData();
     formData.append("from", "Vision Radiology Hub <hub@visionradiology.com.au>");
     formData.append("to", recipientEmail);
-    formData.append("subject", "Test Email - CrowdHub System");
+    formData.append("subject", "Test Email - Vision Radiology Hub");
     formData.append("html", emailContent.html);
     formData.append("text", emailContent.text);
 

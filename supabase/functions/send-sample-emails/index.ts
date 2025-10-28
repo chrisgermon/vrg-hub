@@ -66,7 +66,7 @@ serve(async (req) => {
     `;
 
     const tonerFormData = new FormData();
-    tonerFormData.append('from', `CrowdHub Test <noreply@${mailgunDomain}>`);
+    tonerFormData.append('from', `Vision Radiology Hub Test <noreply@${mailgunDomain}>`);
     tonerFormData.append('to', recipientEmail);
     tonerFormData.append('subject', tonerSubject);
     tonerFormData.append('html', tonerHtml);
@@ -131,12 +131,11 @@ serve(async (req) => {
           </p>
         </div>
         
-        <p>Best regards,<br>CrowdHub Team</p>
       </div>
     `;
 
     const hardwareFormData = new FormData();
-    hardwareFormData.append('from', `CrowdHub Test <noreply@${mailgunDomain}>`);
+    hardwareFormData.append('from', `Vision Radiology Hub Test <noreply@${mailgunDomain}>`);
     hardwareFormData.append('to', recipientEmail);
     hardwareFormData.append('subject', hardwareSubject);
     hardwareFormData.append('html', hardwareHtml);
@@ -155,7 +154,7 @@ serve(async (req) => {
     }
 
     // 3. NEW ACCOUNT INVITE SAMPLE EMAIL
-    const inviteSubject = 'SAMPLE: You\'re invited to join Pinnacle Medical Imaging on CrowdHub';
+    const inviteSubject = 'SAMPLE: You\'re invited to join Pinnacle Medical Imaging on Vision Radiology Hub';
     const inviteHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
@@ -164,7 +163,7 @@ serve(async (req) => {
 
         <h2 style="color: #2563eb;">You're Invited! 🎉</h2>
         <p>Hello,</p>
-        <p>Michael Chen has invited you to join <strong>Pinnacle Medical Imaging</strong> on CrowdHub.</p>
+        <p>Michael Chen has invited you to join <strong>Pinnacle Medical Imaging</strong> on Vision Radiology Hub.</p>
         
         <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
           <p><strong>Your Role:</strong> Manager</p>
@@ -214,7 +213,7 @@ serve(async (req) => {
     `;
 
     const inviteFormData = new FormData();
-    inviteFormData.append('from', `CrowdHub Test <noreply@${mailgunDomain}>`);
+    inviteFormData.append('from', `Vision Radiology Hub Test <noreply@${mailgunDomain}>`);
     inviteFormData.append('to', recipientEmail);
     inviteFormData.append('subject', inviteSubject);
     inviteFormData.append('html', inviteHtml);

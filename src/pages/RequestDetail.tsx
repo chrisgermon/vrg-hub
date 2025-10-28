@@ -47,7 +47,7 @@ type UnifiedRequest = {
   locations?: { name: string };
   brands?: { display_name: string };
   profile?: { full_name: string; email: string };
-  type: 'hardware' | 'department';
+  type: 'hardware' | 'department' | 'ticket';
   cc_emails?: string[];
 };
 
@@ -93,7 +93,7 @@ export default function RequestDetail() {
       if (ticket) {
         return {
           ...ticket,
-          type: 'hardware' as const,
+          type: 'ticket' as const,
           profile: ticket.requester,
           assigned_profile: ticket.assigned_user,
           brands: ticket.brand ? { display_name: ticket.brand.display_name } : undefined,

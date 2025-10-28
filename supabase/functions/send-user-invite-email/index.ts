@@ -58,7 +58,7 @@ const handler = async (req: Request): Promise<Response> => {
     const appUrl = 'https://hub.visionradiology.com.au';
     const signupUrl = `${appUrl}/auth`;
     
-    const subject = `You're invited to join ${inviteData.companies.name} on CrowdHub`;
+    const subject = `You're invited to join ${inviteData.companies.name} on Vision Radiology Hub`;
     
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -67,7 +67,7 @@ const handler = async (req: Request): Promise<Response> => {
         </div>
         <h2 style="color: #2563eb;">You're Invited! 🎉</h2>
         <p>Hello,</p>
-        <p>${inviterData.name || 'Someone'} has invited you to join <strong>${inviteData.companies.name}</strong> on CrowdHub.</p>
+        <p>${inviterData.name || 'Someone'} has invited you to join <strong>${inviteData.companies.name}</strong> on Vision Radiology Hub.</p>`
         
         <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
           <p><strong>Your Role:</strong> ${inviteData.role.replace(/_/g, ' ')}</p>
@@ -99,11 +99,11 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     const text = `
-You're Invited to Join ${inviteData.companies.name} on CrowdHub
+You're Invited to Join ${inviteData.companies.name} on Vision Radiology Hub
 
 Hello,
 
-${inviterData.name || 'Someone'} has invited you to join ${inviteData.companies.name} on CrowdHub.
+${inviterData.name || 'Someone'} has invited you to join ${inviteData.companies.name} on Vision Radiology Hub.
 
 Your Role: ${inviteData.role.replace(/_/g, ' ')}
 Invite Expires: ${new Date(inviteData.expires_at).toLocaleDateString('en-AU')}

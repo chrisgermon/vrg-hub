@@ -46,14 +46,14 @@ serve(async (req) => {
 
     // Prepare email data from the original log
     const formData = new FormData();
-    formData.append('from', `CrowdHub <notifications@${mailgunDomain}>`);
+    formData.append('from', `Vision Radiology Hub <notifications@${mailgunDomain}>`);
     formData.append('to', emailLog.recipient_email);
     formData.append('subject', emailLog.subject);
     
     // Extract HTML from metadata if available
     const htmlContent = emailLog.metadata?.html || `
       <h2>${emailLog.subject}</h2>
-      <p>This is a resent notification from CrowdHub.</p>
+      <p>This is a resent notification from Vision Radiology Hub.</p>
     `;
     formData.append('html', htmlContent);
 

@@ -46,7 +46,7 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
   const emailFooter = (requestId?: string, requestNumber?: string) => `
     <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; color: #666; font-size: 12px; text-align: center;">
       ${requestId || requestNumber ? `<p><strong>Reference:</strong> ${requestNumber || requestId}</p>` : ''}
-      <p>© ${new Date().getFullYear()} CrowdHub. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} Vision Radiology. All rights reserved.</p>
     </div>
   `;
   
