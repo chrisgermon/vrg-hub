@@ -47,6 +47,9 @@ type UnifiedRequest = {
   locations?: { name: string };
   brands?: { display_name: string };
   profile?: { full_name: string; email: string };
+  assigned_profile?: { full_name: string; email: string };
+  request_type?: { name: string };
+  category?: { name: string };
   type: 'hardware' | 'department';
   cc_emails?: string[];
 };
@@ -498,12 +501,12 @@ export default function RequestDetail() {
 
                 <div>
                   <p className="text-xs text-muted-foreground">Request Type</p>
-                  <p className="text-sm">{(request as any).request_type?.name || 'General Request'}</p>
+                  <p className="text-sm">{request.request_type?.name || 'General Request'}</p>
                 </div>
 
                 <div>
                   <p className="text-xs text-muted-foreground">Category</p>
-                  <p className="text-sm">{(request as any).category?.name || 'N/A'}</p>
+                  <p className="text-sm">{request.category?.name || 'N/A'}</p>
                 </div>
 
                 <div>
@@ -529,14 +532,14 @@ export default function RequestDetail() {
 
                 <div>
                   <p className="text-xs text-muted-foreground">Assigned To</p>
-                  {(request as any).assigned_profile ? (
+                  {request.assigned_profile ? (
                     <div className="flex items-center gap-2 mt-1">
                       <Avatar className="h-6 w-6">
                         <AvatarFallback className="text-xs bg-purple-500 text-white">
-                          {(request as any).assigned_profile.full_name?.substring(0, 2).toUpperCase() || 'NA'}
+                          {request.assigned_profile.full_name?.substring(0, 2).toUpperCase() || 'NA'}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-sm">{(request as any).assigned_profile.full_name || 'Assigned'}</span>
+                      <span className="text-sm">{request.assigned_profile.full_name || 'Assigned'}</span>
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">Unassigned</p>
