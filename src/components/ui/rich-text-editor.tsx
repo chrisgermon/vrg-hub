@@ -5,14 +5,6 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Register image resize module
-if (typeof window !== 'undefined') {
-  const ImageResize = (window as any).ImageResize;
-  if (ImageResize) {
-    Quill.register('modules/imageResize', ImageResize.default);
-  }
-}
-
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -103,14 +95,6 @@ export const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
           image: imageHandler
         } : undefined
       },
-      imageResize: enableImageUpload ? {
-        modules: ['Resize', 'DisplaySize'],
-        handleStyles: {
-          backgroundColor: 'hsl(var(--primary))',
-          border: 'none',
-          color: 'white'
-        }
-      } : false,
       clipboard: {
         matchVisual: false
       }
@@ -264,12 +248,16 @@ export const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
           .rich-text-editor .ql-snow .ql-toolbar button.ql-active .ql-stroke {
             stroke: hsl(var(--primary));
           }
-          .rich-text-editor img {
+          .rich-text-editor .ql-editor img {
             max-width: 100%;
             height: auto;
+            cursor: pointer;
+            transition: transform 0.2s;
+          }
+          .rich-text-editor .ql-editor img:hover {
+            transform: scale(1.02);
           }
         `}</style>
-        <script src="https://unpkg.com/quill-image-resize-module-react@3.0.0/image-resize.min.js"></script>
         <ReactQuill
           ref={quillRef}
           theme="snow"
