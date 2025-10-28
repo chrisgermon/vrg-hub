@@ -10,6 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useDepartments, useRequestTypes, useCreateDepartment, useUpdateDepartment, useCreateRequestType, useUpdateRequestType } from '@/hooks/useTicketingSystem';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export function DepartmentRequestTypeManager() {
   const { data: departments, isLoading: loadingDepts } = useDepartments();
@@ -92,6 +94,7 @@ export function DepartmentRequestTypeManager() {
 }
 
 function DepartmentDialog({ department }: { department?: any }) {
+  const { data: departments } = useDepartments();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(department?.name || '');
   const [description, setDescription] = useState(department?.description || '');
@@ -103,6 +106,16 @@ function DepartmentDialog({ department }: { department?: any }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate duplicate department name (excluding current if editing)
+    if (departments?.some(d => 
+      d.name.toLowerCase() === name.toLowerCase() && 
+      d.id !== department?.id
+    )) {
+      toast.error('A department with this name already exists');
+      return;
+    }
+
     if (isEdit) {
       await updateDepartment.mutateAsync({ 
         id: department.id, 
@@ -157,6 +170,7 @@ function DepartmentDialog({ department }: { department?: any }) {
 }
 
 function RequestTypeDialog({ departments, requestType }: { departments: any[]; requestType?: any }) {
+  const { data: requestTypes } = useRequestTypes();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(requestType?.name || '');
   const [description, setDescription] = useState(requestType?.description || '');
@@ -170,11 +184,26 @@ function RequestTypeDialog({ departments, requestType }: { departments: any[]; r
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const generatedSlug = slug || name.toLowerCase().replace(/\s+/g, '-');
+    
+    // Validate duplicate slug (excluding current if editing)
+    const { data: existingSlug } = await supabase
+      .from('request_types')
+      .select('id')
+      .eq('slug', generatedSlug)
+      .neq('id', requestType?.id || '00000000-0000-0000-0000-000000000000');
+    
+    if (existingSlug && existingSlug.length > 0) {
+      toast.error('A request type with this slug already exists. Please use a different name or slug.');
+      return;
+    }
+
     const data = {
       name,
       description,
       department_id: departmentId,
-      slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
+      slug: generatedSlug,
       is_active: isActive,
     };
 

@@ -753,9 +753,10 @@ export type Database = {
           created_at: string
           created_by: string | null
           department: string | null
+          department_id: string | null
           description: string | null
           fields: Json
-          form_type: string
+          form_type: Database["public"]["Enums"]["form_type_enum"]
           id: string
           is_active: boolean
           name: string
@@ -768,9 +769,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           department?: string | null
+          department_id?: string | null
           description?: string | null
           fields?: Json
-          form_type: string
+          form_type?: Database["public"]["Enums"]["form_type_enum"]
           id?: string
           is_active?: boolean
           name: string
@@ -783,9 +785,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           department?: string | null
+          department_id?: string | null
           description?: string | null
           fields?: Json
-          form_type?: string
+          form_type?: Database["public"]["Enums"]["form_type_enum"]
           id?: string
           is_active?: boolean
           name?: string
@@ -794,7 +797,15 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "form_templates_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hardware_catalog: {
         Row: {
@@ -3626,6 +3637,12 @@ export type Database = {
         | "tenant_admin"
         | "super_admin"
         | "marketing"
+      form_type_enum:
+        | "hardware_request"
+        | "department_request"
+        | "toner_request"
+        | "user_account_request"
+        | "general"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3760,6 +3777,13 @@ export const Constants = {
         "tenant_admin",
         "super_admin",
         "marketing",
+      ],
+      form_type_enum: [
+        "hardware_request",
+        "department_request",
+        "toner_request",
+        "user_account_request",
+        "general",
       ],
     },
   },

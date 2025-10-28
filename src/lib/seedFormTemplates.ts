@@ -1,8 +1,18 @@
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 // Vision Radiology Department Request Form Templates
 export const seedFormTemplates = async () => {
-  const templates = [
+  const templates: Array<{
+    name: string;
+    department?: string;
+    department_id?: string;
+    form_type: 'department_request' | 'hardware_request' | 'toner_request' | 'user_account_request' | 'general';
+    description: string;
+    is_active: boolean;
+    sub_department?: string;
+    fields: any[];
+  }> = [
     {
       name: 'HR Request Form',
       department: 'HR',

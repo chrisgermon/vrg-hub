@@ -71,13 +71,41 @@ export default function FormTemplates() {
 
   const handleSave = async (templateData: Partial<FormTemplate>) => {
     try {
+      // Check for duplicate names (excluding current template if editing)
+      const { data: existingTemplates } = await supabase
+        .from('form_templates')
+        .select('id, name')
+        .eq('name', templateData.name!)
+        .neq('id', editingTemplate?.id || '00000000-0000-0000-0000-000000000000');
+
+      if (existingTemplates && existingTemplates.length > 0) {
+        toast({
+          title: 'Error',
+          description: 'A form template with this name already exists',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       if (editingTemplate) {
+        const updateData: any = {
+          name: templateData.name!,
+          description: templateData.description,
+          fields: templateData.fields as any,
+          is_active: templateData.is_active,
+        };
+        
+        // Only include form_type and department_id if they are set
+        if (templateData.form_type) {
+          updateData.form_type = templateData.form_type;
+        }
+        if (templateData.department_id) {
+          updateData.department_id = templateData.department_id;
+        }
+
         const { error } = await supabase
           .from('form_templates')
-          .update({
-            ...templateData,
-            fields: templateData.fields as any,
-          })
+          .update(updateData)
           .eq('id', editingTemplate.id);
 
         if (error) throw error;
@@ -92,8 +120,8 @@ export default function FormTemplates() {
           .insert({
             name: templateData.name!,
             description: templateData.description,
-            form_type: 'department_request',
-            department: templateData.department,
+            form_type: templateData.form_type as 'department_request' | 'hardware_request' | 'toner_request' | 'user_account_request' | 'general',
+            department_id: templateData.department_id,
             fields: templateData.fields as any,
             is_active: templateData.is_active ?? true,
           });

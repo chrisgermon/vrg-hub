@@ -48,8 +48,9 @@ export interface FormTemplate {
   id: string;
   name: string;
   description?: string;
-  form_type: string;
+  form_type: 'department_request' | 'hardware_request' | 'toner_request' | 'user_account_request' | 'general';
   department?: string;
+  department_id?: string;
   sub_department?: string;
   fields: FormField[];
   settings?: {
