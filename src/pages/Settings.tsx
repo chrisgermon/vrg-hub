@@ -12,55 +12,15 @@ import { BrandsManager } from '@/components/settings/BrandsManager';
 import { LocationsManager } from '@/components/settings/LocationsManager';
 import { NotificationSettingsManager } from '@/components/settings/NotificationSettingsManager';
 import { RequestNotificationAssignments } from '@/components/settings/RequestNotificationAssignments';
-import { UsersSection } from '@/components/settings/UsersSection';
 import { PrintBrandsManager } from '@/components/settings/PrintBrandsManager';
 import { CompanyDomainsManager } from '@/components/settings/CompanyDomainsManager';
 import { CompanyFeaturesManager } from '@/components/settings/CompanyFeaturesManager';
-import { DepartmentRequestTypeManager } from '@/components/requests/admin/DepartmentRequestTypeManager';
-import { TeamManagement } from '@/components/requests/admin/TeamManagement';
-import { TicketAuditLog } from '@/components/requests/admin/TicketAuditLog';
 import { RequestTypesManager } from '@/components/settings/RequestTypesManager';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Edit } from 'lucide-react';
 import { APP_VERSION, BUILD_DATE } from '@/lib/version';
 
-const ticketingSections = [
-  {
-    value: 'departments',
-    label: 'Departments & Types',
-    content: <DepartmentRequestTypeManager />,
-  },
-  {
-    value: 'teams',
-    label: 'Teams',
-    content: <TeamManagement />,
-  },
-  {
-    value: 'audit',
-    label: 'Audit Log',
-    content: <TicketAuditLog />,
-  },
-];
-
-function TicketingSettingsTabs() {
-  return (
-    <Tabs defaultValue={ticketingSections[0].value} className="space-y-4">
-      <TabsList className="flex flex-wrap gap-2">
-        {ticketingSections.map((section) => (
-          <TabsTrigger key={section.value} value={section.value} className="whitespace-nowrap">
-            {section.label}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      {ticketingSections.map((section) => (
-        <TabsContent key={section.value} value={section.value} className="space-y-6">
-          {section.content}
-        </TabsContent>
-      ))}
-    </Tabs>
-  );
-}
 
 export default function Settings() {
   const { userRole } = useAuth();
@@ -201,12 +161,6 @@ export default function Settings() {
           </TabsContent>
         </Tabs>
       ),
-    },
-    {
-      value: 'ticketing',
-      label: 'Ticketing System',
-      allowed: isAdmin,
-      content: <TicketingSettingsTabs />,
     },
     {
       value: 'notifications',
