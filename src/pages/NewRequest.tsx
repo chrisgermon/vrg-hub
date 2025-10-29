@@ -68,12 +68,17 @@ export default function NewRequest() {
     const iconMap: Record<string, any> = {
       'accounts-payable': DollarSign,
       'facility-services': Building2,
-      'finance': Calculator,
+      'finance-request': Calculator,
+      'hardware-request': Monitor,
+      'hr-request': Users,
       'it-service-desk': Headphones,
+      'marketing-request': Megaphone,
+      'marketing-service': Megaphone,
+      'new-user-account': UserPlus,
       'office-services': Briefcase,
-      'technology-trainings': GraduationCap,
-      'hr': Users,
-      'marketing': Megaphone,
+      'technology-training': GraduationCap,
+      'toner-request': Printer,
+      'user-offboarding': UserMinus,
     };
     return iconMap[slug] || FileText;
   };
