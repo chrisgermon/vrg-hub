@@ -20,10 +20,21 @@ import { Badge } from '@/components/ui/badge';
 import { Info } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+interface CategoryWithForm {
+  id: string;
+  name: string;
+  slug: string;
+  request_type_id: string;
+  request_type_name: string;
+  form_template_id: string | null;
+  form_template?: FormTemplate | null;
+}
+
 export default function FormTemplates() {
-  const [templates, setTemplates] = useState<FormTemplate[]>([]);
+  const [categories, setCategories] = useState<CategoryWithForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTemplate, setEditingTemplate] = useState<FormTemplate | null>(null);
+  const [editingCategory, setEditingCategory] = useState<CategoryWithForm | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
   const { userRole } = useAuth();
@@ -32,71 +43,61 @@ export default function FormTemplates() {
   const isAdmin = userRole === 'tenant_admin' || userRole === 'super_admin';
 
   useEffect(() => {
-    loadTemplates();
+    loadCategories();
   }, []);
 
-  // Handle URL parameter for editing
-  useEffect(() => {
-    const editId = searchParams.get('edit');
-    if (editId && templates.length > 0) {
-      const templateToEdit = templates.find(t => t.id === editId);
-      if (templateToEdit) {
-        setEditingTemplate(templateToEdit);
-        // Clear the search param after loading
-        setSearchParams({});
-      }
-    }
-  }, [searchParams, templates]);
-
-  const loadTemplates = async () => {
+  const loadCategories = async () => {
     try {
-      const { data: templatesData, error } = await supabase
+      // Fetch all categories with their request types
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('request_categories')
+        .select(`
+          id,
+          name,
+          slug,
+          request_type_id,
+          form_template_id,
+          request_types(name)
+        `)
+        .eq('is_active', true)
+        .order('request_types(name)', { ascending: true })
+        .order('sort_order', { ascending: true });
+
+      if (categoriesError) throw categoriesError;
+
+      // Fetch all form templates
+      const { data: templatesData, error: templatesError } = await supabase
         .from('form_templates')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
 
-      if (error) throw error;
+      if (templatesError) throw templatesError;
 
-      // Fetch request type names for templates that have them
-      const requestTypeIds = (templatesData || [])
-        .map(t => {
-          const settings = t.settings as any;
-          return settings?.request_type_id;
-        })
-        .filter(Boolean);
-
-      let requestTypesMap: Record<string, string> = {};
-      if (requestTypeIds.length > 0) {
-        const { data: requestTypesData } = await supabase
-          .from('request_types')
-          .select('id, name')
-          .in('id', requestTypeIds);
-
-        if (requestTypesData) {
-          requestTypesMap = requestTypesData.reduce((acc, rt) => {
-            acc[rt.id] = rt.name;
-            return acc;
-          }, {} as Record<string, string>);
-        }
-      }
-
-      // Attach request type names to templates
-      const enrichedTemplates = (templatesData || []).map(t => {
-        const settings = t.settings as any;
-        return {
+      // Create a map of templates by ID
+      const templatesMap = (templatesData || []).reduce((acc, t) => {
+        acc[t.id] = {
           ...t,
-          request_type_name: settings?.request_type_id 
-            ? requestTypesMap[settings.request_type_id] 
-            : null
-        };
-      });
+          fields: (t.fields as any) || [],
+        } as FormTemplate;
+        return acc;
+      }, {} as Record<string, FormTemplate>);
 
-      setTemplates(enrichedTemplates as any);
+      // Enrich categories with form template data
+      const enrichedCategories = (categoriesData || []).map(cat => ({
+        id: cat.id,
+        name: cat.name,
+        slug: cat.slug,
+        request_type_id: cat.request_type_id,
+        request_type_name: (cat.request_types as any)?.name || 'Unknown',
+        form_template_id: cat.form_template_id,
+        form_template: cat.form_template_id ? templatesMap[cat.form_template_id] : null,
+      }));
+
+      setCategories(enrichedCategories);
     } catch (error) {
-      console.error('Error loading templates:', error);
+      console.error('Error loading categories:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load form templates',
+        description: 'Failed to load categories',
         variant: 'destructive',
       });
     } finally {
@@ -218,8 +219,9 @@ export default function FormTemplates() {
       }
 
       setEditingTemplate(null);
+      setEditingCategory(null);
       setIsCreating(false);
-      loadTemplates();
+      loadCategories();
     } catch (error) {
       console.error('Error saving template:', error);
       toast({
@@ -255,7 +257,7 @@ export default function FormTemplates() {
         description: 'Form template deleted successfully',
       });
 
-      loadTemplates();
+      loadCategories();
     } catch (error) {
       console.error('Error deleting template:', error);
       toast({
@@ -266,14 +268,36 @@ export default function FormTemplates() {
     }
   };
 
+  const handleCreateFormForCategory = (category: CategoryWithForm) => {
+    setEditingCategory(category);
+    setIsCreating(true);
+  };
+
+  const handleEditFormForCategory = (category: CategoryWithForm) => {
+    if (category.form_template) {
+      setEditingTemplate(category.form_template);
+      setEditingCategory(category);
+    }
+  };
+
   if (isCreating || editingTemplate) {
+    // Pre-populate form with category info if creating/editing for a specific category
+    const initialTemplate = editingTemplate || (editingCategory ? {
+      settings: {
+        request_type_id: editingCategory.request_type_id,
+        category_name: editingCategory.name,
+        category_slug: editingCategory.slug,
+      }
+    } : undefined);
+
     return (
       <div className="container mx-auto p-6">
         <FormBuilder
-          template={editingTemplate || undefined}
+          template={initialTemplate as any}
           onSave={handleSave}
           onCancel={() => {
             setEditingTemplate(null);
+            setEditingCategory(null);
             setIsCreating(false);
           }}
         />
@@ -293,102 +317,92 @@ export default function FormTemplates() {
     );
   }
 
+  // Group categories by request type
+  const categoriesByType = categories.reduce((acc, cat) => {
+    if (!acc[cat.request_type_name]) {
+      acc[cat.request_type_name] = [];
+    }
+    acc[cat.request_type_name].push(cat);
+    return acc;
+  }, {} as Record<string, CategoryWithForm[]>);
+
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Request Forms & Categories</h1>
         <p className="text-muted-foreground mt-2">
-          Create custom forms that become categories under request types
+          Create and manage forms for each request category
         </p>
       </div>
 
       <Alert className="mb-6">
         <Info className="h-4 w-4" />
         <AlertDescription>
-          Each form template you create can be linked to a Request Type (like "IT Service Desk"). 
-          When linked, the form becomes a clickable category option for that request type. 
-          Parent request types don't have their own forms - only their categories do.
+          Each category needs a form. Create or edit forms for categories to make them functional for users submitting requests.
         </AlertDescription>
       </Alert>
 
-      <div className="flex justify-between items-center mb-6 gap-2">
-        {isAdmin && (
-          <>
-            <Button onClick={() => setIsCreating(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Form
-            </Button>
-            <Button variant="outline" onClick={() => window.location.href = '/form-templates/assign'}>
-              <Sparkles className="w-4 h-4 mr-2" />
-              AI Assign Categories
-            </Button>
-          </>
-        )}
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Form Templates</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {templates.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No form templates found. Create your first form to get started.
-            </div>
-          ) : (
+      {Object.entries(categoriesByType).map(([typeName, typeCategories]) => (
+        <Card key={typeName} className="mb-6">
+          <CardHeader>
+            <CardTitle>{typeName}</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Form Name</TableHead>
-                    <TableHead>Request Type</TableHead>
                     <TableHead>Category Name</TableHead>
+                    <TableHead>Form Name</TableHead>
                     <TableHead>Fields</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
                     {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {templates.map((template) => (
-                    <TableRow key={template.id}>
-                      <TableCell className="font-medium">{template.name}</TableCell>
+                  {typeCategories.map((category) => (
+                    <TableRow key={category.id}>
+                      <TableCell className="font-medium">{category.name}</TableCell>
                       <TableCell>
-                        {(template as any).request_type_name || (
-                          <span className="text-muted-foreground italic">Not linked</span>
+                        {category.form_template ? (
+                          category.form_template.name
+                        ) : (
+                          <span className="text-muted-foreground italic">No form created</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        {template.settings?.category_name || (
-                          <span className="text-muted-foreground">-</span>
+                        {category.form_template?.fields?.length || 0}
+                      </TableCell>
+                      <TableCell>
+                        {category.form_template ? (
+                          <Badge variant={category.form_template.is_active ? 'success' : 'secondary'}>
+                            {category.form_template.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">Not configured</Badge>
                         )}
-                      </TableCell>
-                      <TableCell>{template.fields?.length || 0}</TableCell>
-                      <TableCell>
-                        <Badge variant={template.is_active ? 'success' : 'secondary'}>
-                          {template.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(template.created_at).toLocaleDateString()}
                       </TableCell>
                       {isAdmin && (
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setEditingTemplate(template)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(template.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {category.form_template ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditFormForCategory(category)}
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit Form
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                onClick={() => handleCreateFormForCategory(category)}
+                              >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Create Form
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       )}
@@ -397,9 +411,9 @@ export default function FormTemplates() {
                 </TableBody>
               </Table>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }
