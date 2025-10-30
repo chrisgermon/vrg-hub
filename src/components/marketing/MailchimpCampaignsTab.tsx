@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { formatAUDateTimeZoned, formatAUDateZoned, formatAUTimeZoned } from "@/lib/dateUtils";
 
 interface Campaign {
   id: string;
@@ -142,7 +143,7 @@ export const MailchimpCampaignsTab = () => {
       ['Subject', selectedCampaign.settings.subject_line],
       ['Status', selectedCampaign.status],
       ['Emails Sent', selectedCampaign.emails_sent],
-      ['Send Date', selectedCampaign.send_time ? new Date(selectedCampaign.send_time).toLocaleString() : 'Not sent'],
+      ['Send Date', selectedCampaign.send_time ? formatAUDateTimeZoned(selectedCampaign.send_time) : 'Not sent'],
       [],
       ['Recipients']
     ];
@@ -153,9 +154,9 @@ export const MailchimpCampaignsTab = () => {
       'Opens': r.open_count,
       'Clicks': r.click_count,
       'Last Activity': r.last_open 
-        ? new Date(r.last_open).toLocaleString()
+        ? formatAUDateTimeZoned(r.last_open)
         : r.last_click
-        ? new Date(r.last_click).toLocaleString()
+        ? formatAUDateTimeZoned(r.last_click)
         : 'No activity'
     }));
 
@@ -191,7 +192,10 @@ export const MailchimpCampaignsTab = () => {
         ? `${((campaign.report_summary?.subscriber_clicks || 0) / campaign.emails_sent * 100).toFixed(2)}%`
         : '0%',
       'Send Date': campaign.send_time 
-        ? new Date(campaign.send_time).toLocaleDateString()
+        ? formatAUDateZoned(campaign.send_time)
+        : 'Not sent',
+      'Send Time': campaign.send_time 
+        ? formatAUTimeZoned(campaign.send_time)
         : 'Not sent'
     }));
 
@@ -384,10 +388,10 @@ export const MailchimpCampaignsTab = () => {
                 <p className="font-medium">{selectedCampaign?.emails_sent.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Sent Date</p>
+                <p className="text-sm text-muted-foreground">Sent Date & Time (AEDT)</p>
                 <p className="font-medium">
                   {selectedCampaign?.send_time 
-                    ? new Date(selectedCampaign.send_time).toLocaleString()
+                    ? formatAUDateTimeZoned(selectedCampaign.send_time)
                     : 'Not sent'}
                 </p>
               </div>
@@ -531,7 +535,8 @@ const CampaignTable = ({
             <TableHead>Sent</TableHead>
             <TableHead>Opens</TableHead>
             <TableHead>Clicks</TableHead>
-            <TableHead>Send Date</TableHead>
+            <TableHead>Send Date (AEDT)</TableHead>
+            <TableHead>Send Time (AEDT)</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -546,8 +551,13 @@ const CampaignTable = ({
               <TableCell>{campaign.report_summary?.subscriber_clicks?.toLocaleString() || 0}</TableCell>
               <TableCell>
                 {campaign.send_time 
-                  ? new Date(campaign.send_time).toLocaleDateString()
+                  ? formatAUDateZoned(campaign.send_time)
                   : 'Not sent'}
+              </TableCell>
+              <TableCell>
+                {campaign.send_time 
+                  ? formatAUTimeZoned(campaign.send_time)
+                  : '-'}
               </TableCell>
               <TableCell>
                 <div className="flex gap-2">

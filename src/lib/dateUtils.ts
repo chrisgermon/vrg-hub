@@ -1,5 +1,8 @@
 import { format as dateFnsFormat, parseISO } from 'date-fns';
+import { toZonedTime, formatInTimeZone } from 'date-fns-tz';
 
+// Australian timezone
+export const AU_TIMEZONE = 'Australia/Sydney';
 
 // Australian date formats
 export const AU_DATE_FORMAT = 'dd/MM/yyyy';
@@ -54,4 +57,28 @@ export const formatAUDateShort = (date: Date | string): string => {
 export const formatForCalendar = (date: Date | string, formatStr?: string): string => {
   const dateObj = typeof date === 'string' ? parseISO(date) : date;
   return dateFnsFormat(dateObj, formatStr || AU_DATE_FORMAT);
+};
+
+/**
+ * Format a date in Australian timezone (AEDT/AEST)
+ */
+export const formatAUDateTimeZoned = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? parseISO(date) : date;
+  return formatInTimeZone(dateObj, AU_TIMEZONE, AU_DATETIME_FULL_FORMAT);
+};
+
+/**
+ * Format just the date part in Australian timezone
+ */
+export const formatAUDateZoned = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? parseISO(date) : date;
+  return formatInTimeZone(dateObj, AU_TIMEZONE, AU_DATE_FORMAT);
+};
+
+/**
+ * Format just the time part in Australian timezone
+ */
+export const formatAUTimeZoned = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? parseISO(date) : date;
+  return formatInTimeZone(dateObj, AU_TIMEZONE, 'h:mm a');
 };
