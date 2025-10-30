@@ -20,6 +20,7 @@ interface Request {
   status: RequestStatus;
   priority: string;
   created_at: string;
+  updated_at: string;
   user_id: string;
   assigned_to?: string;
 }
@@ -231,6 +232,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
                   <TableHead>Priority</TableHead>
                   <TableHead>Assigned To</TableHead>
                   <TableHead>Created</TableHead>
+                  <TableHead>Last Updated</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -260,6 +262,9 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
                     <TableCell>{(request as any).manager_id || (request as any).admin_id ? 'Assigned' : '-'}</TableCell>
                     <TableCell>
                       {formatAUDate(request.created_at)}
+                    </TableCell>
+                    <TableCell>
+                      {formatAUDate(request.updated_at)}
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <Button

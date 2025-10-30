@@ -157,7 +157,7 @@ Respond ONLY with valid JSON, no additional text.`
         title: analysis.title || subject.substring(0, 100),
         description: content,
         priority: analysis.priority,
-        status: 'open',
+        status: 'submitted',
         user_id: userId || null,
         form_template_id: selectedTemplate.id,
         department_id: selectedTemplate.department_id,

@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Paperclip } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Paperclip, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 
 interface RequestActivityFeedProps {
   requestId: string;
@@ -28,6 +30,53 @@ interface Comment {
 export function RequestActivityFeed({ requestId }: RequestActivityFeedProps) {
   const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({});
   const [selectedComment, setSelectedComment] = useState<Comment | null>(null);
+  const [newCommentIds, setNewCommentIds] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
+
+  // Set up real-time subscription for new comments
+  useEffect(() => {
+    const channel = supabase
+      .channel('request-comments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'request_comments',
+          filter: `request_id=eq.${requestId}`,
+        },
+        (payload) => {
+          console.log('New comment received:', payload);
+          
+          // Mark as new
+          const commentId = payload.new.id;
+          setNewCommentIds(prev => new Set(prev).add(commentId));
+          
+          // Show toast notification
+          toast.info('New update received', {
+            description: `New comment from ${payload.new.author_name}`,
+            icon: <Mail className="h-4 w-4" />,
+          });
+          
+          // Refetch comments
+          queryClient.invalidateQueries({ queryKey: ['request-comments', requestId] });
+          
+          // Remove "new" indicator after 10 seconds
+          setTimeout(() => {
+            setNewCommentIds(prev => {
+              const updated = new Set(prev);
+              updated.delete(commentId);
+              return updated;
+            });
+          }, 10000);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [requestId, queryClient]);
 
   // Fetch comments
   const { data: comments, isLoading } = useQuery({
@@ -93,9 +142,17 @@ export function RequestActivityFeed({ requestId }: RequestActivityFeedProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">{comment.author_name}</span>
-                        <span className="text-xs text-muted-foreground">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">{comment.author_name}</span>
+                          {newCommentIds.has(comment.id) && (
+                            <Badge variant="default" className="h-5 text-xs">
+                              <Mail className="h-3 w-3 mr-1" />
+                              New
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
                           {format(new Date(comment.created_at), 'MMM d, HH:mm')}
                         </span>
                       </div>
