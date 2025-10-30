@@ -40,7 +40,7 @@ interface AssignableUser {
 }
 
 const STATUS_OPTIONS: { value: RequestStatus; label: string }[] = [
-  { value: 'submitted', label: 'Submitted' },
+  { value: 'open', label: 'Open' },
   { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Complete' },
 ];

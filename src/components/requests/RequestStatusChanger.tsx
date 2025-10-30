@@ -35,27 +35,11 @@ export function RequestStatusChanger({
   // Determine available statuses based on permissions
   const getAvailableStatuses = (): RequestStatus[] => {
     if (isManager) {
-      // Managers can set any operational status (excluding draft and inbox)
-      return [
-        'submitted',
-        'in_progress',
-        'awaiting_information',
-        'on_hold',
-        'pending_manager_approval',
-        'pending_admin_approval',
-        'approved',
-        'ordered',
-        'delivered',
-        'completed',
-        'declined',
-        'cancelled'
-      ];
+      // Managers can set any status
+      return ['open', 'in_progress', 'completed'];
     } else if (isCreator) {
-      // Creators can only mark as completed or cancelled
-      if (currentStatus === 'completed' || currentStatus === 'cancelled') {
-        return [];
-      }
-      return ['completed', 'cancelled'];
+      // Creators can only mark as completed
+      return currentStatus === 'completed' ? [] : ['completed'];
     }
     return [];
   };
@@ -102,20 +86,9 @@ export function RequestStatusChanger({
 
   const getStatusLabel = (status: RequestStatus): string => {
     const labels: Record<RequestStatus, string> = {
-      draft: 'Draft',
-      inbox: 'Inbox',
-      submitted: 'Submitted',
-      pending_manager_approval: 'Pending Manager Approval',
-      pending_admin_approval: 'Pending Admin Approval',
-      approved: 'Approved',
+      open: 'Open',
       in_progress: 'In Progress',
-      awaiting_information: 'Awaiting Information',
-      on_hold: 'On Hold',
-      completed: 'Completed',
-      declined: 'Declined',
-      cancelled: 'Cancelled',
-      ordered: 'Ordered',
-      delivered: 'Delivered',
+      completed: 'Complete',
     };
     return labels[status];
   };
@@ -134,35 +107,23 @@ export function RequestStatusChanger({
         <SelectContent>
           {isManager ? (
             <>
-              <SelectItem value="submitted">Submitted</SelectItem>
+              <SelectItem value="open">Open</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="awaiting_information">Awaiting Information</SelectItem>
-              <SelectItem value="on_hold">On Hold</SelectItem>
-              <SelectItem value="pending_manager_approval">Pending Manager Approval</SelectItem>
-              <SelectItem value="pending_admin_approval">Pending Admin Approval</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="ordered">Ordered</SelectItem>
-              <SelectItem value="delivered">Delivered</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="declined">Declined</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="completed">Complete</SelectItem>
             </>
           ) : isCreator ? (
-            <>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </>
+            <SelectItem value="completed">Complete</SelectItem>
           ) : null}
         </SelectContent>
       </Select>
       {isCreator && !isManager && (
         <p className="text-xs text-muted-foreground">
-          You can mark this request as completed or cancelled
+          You can mark this request as complete when resolved
         </p>
       )}
       {isManager && (
         <p className="text-xs text-muted-foreground">
-          Select a new status to update the request
+          Change the status of this request
         </p>
       )}
     </div>

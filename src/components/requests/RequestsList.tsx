@@ -59,7 +59,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
       } else if (filterType === 'pending') {
         const isManagerOrAdmin = ['manager', 'marketing_manager', 'tenant_admin', 'super_admin'].includes(userRole || '');
         if (isManagerOrAdmin) {
-          query = query.in('status', ['submitted', 'pending_manager_approval', 'pending_admin_approval']);
+          query = query.eq('status', 'open');
         }
       }
 
@@ -79,19 +79,12 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
 
   const getStatusBadge = (status: RequestStatus) => {
     const variants: Record<string, { variant: any; icon: any }> = {
-      draft: { variant: 'secondary', icon: Clock },
-      submitted: { variant: 'default', icon: Package },
-      pending_manager_approval: { variant: 'warning', icon: Clock },
-      pending_admin_approval: { variant: 'warning', icon: Clock },
-      approved: { variant: 'success', icon: CheckCircle },
-      declined: { variant: 'destructive', icon: XCircle },
-      ordered: { variant: 'default', icon: Package },
-      delivered: { variant: 'success', icon: CheckCircle },
-      cancelled: { variant: 'destructive', icon: XCircle },
+      open: { variant: 'default', icon: Package },
+      in_progress: { variant: 'warning', icon: Clock },
       completed: { variant: 'success', icon: CheckCircle },
     };
 
-    const config = variants[status] || variants.draft;
+    const config = variants[status] || variants.open;
     const Icon = config.icon;
 
     return (
