@@ -10,7 +10,7 @@ import { Loader2, X, StickyNote, UserCog, Trash2 } from 'lucide-react';
 import { formatAUDateTimeFull } from '@/lib/dateUtils';
 import { RequestStatus } from '@/types/request';
 import { RequestComments } from './RequestComments';
-import { formatRequestId } from '@/lib/requestUtils';
+import { formatRequestId, getDescriptionText } from '@/lib/requestUtils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
@@ -265,45 +265,9 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
               <div className="space-y-4">
               <div>
                   <h2 className="text-xl font-semibold mb-2">{request.title}</h2>
-                  {request.description && (() => {
-                    try {
-                      const raw: any = request.description as any;
-                      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-                      if (parsed && typeof parsed === 'object') {
-                        const primary = parsed.field_description ?? parsed.description ?? parsed.details ?? null;
-                        if (primary) {
-                          return (
-                            <p className="text-muted-foreground whitespace-pre-wrap">
-                              {Array.isArray(primary) ? primary.join(', ') : String(primary)}
-                            </p>
-                          );
-                        }
-                        return (
-                          <div className="space-y-2">
-                            {Object.entries(parsed).map(([key, value]) => {
-                              if (!key.startsWith('field_')) return null;
-                              const displayKey = key.replace('field_', '').replace(/_/g, ' ');
-                              return (
-                                <div key={key}>
-                                  <p className="text-xs font-medium text-muted-foreground capitalize">
-                                    {displayKey}
-                                  </p>
-                                  <p className="text-sm mt-0.5">
-                                    {Array.isArray(value) ? value.join(', ') : String(value)}
-                                  </p>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      }
-                    } catch (e) {
-                      // Not JSON
-                    }
-                    return (
-                      <p className="text-muted-foreground whitespace-pre-wrap">{String(request.description)}</p>
-                    );
-                  })()}
+                  {request.description && (
+                    <p className="text-muted-foreground whitespace-pre-wrap">{getDescriptionText(request.description)}</p>
+                  )}
                 </div>
 
                 {request.business_justification && (() => {
