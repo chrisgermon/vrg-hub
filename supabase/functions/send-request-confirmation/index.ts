@@ -19,7 +19,8 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const resendApiKey = Deno.env.get('RESEND_API_KEY')!;
+    const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY')!;
+    const mailgunDomain = Deno.env.get('MAILGUN_DOMAIN')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { ticketId, recipientEmail }: ConfirmationRequest = await req.json();
@@ -210,28 +211,31 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    // Send email via Resend API
-    const resendResponse = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'Support <support@hub.visionradiology.com.au>',
-        to: [toEmail],
-        subject: `Request Confirmed - ${requestNumber}`,
-        html: emailHtml,
-      }),
-    });
+    // Send email via Mailgun API
+    const formData = new FormData();
+    formData.append("from", `CrowdHub Support <support@${mailgunDomain}>`);
+    formData.append("to", toEmail);
+    formData.append("subject", `Request Confirmed - ${requestNumber}`);
+    formData.append("html", emailHtml);
 
-    if (!resendResponse.ok) {
-      const errorText = await resendResponse.text();
-      console.error('[send-request-confirmation] Resend API error:', resendResponse.status, errorText);
+    const mailgunResponse = await fetch(
+      `https://api.mailgun.net/v3/${mailgunDomain}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${btoa(`api:${mailgunApiKey}`)}`,
+        },
+        body: formData,
+      }
+    );
+
+    if (!mailgunResponse.ok) {
+      const errorText = await mailgunResponse.text();
+      console.error('[send-request-confirmation] Mailgun API error:', mailgunResponse.status, errorText);
       throw new Error(`Failed to send email: ${errorText}`);
     }
 
-    const emailData = await resendResponse.json();
+    const emailData = await mailgunResponse.json();
     console.log('[send-request-confirmation] Email sent successfully:', emailData);
 
     return new Response(
