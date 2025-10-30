@@ -177,6 +177,9 @@ export function TonerRequestDetail({ requestId }: TonerRequestDetailProps) {
                   <p className="text-sm text-muted-foreground mt-1">
                     Created {formatAUDateTimeFull(request.created_at)}
                   </p>
+                  <p className="text-sm text-muted-foreground">
+                    Last Updated {formatAUDateTimeFull(request.updated_at)}
+                  </p>
                 </div>
                 <Badge variant={getStatusColor(request.status) as any}>
                   {request.status.replace(/_/g, ' ').toUpperCase()}

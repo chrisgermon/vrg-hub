@@ -339,6 +339,11 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
               </div>
 
               <div>
+                <p className="text-xs text-muted-foreground">Last Updated</p>
+                <p className="text-sm">{format(new Date(request.updated_at), 'dd/MM/yyyy h:mm a')}</p>
+              </div>
+
+              <div>
                 <p className="text-xs text-muted-foreground">Request Type</p>
                 <p className="text-sm">{request.request_types?.name || 'General Request'}</p>
               </div>
