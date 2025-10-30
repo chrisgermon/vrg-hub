@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getDescriptionText } from '@/lib/requestUtils';
 
 interface PendingApprovalsProps {
   refreshTrigger?: number;
@@ -161,8 +162,8 @@ export function PendingApprovals({ refreshTrigger }: PendingApprovalsProps) {
                 </Badge>
               </div>
 
-              {request.description && (
-                <p className="text-sm">{request.description}</p>
+{request.description && (
+                <p className="text-sm whitespace-pre-wrap">{getDescriptionText(request.description)}</p>
               )}
 
               <div className="flex gap-2">

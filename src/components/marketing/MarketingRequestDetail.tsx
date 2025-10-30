@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import { formatAUDate, formatAUDateTimeFull } from '@/lib/dateUtils';
+import { getDescriptionText } from '@/lib/requestUtils';
 
 interface MarketingRequest {
   id: string;
@@ -185,7 +186,7 @@ export function MarketingRequestDetail({ requestId: propRequestId }: MarketingRe
         <CardContent className="space-y-6">
           <div>
             <h3 className="font-semibold mb-2">Description</h3>
-            <p className="text-muted-foreground whitespace-pre-wrap">{request.description}</p>
+            <p className="text-muted-foreground whitespace-pre-wrap">{getDescriptionText(request.description)}</p>
           </div>
 
           {request.target_audience && (

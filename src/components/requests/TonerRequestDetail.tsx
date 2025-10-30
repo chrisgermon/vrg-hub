@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { formatAUDate, formatAUDateTimeFull } from '@/lib/dateUtils';
 import { ArrowLeft, Loader2, Package, Calendar, CheckCircle } from 'lucide-react';
+import { getDescriptionText } from '@/lib/requestUtils';
 
 interface TonerRequest {
   id: string;
@@ -226,10 +227,10 @@ export function TonerRequestDetail({ requestId }: TonerRequestDetailProps) {
                 </div>
               )}
 
-              {request.description && (
+{request.description && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-2">Description</p>
-                  <p className="text-sm whitespace-pre-wrap">{request.description}</p>
+                  <p className="text-sm whitespace-pre-wrap">{getDescriptionText(request.description)}</p>
                 </div>
               )}
             </CardContent>

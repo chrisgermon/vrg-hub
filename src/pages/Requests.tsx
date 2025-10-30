@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { formatRequestId, formatRequestIdShort } from '@/lib/requestUtils';
+import { formatRequestId, formatRequestIdShort, getDescriptionText } from '@/lib/requestUtils';
 
 export default function Requests() {
   const navigate = useNavigate();
@@ -176,9 +176,9 @@ export default function Requests() {
               )}
             </DetailsSection>
 
-            {selectedRequest.description && (
+{selectedRequest.description && (
               <DetailsSection title="Description">
-                <p className="text-sm whitespace-pre-wrap">{selectedRequest.description}</p>
+                <p className="text-sm whitespace-pre-wrap">{getDescriptionText(selectedRequest.description)}</p>
               </DetailsSection>
             )}
 

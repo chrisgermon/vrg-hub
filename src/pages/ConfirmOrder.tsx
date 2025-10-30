@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { getDescriptionText } from '@/lib/requestUtils';
 
 interface RequestData {
   id: string;
@@ -171,7 +172,7 @@ export default function ConfirmOrder() {
             {/* Request Details */}
             <div className="bg-muted/50 p-4 rounded-lg space-y-2">
               <h3 className="font-semibold text-lg">{request.title}</h3>
-              <p className="text-sm text-muted-foreground">{request.description}</p>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{getDescriptionText(request.description)}</p>
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div>
                   <p className="text-sm font-medium">Total Amount</p>
