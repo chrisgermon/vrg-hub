@@ -38,6 +38,8 @@ export function ExternalProvidersEditor({ onClose }: ExternalProvidersEditorProp
   const [providers, setProviders] = useState<ExternalProvider[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [editingProvider, setEditingProvider] = useState<ExternalProvider | null>(null);
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [newCategory, setNewCategory] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -105,6 +107,55 @@ export function ExternalProvidersEditor({ onClose }: ExternalProvidersEditorProp
     }
   };
 
+  const addCategory = async () => {
+    if (!newCategory.trim()) {
+      toast.error("Category name is required");
+      return;
+    }
+    if (categories.includes(newCategory.trim())) {
+      toast.error("Category already exists");
+      return;
+    }
+    setCategories([...categories, newCategory.trim()]);
+    setNewCategory("");
+    toast.success("Category added successfully");
+  };
+
+  const updateCategory = async (oldName: string, newName: string) => {
+    if (!newName.trim()) {
+      toast.error("Category name is required");
+      return;
+    }
+    
+    // Update all providers with this category
+    const providersToUpdate = providers.filter(p => p.category === oldName);
+    const updates = providersToUpdate.map(p => 
+      supabase.from("external_providers").update({ category: newName.trim() }).eq("id", p.id)
+    );
+    
+    const results = await Promise.all(updates);
+    const hasError = results.some(r => r.error);
+    
+    if (hasError) {
+      toast.error("Failed to update category");
+    } else {
+      toast.success("Category updated successfully");
+      fetchData();
+      setEditingCategory(null);
+    }
+  };
+
+  const deleteCategory = async (categoryName: string) => {
+    const providersInCategory = providers.filter(p => p.category === categoryName);
+    if (providersInCategory.length > 0) {
+      toast.error(`Cannot delete category with ${providersInCategory.length} provider(s)`);
+      return;
+    }
+    
+    setCategories(categories.filter(c => c !== categoryName));
+    toast.success("Category deleted successfully");
+  };
+
   const groupedProviders = providers.reduce((acc, provider) => {
     if (!acc[provider.category]) {
       acc[provider.category] = [];
@@ -136,67 +187,147 @@ export function ExternalProvidersEditor({ onClose }: ExternalProvidersEditorProp
           </Select>
         </div>
 
-        <Button
-          onClick={() =>
-            setEditingProvider({
-              brand_id: selectedBrand,
-              name: "",
-              category: categories[0] || "",
-              url: "",
-              description: "",
-              sort_order: providers.length,
-              is_active: true,
-            })
-          }
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Provider
-        </Button>
+        <Tabs defaultValue="providers" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="providers">Providers</TabsTrigger>
+            <TabsTrigger value="categories">Categories</TabsTrigger>
+          </TabsList>
 
-        {isLoading ? (
-          <div className="text-center py-8">Loading...</div>
-        ) : (
-          <div className="space-y-6 max-h-[500px] overflow-y-auto">
-            {Object.entries(groupedProviders).map(([category, categoryProviders]) => (
-              <Card key={category}>
-                <CardHeader>
-                  <CardTitle className="text-lg">{category}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {categoryProviders.map((provider) => (
-                    <div
-                      key={provider.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
-                    >
+          <TabsContent value="providers" className="space-y-4">
+            <Button
+              onClick={() =>
+                setEditingProvider({
+                  brand_id: selectedBrand,
+                  name: "",
+                  category: categories[0] || "",
+                  url: "",
+                  description: "",
+                  sort_order: providers.length,
+                  is_active: true,
+                })
+              }
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Provider
+            </Button>
+
+            {isLoading ? (
+              <div className="text-center py-8">Loading...</div>
+            ) : (
+              <div className="space-y-6 max-h-[500px] overflow-y-auto">
+                {Object.entries(groupedProviders).map(([category, categoryProviders]) => (
+                  <Card key={category}>
+                    <CardHeader>
+                      <CardTitle className="text-lg">{category}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {categoryProviders.map((provider) => (
+                        <div
+                          key={provider.id}
+                          className="flex items-center justify-between p-3 border rounded-lg"
+                        >
+                          <div className="flex-1">
+                            <div className="font-medium">{provider.name}</div>
+                            {provider.url && (
+                              <div className="text-sm text-muted-foreground">{provider.url}</div>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setEditingProvider(provider)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => provider.id && deleteProvider(provider.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="categories" className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="New category name"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addCategory()}
+              />
+              <Button onClick={addCategory}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add
+              </Button>
+            </div>
+
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              {categories.map((category) => (
+                <div
+                  key={category}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  {editingCategory === category ? (
+                    <Input
+                      defaultValue={category}
+                      onBlur={(e) => {
+                        if (e.target.value !== category) {
+                          updateCategory(category, e.target.value);
+                        } else {
+                          setEditingCategory(null);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          updateCategory(category, e.currentTarget.value);
+                        } else if (e.key === "Escape") {
+                          setEditingCategory(null);
+                        }
+                      }}
+                      autoFocus
+                      className="flex-1 mr-2"
+                    />
+                  ) : (
+                    <>
                       <div className="flex-1">
-                        <div className="font-medium">{provider.name}</div>
-                        {provider.url && (
-                          <div className="text-sm text-muted-foreground">{provider.url}</div>
-                        )}
+                        <div className="font-medium">{category}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {providers.filter(p => p.category === category).length} provider(s)
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setEditingProvider(provider)}
+                          onClick={() => setEditingCategory(category)}
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => provider.id && deleteProvider(provider.id)}
+                          onClick={() => deleteCategory(category)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       <Dialog open={!!editingProvider} onOpenChange={() => setEditingProvider(null)}>
