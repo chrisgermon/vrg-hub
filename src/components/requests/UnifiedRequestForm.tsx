@@ -213,6 +213,19 @@ export function UnifiedRequestForm({
 
       if (error) throw error;
 
+      // Send confirmation email to requester
+      try {
+        await supabase.functions.invoke('send-request-confirmation', {
+          body: {
+            ticketId: data.id,
+            recipientEmail: profile?.email,
+          },
+        });
+      } catch (emailError) {
+        console.error('Failed to send confirmation email:', emailError);
+        // Don't fail the request if email fails
+      }
+
       toast.success(`Request #${data.request_number} submitted successfully!`);
       navigate('/requests');
     } catch (error: any) {
@@ -285,6 +298,19 @@ export function UnifiedRequestForm({
         .single();
 
       if (error) throw error;
+
+      // Send confirmation email to requester
+      try {
+        await supabase.functions.invoke('send-request-confirmation', {
+          body: {
+            ticketId: data.id,
+            recipientEmail: profile?.email,
+          },
+        });
+      } catch (emailError) {
+        console.error('Failed to send confirmation email:', emailError);
+        // Don't fail the request if email fails
+      }
 
       toast.success(`Request #${data.request_number} submitted successfully!`);
       navigate('/requests');

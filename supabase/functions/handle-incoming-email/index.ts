@@ -249,7 +249,15 @@ Respond ONLY with valid JSON, no additional text.`
       direction: 'inbound',
     });
 
-    // Send confirmation email to sender
+    // Send detailed confirmation email to requester
+    await supabase.functions.invoke('send-request-confirmation', {
+      body: {
+        ticketId: newTicket.id,
+        recipientEmail: senderEmail,
+      },
+    });
+
+    // Send notification to assigned team
     await supabase.functions.invoke('notify-ticket-event', {
       body: {
         requestId: newTicket.id,
