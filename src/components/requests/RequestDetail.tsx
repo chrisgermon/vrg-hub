@@ -118,9 +118,20 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
 
   const getStatusBadge = (status: RequestStatus) => {
     const variants: Record<string, { variant: any; label: string }> = {
+      draft: { variant: 'secondary', label: 'Draft' },
+      inbox: { variant: 'default', label: 'Inbox' },
       submitted: { variant: 'default', label: 'Submitted' },
-      in_progress: { variant: 'warning', label: 'In Progress' },
-      completed: { variant: 'success', label: 'Complete' },
+      pending_manager_approval: { variant: 'warning', label: 'Pending Manager' },
+      pending_admin_approval: { variant: 'warning', label: 'Pending Admin' },
+      approved: { variant: 'success', label: 'Approved' },
+      in_progress: { variant: 'default', label: 'In Progress' },
+      awaiting_information: { variant: 'warning', label: 'Awaiting Info' },
+      on_hold: { variant: 'secondary', label: 'On Hold' },
+      completed: { variant: 'success', label: 'Completed' },
+      declined: { variant: 'destructive', label: 'Declined' },
+      cancelled: { variant: 'destructive', label: 'Cancelled' },
+      ordered: { variant: 'default', label: 'Ordered' },
+      delivered: { variant: 'success', label: 'Delivered' },
     };
 
     const config = variants[status] || variants.submitted;
