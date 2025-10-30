@@ -271,28 +271,58 @@ export default function RequestDetail() {
 
   // Get the primary content to display (prefer description, avoid duplicates)
   const getPrimaryContent = () => {
-    // For department requests with form data, extract description from form
-    if (formData && formData.description) {
-      return formData.description;
+    // Helper to extract a primary description from an object
+    const extractFromObject = (obj: any) => {
+      if (!obj || typeof obj !== 'object') return null;
+      const primary = (obj as any).field_description ?? (obj as any).description ?? (obj as any).details ?? null;
+      if (primary == null) return null;
+      if (Array.isArray(primary)) return primary.join(', ');
+      const str = String(primary).trim();
+      return str.length ? str : null;
+    };
+
+    // 1) Prefer description from structured form data (business_justification JSON)
+    if (formData) {
+      const fromForm = extractFromObject(formData);
+      if (fromForm) return fromForm;
     }
-    
-    const desc = request.description?.trim();
-    const justification = request.business_justification?.trim();
-    
-    // If both exist and are the same (or one is HTML version of the other), show only one
-    if (desc && justification) {
-      // Strip HTML tags for comparison
-      const descStripped = desc.replace(/<[^>]*>/g, '').trim();
-      const justStripped = justification.replace(/<[^>]*>/g, '').trim();
-      
-      if (descStripped === justStripped) {
-        // They're the same content, prefer the one with HTML
-        return isHTML(desc) ? desc : (isHTML(justification) ? justification : desc);
+
+    // 2) Try parsing request.description as JSON and extract common fields
+    if (request.description) {
+      try {
+        const raw: any = request.description as any;
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const fromParsed = extractFromObject(parsed);
+        if (fromParsed) return fromParsed;
+      } catch (e) {
+        // not JSON, fall through
       }
     }
-    
-    // Return whichever exists
-    return desc || justification || '';
+
+    // 3) Fallback to plain text values and avoid duplicates vs justification
+    const desc = (request.description ? String(request.description) : '').trim();
+
+    // If justification is JSON, try to extract text for comparison
+    let justText = (request.business_justification || '').trim();
+    if (justText) {
+      try {
+        const jp = JSON.parse(justText);
+        const ex = extractFromObject(jp);
+        if (ex) justText = ex;
+      } catch {
+        // not JSON, keep as-is
+      }
+    }
+
+    if (desc && justText) {
+      const descStripped = desc.replace(/<[^>]*>/g, '').trim();
+      const justStripped = justText.replace(/<[^>]*>/g, '').trim();
+      if (descStripped === justStripped) {
+        return isHTML(desc) ? desc : (isHTML(justText) ? justText : desc);
+      }
+    }
+
+    return desc || justText || '';
   };
 
   const primaryContent = getPrimaryContent();
@@ -435,8 +465,8 @@ export default function RequestDetail() {
                       <h3 className="font-semibold text-sm text-muted-foreground mb-2">Additional Information</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {Object.entries(formData).map(([key, value]) => {
-                          // Skip empty values and description (already shown above)
-                          if (!value || value === '' || key === 'description') return null;
+                          // Skip empty values and description/title fields already rendered above
+                          if (!value || value === '' || ['description', 'details', 'field_description', 'field_title'].includes(key)) return null;
                           
                           return (
                             <div key={key}>
