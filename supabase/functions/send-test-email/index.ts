@@ -66,19 +66,32 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Attach inline logo image so it displays reliably in email clients
     try {
-      const logoUrl =
-        Deno.env.get('EMAIL_LOGO_URL') ||
-        'https://qnavtvxemndvrutnavvm.supabase.co/storage/v1/object/public/company-assets/vision-radiology-email-logo.png' ||
-        'https://hub.visionradiology.com.au/vision-radiology-email-logo.png' ||
-        'https://404937c6-0b78-4994-94df-9246989f9d9d.lovableproject.com/vision-radiology-email-logo.png';
-      const logoRes = await fetch(logoUrl);
-      if (logoRes.ok) {
+      // Try multiple logo sources in order of preference
+      const logoUrls = [
+        Deno.env.get('EMAIL_LOGO_URL'),
+        'https://qnavtvxemndvrutnavvm.supabase.co/storage/v1/object/public/company-assets/VR22004_Logo_Update.png',
+        'https://qnavtvxemndvrutnavvm.supabase.co/storage/v1/object/public/company-assets/vision-radiology-email-logo.png',
+        'https://hub.visionradiology.com.au/vision-radiology-email-logo.png',
+      ].filter(Boolean);
+      
+      let logoRes;
+      let workingUrl;
+      
+      for (const url of logoUrls) {
+        logoRes = await fetch(url as string);
+        if (logoRes.ok) {
+          workingUrl = url;
+          console.log('[send-test-email] Logo fetched successfully from:', workingUrl);
+          break;
+        }
+      }
+      if (logoRes && logoRes.ok) {
         const logoBuffer = await logoRes.arrayBuffer();
         const contentType = logoRes.headers.get('content-type') || 'image/png';
-        const logoFile = new File([new Blob([logoBuffer], { type: contentType })], 'email-logo.png', { type: contentType });
-        formData.append('inline', logoFile);
+        const logoBlob = new Blob([logoBuffer], { type: contentType });
+        formData.append('inline', logoBlob, 'email-logo.png');
       } else {
-        console.warn('[send-test-email] Failed to fetch logo:', logoRes.status, logoUrl);
+        console.warn('[send-test-email] Failed to fetch logo from all URLs');
       }
     } catch (logoError) {
       console.warn('[send-test-email] Error fetching logo:', logoError);

@@ -523,22 +523,37 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Attach inline logo image so it displays even when remote images are blocked
       try {
-        const logoUrl =
-          Deno.env.get('EMAIL_LOGO_URL') ||
-          'https://qnavtvxemndvrutnavvm.supabase.co/storage/v1/object/public/company-assets/vision-radiology-email-logo.png';
+        // Try multiple logo sources in order of preference
+        const logoUrls = [
+          Deno.env.get('EMAIL_LOGO_URL'),
+          'https://qnavtvxemndvrutnavvm.supabase.co/storage/v1/object/public/company-assets/VR22004_Logo_Update.png',
+          'https://qnavtvxemndvrutnavvm.supabase.co/storage/v1/object/public/company-assets/vision-radiology-email-logo.png',
+          'https://hub.visionradiology.com.au/vision-radiology-email-logo.png',
+        ].filter(Boolean);
         
-        console.log('[send-notification-email] Fetching logo from:', logoUrl);
-        const logoRes = await fetch(logoUrl);
+        let logoRes;
+        let workingUrl;
         
-        if (logoRes.ok) {
+        for (const url of logoUrls) {
+          console.log('[send-notification-email] Trying logo URL:', url);
+          logoRes = await fetch(url as string);
+          if (logoRes.ok) {
+            workingUrl = url;
+            console.log('[send-notification-email] Logo fetched successfully from:', workingUrl);
+            break;
+          }
+        }
+        
+        if (logoRes && logoRes.ok) {
           const logoBuffer = await logoRes.arrayBuffer();
-          const logoBlob = new Blob([logoBuffer], { type: 'image/png' });
+          const contentType = logoRes.headers.get('content-type') || 'image/png';
+          const logoBlob = new Blob([logoBuffer], { type: contentType });
           
           // Append inline attachment with filename matching the CID reference
           formData.append('inline', logoBlob, 'email-logo.png');
           console.log('[send-notification-email] Logo attached successfully');
         } else {
-          console.warn('[send-notification-email] Failed to fetch logo:', logoRes.status, logoUrl);
+          console.warn('[send-notification-email] Failed to fetch logo from all URLs');
         }
       } catch (e) {
         console.warn('[send-notification-email] Error attaching inline logo:', e);
