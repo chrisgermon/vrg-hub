@@ -56,6 +56,7 @@ const ContentEditor = lazy(() => import("./pages/ContentEditor"));
 const FormTemplates = lazy(() => import("./pages/FormTemplates"));
 const SeedFormTemplates = lazy(() => import("./pages/SeedFormTemplates"));
 const AssignCategories = lazy(() => import("./pages/AssignCategories"));
+const UploadLogoToStorage = lazy(() => import("./pages/UploadLogoToStorage"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Install = lazy(() => import("./pages/Install"));
 const Integrations = lazy(() => import("./pages/Integrations"));
@@ -167,6 +168,7 @@ function App() {
                   <Route path="/shared/:token" element={<SharedClinic />} />
                   <Route path="/shared-clinic/:token" element={<SharedModality />} />
                   <Route path="/confirm-order/:token" element={<ConfirmOrder />} />
+                  <Route path="/upload-logo" element={<UploadLogoToStorage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
