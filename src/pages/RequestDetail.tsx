@@ -269,6 +269,10 @@ export default function RequestDetail() {
 
   const formData = isDepartmentRequest ? parseFormData() : null;
 
+  // Check if this request came from email
+  const isFromEmail = (request as any).source === 'email' || 
+                      (request as any).metadata?.email_message_id;
+
   // Get the primary content to display (prefer description, avoid duplicates)
   const getPrimaryContent = () => {
     // Helper to extract a primary description from an object
@@ -325,7 +329,9 @@ export default function RequestDetail() {
     return desc || justText || '';
   };
 
-  const primaryContent = getPrimaryContent();
+  const rawContent = getPrimaryContent();
+  // Apply email cleaning using the utility function
+  const primaryContent = getDescriptionText(rawContent, isFromEmail);
   const shouldRenderAsHTML = isHTML(primaryContent);
 
   return (

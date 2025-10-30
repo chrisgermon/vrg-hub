@@ -18,6 +18,63 @@ interface IncomingEmail {
   'References'?: string;
 }
 
+/**
+ * Clean email content by removing signatures, disclaimers, and CID references
+ */
+function cleanEmailContent(content: string): string {
+  if (!content) return '';
+  
+  let cleaned = content;
+  
+  // Remove [cid:...] image references
+  cleaned = cleaned.replace(/\[cid:[^\]]+\]/gi, '');
+  
+  // Remove email signature patterns
+  const signaturePatterns = [
+    // Phone numbers
+    /\(\d{2}\)\s*\d{4}\s*\d{4}/g,
+    // Email addresses (but keep the main request text)
+    /[\w\.-]+@[\w\.-]+\.\w+/g,
+    // Website URLs
+    /https?:\/\/[\w\.-]+\.\w+[\w\-\._~:\/?#\[\]@!\$&'\(\)\*\+,;=]*/gi,
+  ];
+  
+  // Split by common signature delimiters
+  const lines = cleaned.split('\n');
+  const cleanedLines: string[] = [];
+  let inSignature = false;
+  let requestContent = '';
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    // Detect signature start
+    if (!inSignature && (
+      line.match(/^[-_]{2,}$/) || // Separator lines
+      line.match(/^(regards|thanks|sincerely|best|cheers)/i) || // Common closings
+      line.match(/\|\s*[\w\s]+$/i) || // Job titles with pipe
+      line.includes('accepts no liability') || // Legal disclaimers
+      line.match(/^\d+\/\d+.*VIC \d{4}/) // Addresses
+    )) {
+      inSignature = true;
+    }
+    
+    if (!inSignature && line.length > 0) {
+      cleanedLines.push(lines[i]);
+    }
+  }
+  
+  requestContent = cleanedLines.join('\n').trim();
+  
+  // Remove excessive whitespace and newlines
+  requestContent = requestContent
+    .replace(/\n{3,}/g, '\n\n') // Max 2 consecutive newlines
+    .replace(/[ \t]+/g, ' ') // Multiple spaces to single space
+    .trim();
+  
+  return requestContent || cleaned.trim(); // Fallback to original if cleaning removed everything
+}
+
 async function handleNewRequest(supabase: any, emailData: Partial<IncomingEmail>): Promise<Response> {
   try {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -27,7 +84,8 @@ async function handleNewRequest(supabase: any, emailData: Partial<IncomingEmail>
 
     const senderEmail = emailData.sender?.toLowerCase() || '';
     const subject = emailData.subject || 'No subject';
-    const content = emailData['stripped-text'] || emailData['body-plain'] || '';
+    const rawContent = emailData['stripped-text'] || emailData['body-plain'] || '';
+    const content = cleanEmailContent(rawContent);
 
     console.log('[handle-incoming-email] Analyzing email content with AI');
 
@@ -166,6 +224,7 @@ Respond ONLY with valid JSON, no additional text.`
           sender_email: senderEmail,
           ai_analysis: analysis,
           original_subject: subject,
+          original_body: rawContent, // Store original for audit
           email_message_id: emailData['Message-Id']
         }
       })
@@ -332,7 +391,8 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Request not found after initial lookup');
     }
 
-    const content = emailData['stripped-text'] || emailData['body-plain'] || '';
+    const rawCommentContent = emailData['stripped-text'] || emailData['body-plain'] || '';
+    const content = cleanEmailContent(rawCommentContent);
     const contentHtml = emailData['body-html'] || null;
     const senderEmail = emailData.sender?.toLowerCase() || '';
 
