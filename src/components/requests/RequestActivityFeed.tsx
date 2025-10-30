@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 
 interface RequestActivityFeedProps {
   requestId: string;
@@ -25,6 +27,7 @@ interface Comment {
 
 export function RequestActivityFeed({ requestId }: RequestActivityFeedProps) {
   const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({});
+  const [selectedComment, setSelectedComment] = useState<Comment | null>(null);
 
   // Fetch comments
   const { data: comments, isLoading } = useQuery({
@@ -69,66 +72,128 @@ export function RequestActivityFeed({ requestId }: RequestActivityFeedProps) {
   }
 
   return (
-    <Card className="p-4">
-      <div className="space-y-4">
-        <h3 className="font-semibold text-sm">Activity & Updates</h3>
+    <>
+      <Card className="p-4">
+        <div className="space-y-4">
+          <h3 className="font-semibold text-sm">Activity & Updates</h3>
 
-        {/* Comments list - preview only */}
-        <div className="space-y-3 max-h-[400px] overflow-y-auto">
-          {comments && comments.length > 0 ? (
-            comments.map((comment) => (
-              <div key={comment.id} className="group cursor-pointer hover:bg-muted/50 p-2 rounded transition-colors">
-                <div className="flex gap-2 items-start">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs">
-                      {comment.author_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">{comment.author_name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(comment.created_at), 'MMM d, HH:mm')}
-                      </span>
-                    </div>
-                    <div 
-                      className="text-sm text-muted-foreground line-clamp-2"
-                      dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }}
-                    />
-                    {comment.attachments && comment.attachments.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {comment.attachments.map((attachment, idx) => {
-                          const fileName = attachment.split('/').pop() || attachment;
-                          const url = attachmentUrls[attachment];
-                          return (
-                            <Button
-                              key={idx}
-                              variant="outline"
-                              size="sm"
-                              className="h-6 text-xs gap-1"
-                              asChild
-                              disabled={!url}
-                            >
-                              <a href={url} target="_blank" rel="noopener noreferrer">
-                                <Paperclip className="h-3 w-3" />
-                                {fileName}
-                              </a>
-                            </Button>
-                          );
-                        })}
+          {/* Comments list - preview only */}
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            {comments && comments.length > 0 ? (
+              comments.map((comment) => (
+                <div 
+                  key={comment.id} 
+                  className="group cursor-pointer hover:bg-muted/50 p-2 rounded transition-colors"
+                  onClick={() => setSelectedComment(comment)}
+                >
+                  <div className="flex gap-2 items-start">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="text-xs">
+                        {comment.author_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm">{comment.author_name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(comment.created_at), 'MMM d, HH:mm')}
+                        </span>
                       </div>
-                    )}
+                      <div 
+                        className="text-sm text-muted-foreground line-clamp-2"
+                        dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }}
+                      />
+                      {comment.attachments && comment.attachments.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {comment.attachments.map((attachment, idx) => {
+                            const fileName = attachment.split('/').pop() || attachment;
+                            return (
+                              <div key={idx} className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Paperclip className="h-3 w-3" />
+                                <span>{fileName}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-xs text-muted-foreground text-center py-4">
-              No activity yet
-            </p>
-          )}
+              ))
+            ) : (
+              <p className="text-xs text-muted-foreground text-center py-4">
+                No activity yet
+              </p>
+            )}
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+
+      {/* Full Activity Dialog */}
+      <Dialog open={!!selectedComment} onOpenChange={() => setSelectedComment(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Activity Details</DialogTitle>
+          </DialogHeader>
+          
+          {selectedComment && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback>
+                    {selectedComment.author_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">{selectedComment.author_name}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {format(new Date(selectedComment.created_at), 'PPpp')}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{selectedComment.author_email}</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div 
+                className="prose prose-sm max-w-none dark:prose-invert"
+                dangerouslySetInnerHTML={{ __html: selectedComment.content_html || selectedComment.content }}
+              />
+
+              {selectedComment.attachments && selectedComment.attachments.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">Attachments</h4>
+                    <div className="grid gap-2">
+                      {selectedComment.attachments.map((attachment, idx) => {
+                        const fileName = attachment.split('/').pop() || attachment;
+                        const url = attachmentUrls[attachment];
+                        return (
+                          <Button
+                            key={idx}
+                            variant="outline"
+                            className="justify-start gap-2"
+                            asChild
+                            disabled={!url}
+                          >
+                            <a href={url} target="_blank" rel="noopener noreferrer" download>
+                              <Paperclip className="h-4 w-4" />
+                              {fileName}
+                            </a>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
