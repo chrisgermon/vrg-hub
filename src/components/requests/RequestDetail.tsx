@@ -267,8 +267,17 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
                   <h2 className="text-xl font-semibold mb-2">{request.title}</h2>
                   {request.description && (() => {
                     try {
-                      const parsed = JSON.parse(request.description);
-                      if (typeof parsed === 'object' && parsed !== null) {
+                      const raw: any = request.description as any;
+                      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                      if (parsed && typeof parsed === 'object') {
+                        const primary = parsed.field_description ?? parsed.description ?? parsed.details ?? null;
+                        if (primary) {
+                          return (
+                            <p className="text-muted-foreground whitespace-pre-wrap">
+                              {Array.isArray(primary) ? primary.join(', ') : String(primary)}
+                            </p>
+                          );
+                        }
                         return (
                           <div className="space-y-2">
                             {Object.entries(parsed).map(([key, value]) => {
@@ -289,10 +298,10 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
                         );
                       }
                     } catch (e) {
-                      // Not JSON, display as text
+                      // Not JSON
                     }
                     return (
-                      <p className="text-muted-foreground whitespace-pre-wrap">{request.description}</p>
+                      <p className="text-muted-foreground whitespace-pre-wrap">{String(request.description)}</p>
                     );
                   })()}
                 </div>
