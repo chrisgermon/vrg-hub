@@ -263,11 +263,38 @@ export function RequestDetail({ requestId: propRequestId }: RequestDetailProps) 
 
               {/* Ticket Content */}
               <div className="space-y-4">
-                <div>
+              <div>
                   <h2 className="text-xl font-semibold mb-2">{request.title}</h2>
-                  {request.description && (
-                    <p className="text-muted-foreground whitespace-pre-wrap">{request.description}</p>
-                  )}
+                  {request.description && (() => {
+                    try {
+                      const parsed = JSON.parse(request.description);
+                      if (typeof parsed === 'object' && parsed !== null) {
+                        return (
+                          <div className="space-y-2">
+                            {Object.entries(parsed).map(([key, value]) => {
+                              if (!key.startsWith('field_')) return null;
+                              const displayKey = key.replace('field_', '').replace(/_/g, ' ');
+                              return (
+                                <div key={key}>
+                                  <p className="text-xs font-medium text-muted-foreground capitalize">
+                                    {displayKey}
+                                  </p>
+                                  <p className="text-sm mt-0.5">
+                                    {Array.isArray(value) ? value.join(', ') : String(value)}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      }
+                    } catch (e) {
+                      // Not JSON, display as text
+                    }
+                    return (
+                      <p className="text-muted-foreground whitespace-pre-wrap">{request.description}</p>
+                    );
+                  })()}
                 </div>
 
                 {request.business_justification && (() => {
