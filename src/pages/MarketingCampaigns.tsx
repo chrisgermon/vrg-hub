@@ -1,7 +1,8 @@
 import * as React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Mail } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Mail, FileText } from "lucide-react";
 import { MailchimpCampaignsTab } from "@/components/marketing/MailchimpCampaignsTab";
+import { NotifyreFaxCampaigns } from "@/components/notifyre/NotifyreFaxCampaigns";
 
 const MarketingCampaigns = () => {
   return (
@@ -9,11 +10,30 @@ const MarketingCampaigns = () => {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Marketing Campaigns</h1>
         <p className="text-muted-foreground mt-2">
-          View and analyze your email campaign performance
+          View and analyze your email and fax campaign performance
         </p>
       </div>
 
-      <MailchimpCampaignsTab />
+      <Tabs defaultValue="email" className="w-full">
+        <TabsList>
+          <TabsTrigger value="email" className="gap-2">
+            <Mail className="h-4 w-4" />
+            Email Campaigns
+          </TabsTrigger>
+          <TabsTrigger value="fax" className="gap-2">
+            <FileText className="h-4 w-4" />
+            Fax Campaigns
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="email" className="mt-6">
+          <MailchimpCampaignsTab />
+        </TabsContent>
+        
+        <TabsContent value="fax" className="mt-6">
+          <NotifyreFaxCampaigns />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
