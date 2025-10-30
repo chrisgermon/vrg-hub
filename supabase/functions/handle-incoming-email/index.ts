@@ -48,7 +48,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Extract request number from multiple sources (To, Reply-To, Subject)
     let requestNumber: number | null = null;
     let requestId: string | null = null;
-    let requestType: 'hardware' | 'department' | null = null;
+    let requestType: 'hardware' | 'ticket' | null = null;
 
     // Try To address first (reply+VRG-00001@domain.com)
     const toMatch = emailData.recipient?.match(/reply\+VRG-(\d{5})/i);
@@ -68,28 +68,28 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (requestNumber) {
       // Try hardware_requests first
-      const { data: hardwareRequest, error: hwError } = await supabase
+      const { data: hardwareRequest } = await supabase
         .from('hardware_requests')
-        .select('id, user_id, title, request_number, assigned_to, status, email_thread_id')
+        .select('id, user_id, title, request_number, assigned_to, status')
         .eq('request_number', requestNumber)
-        .single();
+        .maybeSingle();
 
       if (hardwareRequest) {
         requestId = hardwareRequest.id;
         requestType = 'hardware';
         console.log('[handle-incoming-email] Found hardware request:', hardwareRequest.id);
       } else {
-        // Try department_requests
-        const { data: deptRequest, error: deptError } = await supabase
-          .from('department_requests')
-          .select('id, user_id, title, request_number, assigned_to, status, email_thread_id')
+        // Try tickets table (unified ticketing system)
+        const { data: ticketRequest } = await supabase
+          .from('tickets')
+          .select('id, user_id, title, request_number, assigned_to, status')
           .eq('request_number', requestNumber)
-          .single();
+          .maybeSingle();
 
-        if (deptRequest) {
-          requestId = deptRequest.id;
-          requestType = 'department';
-          console.log('[handle-incoming-email] Found department request:', deptRequest.id);
+        if (ticketRequest) {
+          requestId = ticketRequest.id;
+          requestType = 'ticket';
+          console.log('[handle-incoming-email] Found ticket request:', ticketRequest.id);
         }
       }
     }
@@ -106,12 +106,12 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Fetch the full request details
-    const tableName = requestType === 'hardware' ? 'hardware_requests' : 'department_requests';
+    const tableName = requestType === 'hardware' ? 'hardware_requests' : 'tickets';
     const { data: request, error: requestError } = await supabase
       .from(tableName)
       .select('*')
       .eq('id', requestId)
-      .single();
+      .maybeSingle();
 
     if (!request) {
       throw new Error('Request not found after initial lookup');
