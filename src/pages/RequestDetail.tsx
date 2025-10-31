@@ -549,15 +549,17 @@ export default function RequestDetail() {
                   <Badge variant={getStatusColor(request.status) as any} className="mb-2">
                     {getStatusLabel(request.status)}
                   </Badge>
-                  <RequestStatusChanger
-                    requestId={request.id}
-                    currentStatus={request.status as any}
-                    requestUserId={request.user_id}
-                    onStatusChanged={() => {
-                      // Invalidate query to refresh data
-                      window.location.reload();
-                    }}
-                  />
+                  {request.type === 'department' && (
+                    <RequestStatusChanger
+                      requestId={request.id}
+                      currentStatus={request.status as any}
+                      requestUserId={request.user_id}
+                      onStatusChanged={() => {
+                        // Invalidate query to refresh data
+                        window.location.reload();
+                      }}
+                    />
+                  )}
                 </div>
 
                 <div>
