@@ -16,7 +16,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { CloseRequestDialog } from '@/components/requests/CloseRequestDialog';
 import { ReassignDialog } from '@/components/requests/ReassignDialog';
-import { EditRequestDialog } from '@/components/requests/EditRequestDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { CCEmailsManager } from '@/components/requests/CCEmailsManager';
 import { RequestStatusChanger } from '@/components/requests/RequestStatusChanger';
@@ -61,7 +60,6 @@ export default function RequestDetail() {
   const { user, userRole } = useAuth();
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const isManagerOrAdmin = ['manager', 'marketing_manager', 'tenant_admin', 'super_admin'].includes(userRole || '');
 
@@ -357,7 +355,7 @@ export default function RequestDetail() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-2 overflow-x-auto">
             {canEdit && (
-              <Button variant="outline" size="sm" onClick={() => setEditDialogOpen(true)}>
+              <Button variant="outline" size="sm" onClick={() => navigate(`/requests/${request.id}/edit`)}>
                 <Edit className="w-4 h-4 mr-2" />
                 Edit Request
               </Button>
@@ -385,12 +383,6 @@ export default function RequestDetail() {
       </div>
 
       {/* Dialogs */}
-      <EditRequestDialog
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        request={request}
-      />
-      
       <CloseRequestDialog
         open={closeDialogOpen}
         onOpenChange={setCloseDialogOpen}
