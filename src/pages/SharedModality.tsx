@@ -170,7 +170,9 @@ export default function SharedModality() {
                         <TableHead>IP Address</TableHead>
                         <TableHead>AE Title</TableHead>
                         <TableHead>Port</TableHead>
-                        <TableHead>Worklist</TableHead>
+                        <TableHead>Worklist IP</TableHead>
+                        <TableHead>Worklist AE</TableHead>
+                        <TableHead>Worklist Port</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -191,13 +193,15 @@ export default function SharedModality() {
                             {modality.ae_title || '-'}
                           </TableCell>
                           <TableCell>{modality.port || '-'}</TableCell>
+                          <TableCell className="font-mono text-sm">{modality.worklist_ip_address || '-'}</TableCell>
                           <TableCell>
                             {modality.worklist_ae_title ? (
                               <span className="font-mono text-xs">{modality.worklist_ae_title}</span>
                             ) : (
-                              <Badge variant="secondary">None</Badge>
+                              '-'
                             )}
                           </TableCell>
+                          <TableCell>{modality.worklist_port || '-'}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
