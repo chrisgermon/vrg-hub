@@ -181,9 +181,11 @@ Only users with the `edit_home_page` permission can use the visual editor:
 - Super Admins
 - Managers (with permission)
 
-## Comparison to TinaCMS
+## CMS Options
 
-| Feature | CrowdHub Editor | TinaCMS |
+CrowdHub now uses Decap CMS for content management. See `README_DECAP_CMS.md` for full setup instructions.
+
+| Feature | Built-in Inline Editor | Decap CMS |
 |---------|----------------|---------|
 | Visual editing | ✅ | ✅ |
 | Sidebar navigation | ✅ | ✅ |
