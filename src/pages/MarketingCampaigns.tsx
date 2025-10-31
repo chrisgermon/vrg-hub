@@ -1,17 +1,27 @@
 import * as React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Mail, FileText, FileBarChart } from "lucide-react";
 import { MailchimpCampaignsTab } from "@/components/marketing/MailchimpCampaignsTab";
 import { NotifyreFaxCampaigns } from "@/components/notifyre/NotifyreFaxCampaigns";
+import { CampaignReportGenerator } from "@/components/marketing/CampaignReportGenerator";
 
 const MarketingCampaigns = () => {
+  const [reportDialogOpen, setReportDialogOpen] = React.useState(false);
+
   return (
     <div className="container mx-auto py-8 px-4 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Marketing Campaigns</h1>
-        <p className="text-muted-foreground mt-2">
-          View and analyze your email and fax campaign performance
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Marketing Campaigns</h1>
+          <p className="text-muted-foreground mt-2">
+            View and analyze your email and fax campaign performance
+          </p>
+        </div>
+        <Button onClick={() => setReportDialogOpen(true)}>
+          <FileBarChart className="h-4 w-4 mr-2" />
+          Generate Report
+        </Button>
       </div>
 
       <Tabs defaultValue="email" className="w-full">
@@ -34,6 +44,11 @@ const MarketingCampaigns = () => {
           <NotifyreFaxCampaigns />
         </TabsContent>
       </Tabs>
+
+      <CampaignReportGenerator 
+        open={reportDialogOpen}
+        onOpenChange={setReportDialogOpen}
+      />
     </div>
   );
 };
