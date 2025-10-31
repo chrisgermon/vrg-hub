@@ -159,14 +159,29 @@ serve(async (req: Request) => {
     
     if (mailchimpApiKey) {
       try {
-        const mailchimpData = await supabase.functions.invoke('fetch-mailchimp-campaigns');
-        if (mailchimpData.data?.campaigns) {
-          // Filter campaigns by date range
-          emailData = (mailchimpData.data.campaigns as Campaign[]).filter(campaign => {
-            if (!campaign.send_time) return false;
-            const sendDate = new Date(campaign.send_time);
-            return sendDate >= new Date(startDate) && sendDate <= new Date(endDate);
-          });
+        const dc = mailchimpApiKey.split('-')[1];
+        const mailchimpResponse = await fetch(
+          `https://${dc}.api.mailchimp.com/3.0/campaigns?count=1000&status=sent`,
+          {
+            headers: {
+              'Authorization': `Basic ${btoa(`anystring:${mailchimpApiKey}`)}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (mailchimpResponse.ok) {
+          const mailchimpData = await mailchimpResponse.json();
+          if (mailchimpData.campaigns) {
+            // Filter campaigns by date range
+            emailData = (mailchimpData.campaigns as Campaign[]).filter(campaign => {
+              if (!campaign.send_time) return false;
+              const sendDate = new Date(campaign.send_time);
+              return sendDate >= new Date(startDate) && sendDate <= new Date(endDate);
+            });
+          }
+        } else {
+          console.error('[generate-campaign-report] Mailchimp API error:', mailchimpResponse.status);
         }
       } catch (error) {
         console.error('[generate-campaign-report] Error fetching Mailchimp campaigns:', error);
@@ -356,10 +371,11 @@ serve(async (req: Request) => {
 
   } catch (error) {
     console.error('[generate-campaign-report] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to generate report';
     return new Response(
       JSON.stringify({ 
         success: false, 
-        message: error.message || 'Failed to generate report' 
+        message: errorMessage
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
