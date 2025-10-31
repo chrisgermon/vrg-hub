@@ -24,22 +24,30 @@ export default function SharedModality() {
       setLoading(true);
       setError(null);
 
+      console.log('[SharedModality] Fetching with token:', token);
+      console.log('[SharedModality] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+
       // Call the edge function with the token as a query parameter
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-shared-modality?token=${token}`,
         {
           headers: {
             'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json',
           },
         }
       );
 
+      console.log('[SharedModality] Response status:', response.status);
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('[SharedModality] Error response:', errorData);
         throw new Error(errorData.error || 'Failed to load shared clinic');
       }
 
       const responseData = await response.json();
+      console.log('[SharedModality] Success:', responseData);
       setData(responseData);
     } catch (err: any) {
       console.error('Error fetching shared clinic:', err);
