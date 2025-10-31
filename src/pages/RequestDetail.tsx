@@ -19,6 +19,8 @@ import { ReassignDialog } from '@/components/requests/ReassignDialog';
 import { EditRequestDialog } from '@/components/requests/EditRequestDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { CCEmailsManager } from '@/components/requests/CCEmailsManager';
+import { RequestStatusChanger } from '@/components/requests/RequestStatusChanger';
+import { RequestPriorityChanger } from '@/components/requests/RequestPriorityChanger';
 import DOMPurify from 'dompurify';
 
 type UnifiedRequest = {
@@ -543,17 +545,36 @@ export default function RequestDetail() {
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground">Status</p>
-                  <Badge variant={getStatusColor(request.status) as any} className="mt-1">
+                  <p className="text-xs text-muted-foreground mb-1">Status</p>
+                  <Badge variant={getStatusColor(request.status) as any} className="mb-2">
                     {getStatusLabel(request.status)}
                   </Badge>
+                  <RequestStatusChanger
+                    requestId={request.id}
+                    currentStatus={request.status as any}
+                    requestUserId={request.user_id}
+                    onStatusChanged={() => {
+                      // Invalidate query to refresh data
+                      window.location.reload();
+                    }}
+                  />
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground">Priority</p>
-                  <Badge variant="outline" className="mt-1 uppercase">
+                  <p className="text-xs text-muted-foreground mb-1">Priority</p>
+                  <Badge variant="outline" className="uppercase mb-2">
                     {request.priority}
                   </Badge>
+                  <RequestPriorityChanger
+                    requestId={request.id}
+                    currentPriority={request.priority as any}
+                    requestUserId={request.user_id}
+                    requestType={request.type}
+                    onPriorityChanged={() => {
+                      // Invalidate query to refresh data
+                      window.location.reload();
+                    }}
+                  />
                 </div>
 
                 {request.total_amount && (

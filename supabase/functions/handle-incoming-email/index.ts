@@ -75,7 +75,7 @@ function cleanEmailContent(content: string): string {
   return requestContent || cleaned.trim(); // Fallback to original if cleaning removed everything
 }
 
-async function handleNewRequest(supabase: any, emailData: Partial<IncomingEmail>): Promise<Response> {
+async function handleNewRequest(supabase: any, emailData: Partial<IncomingEmail>, attachments: File[] = []): Promise<Response> {
   try {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -238,6 +238,47 @@ Respond ONLY with valid JSON, no additional text.`
 
     console.log('[handle-incoming-email] Created new ticket:', newTicket.id, 'Request #:', newTicket.request_number);
 
+    // Handle attachments for new request
+    if (attachments.length > 0) {
+      console.log('[handle-incoming-email] Processing', attachments.length, 'attachments for new ticket');
+      
+      for (const file of attachments) {
+        try {
+          const fileName = `${newTicket.id}/${Date.now()}-${file.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from('request-attachments')
+            .upload(fileName, file, {
+              contentType: file.type,
+              upsert: false,
+            });
+
+          if (uploadError) {
+            console.error('[handle-incoming-email] Error uploading attachment:', uploadError);
+            continue;
+          }
+
+          const { data: urlData } = supabase.storage
+            .from('request-attachments')
+            .getPublicUrl(fileName);
+
+          await supabase.from('request_attachments').insert({
+            request_id: newTicket.id,
+            request_type: 'ticket',
+            file_name: file.name,
+            file_path: fileName,
+            file_url: urlData.publicUrl,
+            file_size: file.size,
+            content_type: file.type,
+            uploaded_by: userId,
+          });
+
+          console.log('[handle-incoming-email] New ticket attachment saved:', file.name);
+        } catch (error) {
+          console.error('[handle-incoming-email] Error processing new ticket attachment:', error);
+        }
+      }
+    }
+
     // Track email message
     await supabase.from('email_message_tracking').insert({
       request_id: newTicket.id,
@@ -307,12 +348,18 @@ const handler = async (req: Request): Promise<Response> => {
     // Parse form data from Mailgun
     const formData = await req.formData();
     const emailData: Partial<IncomingEmail> = {};
+    const attachments: File[] = [];
     
     for (const [key, value] of formData.entries()) {
       if (typeof value === 'string') {
         emailData[key as keyof IncomingEmail] = value;
+      } else if (value instanceof File) {
+        // Collect email attachments
+        attachments.push(value);
       }
     }
+    
+    console.log('[handle-incoming-email] Found', attachments.length, 'attachments');
 
     console.log('[handle-incoming-email] Email from:', emailData.sender);
     console.log('[handle-incoming-email] Subject:', emailData.subject);
@@ -324,7 +371,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     if (isNewRequest) {
       console.log('[handle-incoming-email] Processing new request via email');
-      return await handleNewRequest(supabase, emailData);
+      return await handleNewRequest(supabase, emailData, attachments);
     }
 
     // Extract request number from multiple sources (To, Reply-To, Subject)
@@ -480,6 +527,56 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log('[handle-incoming-email] Comment added to request:', requestId);
+
+    // Handle attachments from email
+    if (attachments.length > 0) {
+      console.log('[handle-incoming-email] Processing', attachments.length, 'attachments');
+      
+      for (const file of attachments) {
+        try {
+          // Upload to storage
+          const fileName = `${requestId}/${Date.now()}-${file.name}`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('request-attachments')
+            .upload(fileName, file, {
+              contentType: file.type,
+              upsert: false,
+            });
+
+          if (uploadError) {
+            console.error('[handle-incoming-email] Error uploading attachment:', uploadError);
+            continue;
+          }
+
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('request-attachments')
+            .getPublicUrl(fileName);
+
+          // Save attachment record
+          const { error: attachmentError } = await supabase
+            .from('request_attachments')
+            .insert({
+              request_id: requestId,
+              request_type: requestType,
+              file_name: file.name,
+              file_path: fileName,
+              file_url: urlData.publicUrl,
+              file_size: file.size,
+              content_type: file.type,
+              uploaded_by: senderUserId,
+            });
+
+          if (attachmentError) {
+            console.error('[handle-incoming-email] Error saving attachment record:', attachmentError);
+          } else {
+            console.log('[handle-incoming-email] Attachment saved:', file.name);
+          }
+        } catch (error) {
+          console.error('[handle-incoming-email] Error processing attachment:', error);
+        }
+      }
+    }
 
     // Track email message for threading
     await supabase.from('email_message_tracking').insert({
