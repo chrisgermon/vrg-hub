@@ -19,7 +19,7 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function EditRequest() {
-  const { id } = useParams();
+  const { identifier } = useParams();
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -28,13 +28,13 @@ export default function EditRequest() {
   const [businessJustification, setBusinessJustification] = useState('');
 
   const { data: request, isLoading } = useQuery({
-    queryKey: ['request', id],
+    queryKey: ['request', identifier],
     queryFn: async () => {
       // Try tickets table first
       const { data: ticketData, error: ticketError } = await supabase
         .from('tickets')
         .select('*')
-        .eq('id', id)
+        .eq('id', identifier)
         .single();
 
       if (!ticketError && ticketData) return ticketData;
@@ -43,7 +43,7 @@ export default function EditRequest() {
       const { data: hwData, error: hwError } = await supabase
         .from('hardware_requests')
         .select('*')
-        .eq('id', id)
+        .eq('id', identifier)
         .single();
 
       if (hwError) throw hwError;
@@ -80,7 +80,7 @@ export default function EditRequest() {
           business_justification: data.business_justification,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', id);
+        .eq('id', identifier);
 
       if (ticketError) {
         // Fallback to hardware_requests
@@ -94,7 +94,7 @@ export default function EditRequest() {
             business_justification: data.business_justification,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', id);
+          .eq('id', identifier);
 
         if (hwError) throw hwError;
       }
