@@ -1,28 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
-import { CCEmailsInput } from './CCEmailsInput';
+import { Edit } from 'lucide-react';
 
 interface EditRequestDialogProps {
   open: boolean;
@@ -35,138 +20,50 @@ export function EditRequestDialog({
   onOpenChange,
   request,
 }: EditRequestDialogProps) {
-  const queryClient = useQueryClient();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState('medium');
-  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (request) {
-      setTitle(request.title || '');
-      setDescription(request.description || '');
-      setPriority(request.priority || 'medium');
-      setCcEmails(request.cc_emails || []);
-    }
-  }, [request]);
-
-  const updateRequest = useMutation({
-    mutationFn: async (data: { title: string; description: string; priority: string; cc_emails: string[] }) => {
-      // Try tickets table first
-      const { error: ticketError } = await supabase
-        .from('tickets')
-        .update({
-          title: data.title,
-          description: data.description,
-          priority: data.priority,
-          cc_emails: data.cc_emails,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', request.id);
-
-      if (ticketError) {
-        // Fallback to hardware_requests
-        const { error: hwError } = await supabase
-          .from('hardware_requests')
-          .update({
-            title: data.title,
-            description: data.description,
-            priority: data.priority,
-            cc_emails: data.cc_emails,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', request.id);
-
-        if (hwError) throw hwError;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['request-by-identifier'] });
-      toast.success('Request updated successfully');
-      onOpenChange(false);
-    },
-    onError: (error: any) => {
-      console.error('Error updating request:', error);
-      toast.error('Failed to update request');
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateRequest.mutate({ title, description, priority, cc_emails: ccEmails });
+  const handleEdit = () => {
+    onOpenChange(false);
+    navigate(`/requests/${request.id}/edit`);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Request</DialogTitle>
           <DialogDescription>
-            Update the request details below
+            Open the full editor to modify all request details
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Request title"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe your request..."
-              rows={4}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="priority">Priority *</Label>
-            <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <CCEmailsInput
-            emails={ccEmails}
-            onChange={setCcEmails}
-            disabled={updateRequest.isPending}
-          />
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={updateRequest.isPending}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={updateRequest.isPending}>
-              {updateRequest.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </form>
+        <div className="py-4">
+          <p className="text-sm text-muted-foreground mb-4">
+            Click the button below to open the full-page editor where you can modify:
+          </p>
+          <ul className="text-sm space-y-2 mb-6">
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <span>Title and description with rich text formatting</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <span>Priority level</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <span>CC email recipients</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <span>Business justification</span>
+            </li>
+          </ul>
+          <Button onClick={handleEdit} className="w-full">
+            <Edit className="mr-2 h-4 w-4" />
+            Open Full Editor
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
