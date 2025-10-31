@@ -1,0 +1,54 @@
+image: node:20
+
+# Cache node_modules and bun cache for faster builds
+cache:
+  key:
+    files:
+      - package-lock.json
+      - bun.lockb
+  paths:
+    - node_modules/
+    - .bun/
+
+# Global before_script to install build tools and bun
+before_script:
+  - apt-get update -qq
+  - apt-get install -y -qq build-essential python3 make g++
+  - curl -fsSL https://bun.sh/install | bash
+  - export PATH="$HOME/.bun/bin:$PATH"
+
+stages:
+  - install
+  - build
+  - test
+
+# Install dependencies
+install:
+  stage: install
+  script:
+    - bun install
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 hour
+
+# Build the project
+build:
+  stage: build
+  dependencies:
+    - install
+  script:
+    - bun run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 day
+
+# Optional: Add lint and test stages
+lint:
+  stage: test
+  dependencies:
+    - install
+  script:
+    - bun run lint
+  allow_failure: true
