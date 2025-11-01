@@ -1224,6 +1224,48 @@ export type Database = {
           },
         ]
       }
+      mailchimp_campaign_assignments: {
+        Row: {
+          brand_id: string | null
+          campaign_id: string
+          created_at: string | null
+          id: string
+          location_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          campaign_id: string
+          created_at?: string | null
+          id?: string
+          location_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          campaign_id?: string
+          created_at?: string | null
+          id?: string
+          location_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mailchimp_campaign_assignments_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mailchimp_campaign_assignments_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketing_requests: {
         Row: {
           approved_at: string | null
@@ -1700,6 +1742,7 @@ export type Database = {
       }
       notifyre_fax_campaigns: {
         Row: {
+          brand_id: string | null
           campaign_id: string
           campaign_name: string | null
           contact_group_id: string | null
@@ -1709,6 +1752,7 @@ export type Database = {
           document_path: string | null
           failed_count: number | null
           id: string
+          location_id: string | null
           metadata: Json | null
           pending_count: number | null
           sent_at: string | null
@@ -1716,6 +1760,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          brand_id?: string | null
           campaign_id: string
           campaign_name?: string | null
           contact_group_id?: string | null
@@ -1725,6 +1770,7 @@ export type Database = {
           document_path?: string | null
           failed_count?: number | null
           id?: string
+          location_id?: string | null
           metadata?: Json | null
           pending_count?: number | null
           sent_at?: string | null
@@ -1732,6 +1778,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          brand_id?: string | null
           campaign_id?: string
           campaign_name?: string | null
           contact_group_id?: string | null
@@ -1741,13 +1788,29 @@ export type Database = {
           document_path?: string | null
           failed_count?: number | null
           id?: string
+          location_id?: string | null
           metadata?: Json | null
           pending_count?: number | null
           sent_at?: string | null
           total_recipients?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notifyre_fax_campaigns_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifyre_fax_campaigns_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifyre_fax_logs: {
         Row: {

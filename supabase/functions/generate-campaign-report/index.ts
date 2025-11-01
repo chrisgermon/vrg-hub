@@ -27,6 +27,12 @@ interface Campaign {
     clicks?: number;
     subscriber_clicks?: number;
   };
+  brand?: {
+    display_name: string;
+  };
+  location?: {
+    name: string;
+  };
 }
 
 interface FaxCampaign {
@@ -37,6 +43,12 @@ interface FaxCampaign {
   failed_count: number;
   pending_count: number;
   sent_at: string;
+  brand?: {
+    display_name: string;
+  };
+  location?: {
+    name: string;
+  };
 }
 
 const getDateRange = (timeframe: string) => {
@@ -140,10 +152,14 @@ serve(async (req: Request) => {
     const { startDate, endDate } = getDateRange(timeframe);
     console.log('[generate-campaign-report] Date range:', startDate, 'to', endDate);
 
-    // Fetch fax campaigns from database
+    // Fetch fax campaigns from database with brand/location info
     const { data: faxCampaigns, error: faxError } = await supabase
       .from('notifyre_fax_campaigns')
-      .select('*')
+      .select(`
+        *,
+        brand:brands(display_name),
+        location:locations(name)
+      `)
       .gte('sent_at', startDate)
       .lte('sent_at', endDate)
       .order('sent_at', { ascending: false });
@@ -156,6 +172,7 @@ serve(async (req: Request) => {
 
     // Fetch email campaigns from Mailchimp API
     let emailData: Campaign[] = [];
+    let bouncedEmails: Array<{campaign: string, email: string}> = [];
     
     if (mailchimpApiKey) {
       try {
@@ -174,11 +191,73 @@ serve(async (req: Request) => {
           const mailchimpData = await mailchimpResponse.json();
           if (mailchimpData.campaigns) {
             // Filter campaigns by date range
-            emailData = (mailchimpData.campaigns as Campaign[]).filter(campaign => {
+            const filteredCampaigns = (mailchimpData.campaigns as Campaign[]).filter(campaign => {
               if (!campaign.send_time) return false;
               const sendDate = new Date(campaign.send_time);
               return sendDate >= new Date(startDate) && sendDate <= new Date(endDate);
             });
+
+            // Fetch brand/location assignments
+            const campaignIds = filteredCampaigns.map(c => c.id);
+            const { data: assignments } = await supabase
+              .from('mailchimp_campaign_assignments')
+              .select(`
+                campaign_id,
+                brand_id,
+                location_id,
+                brands!mailchimp_campaign_assignments_brand_id_fkey(display_name),
+                locations!mailchimp_campaign_assignments_location_id_fkey(name)
+              `)
+              .in('campaign_id', campaignIds);
+
+            const assignmentMap = new Map<string, { brand?: { display_name: string }, location?: { name: string } }>();
+            
+            if (assignments) {
+              for (const a of assignments) {
+                const brandData = Array.isArray(a.brands) ? a.brands[0] : a.brands;
+                const locationData = Array.isArray(a.locations) ? a.locations[0] : a.locations;
+                
+                assignmentMap.set(a.campaign_id, {
+                  brand: brandData ? { display_name: brandData.display_name } : undefined,
+                  location: locationData ? { name: locationData.name } : undefined
+                });
+              }
+            }
+
+            emailData = filteredCampaigns.map(c => ({
+              ...c,
+              brand: assignmentMap.get(c.id)?.brand,
+              location: assignmentMap.get(c.id)?.location
+            }));
+
+            // Fetch bounced emails for these campaigns
+            for (const campaign of filteredCampaigns) {
+              try {
+                const bouncesResponse = await fetch(
+                  `https://${dc}.api.mailchimp.com/3.0/reports/${campaign.id}/email-activity?status=bounced`,
+                  {
+                    headers: {
+                      'Authorization': `Basic ${btoa(`anystring:${mailchimpApiKey}`)}`,
+                      'Content-Type': 'application/json',
+                    },
+                  }
+                );
+
+                if (bouncesResponse.ok) {
+                  const bouncesData = await bouncesResponse.json();
+                  if (bouncesData.emails) {
+                    bouncesData.emails.forEach((activity: any) => {
+                      bouncedEmails.push({
+                        campaign: campaign.settings.title || campaign.settings.subject_line || `Campaign ${campaign.web_id}`,
+                        email: activity.email_address
+                      });
+                    });
+                  }
+                }
+              } catch (error) {
+                console.error('[generate-campaign-report] Error fetching bounces for campaign:', campaign.id, error);
+              }
+            }
           }
         } else {
           console.error('[generate-campaign-report] Mailchimp API error:', mailchimpResponse.status);
@@ -186,6 +265,29 @@ serve(async (req: Request) => {
       } catch (error) {
         console.error('[generate-campaign-report] Error fetching Mailchimp campaigns:', error);
       }
+    }
+
+    // Fetch failed fax numbers
+    const campaignIds = faxData.map(c => c.id);
+    const { data: failedFaxLogs } = await supabase
+      .from('notifyre_fax_logs')
+      .select('campaign_id, recipient_number, recipient_name, error_message')
+      .in('campaign_id', campaignIds)
+      .in('status', ['failed', 'error']);
+
+    const failedFaxes: Array<{campaign: string, number: string, name: string | null, reason: string | null}> = [];
+    
+    if (failedFaxLogs) {
+      const campaignMap = new Map(faxData.map(c => [c.id, c.campaign_name]));
+      
+      failedFaxLogs.forEach(log => {
+        failedFaxes.push({
+          campaign: campaignMap.get(log.campaign_id) || 'Unknown',
+          number: log.recipient_number,
+          name: log.recipient_name,
+          reason: log.error_message
+        });
+      });
     }
 
     console.log(`[generate-campaign-report] Found ${emailData.length} email campaigns and ${faxData.length} fax campaigns`);
@@ -212,7 +314,8 @@ serve(async (req: Request) => {
           <thead>
             <tr style="background: #f3f4f6;">
               <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Campaign</th>
-              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Subject</th>
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Brand</th>
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Location</th>
               <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Sent</th>
               <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Opens</th>
               <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Clicks</th>
@@ -223,7 +326,8 @@ serve(async (req: Request) => {
             ${emailData.map(campaign => `
               <tr style="border-bottom: 1px solid #f3f4f6;">
                 <td style="padding: 12px; color: #1f2937;">${campaign.settings.title || 'Untitled'}</td>
-                <td style="padding: 12px; color: #6b7280;">${campaign.settings.subject_line}</td>
+                <td style="padding: 12px; color: #6b7280;">${campaign.brand?.display_name || '-'}</td>
+                <td style="padding: 12px; color: #6b7280;">${campaign.location?.name || '-'}</td>
                 <td style="padding: 12px; text-align: center; color: #1f2937; font-weight: 500;">${campaign.emails_sent.toLocaleString()}</td>
                 <td style="padding: 12px; text-align: center; color: #059669; font-weight: 500;">${campaign.report_summary?.unique_opens || 0}</td>
                 <td style="padding: 12px; text-align: center; color: #2563eb; font-weight: 500;">${campaign.report_summary?.subscriber_clicks || 0}</td>
@@ -244,10 +348,11 @@ serve(async (req: Request) => {
           <thead>
             <tr style="background: #f3f4f6;">
               <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Campaign</th>
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Brand</th>
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Location</th>
               <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Recipients</th>
               <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Delivered</th>
               <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Failed</th>
-              <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Pending</th>
               <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">Date</th>
             </tr>
           </thead>
@@ -255,11 +360,64 @@ serve(async (req: Request) => {
             ${faxData.map(campaign => `
               <tr style="border-bottom: 1px solid #f3f4f6;">
                 <td style="padding: 12px; color: #1f2937;">${campaign.campaign_name}</td>
+                <td style="padding: 12px; color: #6b7280;">${campaign.brand?.display_name || '-'}</td>
+                <td style="padding: 12px; color: #6b7280;">${campaign.location?.name || '-'}</td>
                 <td style="padding: 12px; text-align: center; color: #1f2937; font-weight: 500;">${campaign.total_recipients}</td>
                 <td style="padding: 12px; text-align: center; color: #059669; font-weight: 500;">${campaign.delivered_count}</td>
                 <td style="padding: 12px; text-align: center; color: #dc2626; font-weight: 500;">${campaign.failed_count}</td>
-                <td style="padding: 12px; text-align: center; color: #d97706; font-weight: 500;">${campaign.pending_count}</td>
                 <td style="padding: 12px; color: #6b7280;">${formatDate(campaign.sent_at)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    // Build bounced emails table
+    let bouncedEmailsHtml = '';
+    if (bouncedEmails.length > 0) {
+      bouncedEmailsHtml = `
+        <h2 style="color: #1f2937; font-size: 20px; font-weight: 600; margin: 24px 0 16px 0;">Bounced Emails</h2>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; background: white; border-radius: 8px; overflow: hidden;">
+          <thead>
+            <tr style="background: #fef2f2;">
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #fecaca; font-weight: 600; color: #991b1b;">Campaign</th>
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #fecaca; font-weight: 600; color: #991b1b;">Email Address</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${bouncedEmails.map(bounce => `
+              <tr style="border-bottom: 1px solid #fef2f2;">
+                <td style="padding: 12px; color: #7f1d1d;">${bounce.campaign}</td>
+                <td style="padding: 12px; color: #991b1b; font-family: monospace;">${bounce.email}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    // Build failed faxes table
+    let failedFaxesHtml = '';
+    if (failedFaxes.length > 0) {
+      failedFaxesHtml = `
+        <h2 style="color: #1f2937; font-size: 20px; font-weight: 600; margin: 24px 0 16px 0;">Failed Fax Numbers</h2>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; background: white; border-radius: 8px; overflow: hidden;">
+          <thead>
+            <tr style="background: #fef2f2;">
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #fecaca; font-weight: 600; color: #991b1b;">Campaign</th>
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #fecaca; font-weight: 600; color: #991b1b;">Recipient</th>
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #fecaca; font-weight: 600; color: #991b1b;">Fax Number</th>
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #fecaca; font-weight: 600; color: #991b1b;">Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${failedFaxes.map(fax => `
+              <tr style="border-bottom: 1px solid #fef2f2;">
+                <td style="padding: 12px; color: #7f1d1d;">${fax.campaign}</td>
+                <td style="padding: 12px; color: #991b1b;">${fax.name || 'Unknown'}</td>
+                <td style="padding: 12px; color: #991b1b; font-family: monospace;">${fax.number}</td>
+                <td style="padding: 12px; color: #7f1d1d; font-size: 12px;">${fax.reason || 'No reason provided'}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -312,6 +470,8 @@ serve(async (req: Request) => {
 
               ${emailCampaignsHtml}
               ${faxCampaignsHtml}
+              ${bouncedEmailsHtml}
+              ${failedFaxesHtml}
 
               ${emailData.length === 0 && faxData.length === 0 ? `
                 <div style="text-align: center; padding: 48px 16px; color: #6b7280;">

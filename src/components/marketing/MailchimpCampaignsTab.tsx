@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatAUDateTimeZoned, formatAUDateZoned, formatAUTimeZoned } from "@/lib/dateUtils";
+import { CampaignBrandLocationSelect } from "./CampaignBrandLocationSelect";
 
 interface Campaign {
   id: string;
@@ -29,6 +30,8 @@ interface Campaign {
     clicks?: number;
     subscriber_clicks?: number;
   };
+  brand_id?: string | null;
+  location_id?: string | null;
 }
 
 interface RecipientDetail {
@@ -55,7 +58,21 @@ export const MailchimpCampaignsTab = () => {
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('fetch-mailchimp-campaigns');
       if (error) throw error;
-      return data.campaigns as Campaign[];
+      
+      // Fetch assignments
+      const { data: assignments } = await supabase
+        .from('mailchimp_campaign_assignments')
+        .select('campaign_id, brand_id, location_id');
+      
+      const assignmentMap = new Map(
+        assignments?.map(a => [a.campaign_id, { brand_id: a.brand_id, location_id: a.location_id }]) || []
+      );
+      
+      return (data.campaigns as Campaign[]).map(c => ({
+        ...c,
+        brand_id: assignmentMap.get(c.id)?.brand_id,
+        location_id: assignmentMap.get(c.id)?.location_id
+      }));
     },
   });
 
@@ -305,6 +322,7 @@ export const MailchimpCampaignsTab = () => {
             getStatusBadge={getStatusBadge} 
             onCampaignClick={handleCampaignClick}
             onPreviewClick={handlePreviewClick}
+            onUpdate={refetch}
           />
         </TabsContent>
 
@@ -314,6 +332,7 @@ export const MailchimpCampaignsTab = () => {
               getStatusBadge={getStatusBadge} 
               onCampaignClick={handleCampaignClick}
               onPreviewClick={handlePreviewClick}
+              onUpdate={refetch}
             />
         </TabsContent>
 
@@ -323,6 +342,7 @@ export const MailchimpCampaignsTab = () => {
               getStatusBadge={getStatusBadge} 
               onCampaignClick={handleCampaignClick}
               onPreviewClick={handlePreviewClick}
+              onUpdate={refetch}
             />
         </TabsContent>
 
@@ -332,6 +352,7 @@ export const MailchimpCampaignsTab = () => {
               getStatusBadge={getStatusBadge} 
               onCampaignClick={handleCampaignClick}
               onPreviewClick={handlePreviewClick}
+              onUpdate={refetch}
             />
         </TabsContent>
       </Tabs>
@@ -503,12 +524,14 @@ const CampaignTable = ({
   campaigns, 
   getStatusBadge,
   onCampaignClick,
-  onPreviewClick
+  onPreviewClick,
+  onUpdate
 }: { 
   campaigns?: Campaign[]; 
   getStatusBadge: (status: string) => React.ReactNode;
   onCampaignClick: (campaign: Campaign) => void;
   onPreviewClick?: (campaign: Campaign) => void;
+  onUpdate?: () => void;
 }) => {
   const getCampaignName = (campaign: Campaign) => {
     return campaign.settings.title || campaign.settings.subject_line || `Campaign ${campaign.web_id}`;
@@ -535,6 +558,7 @@ const CampaignTable = ({
             <TableHead>Sent</TableHead>
             <TableHead>Opens</TableHead>
             <TableHead>Clicks</TableHead>
+            <TableHead>Brand & Location</TableHead>
             <TableHead>Send Date (AEDT)</TableHead>
             <TableHead>Send Time (AEDT)</TableHead>
             <TableHead>Actions</TableHead>
@@ -549,6 +573,15 @@ const CampaignTable = ({
               <TableCell>{campaign.emails_sent.toLocaleString()}</TableCell>
               <TableCell>{campaign.report_summary?.unique_opens?.toLocaleString() || 0}</TableCell>
               <TableCell>{campaign.report_summary?.subscriber_clicks?.toLocaleString() || 0}</TableCell>
+              <TableCell>
+                <CampaignBrandLocationSelect
+                  campaignId={campaign.id}
+                  campaignType="email"
+                  currentBrandId={campaign.brand_id}
+                  currentLocationId={campaign.location_id}
+                  onUpdate={onUpdate}
+                />
+              </TableCell>
               <TableCell>
                 {campaign.send_time 
                   ? formatAUDateZoned(campaign.send_time)

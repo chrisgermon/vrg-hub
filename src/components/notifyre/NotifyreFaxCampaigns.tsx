@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RefreshCw, Download, Loader2, Send, CheckCircle, XCircle, Clock } from "lucide-react";
 import { formatAUDateTimeFull } from "@/lib/dateUtils";
+import { CampaignBrandLocationSelect } from "@/components/marketing/CampaignBrandLocationSelect";
 
 interface FaxCampaign {
   id: string;
@@ -21,6 +22,8 @@ interface FaxCampaign {
   sent_at: string;
   document_path: string | null;
   created_at: string;
+  brand_id?: string | null;
+  location_id?: string | null;
 }
 
 interface FaxLog {
@@ -309,6 +312,7 @@ export const NotifyreFaxCampaigns = () => {
                     <TableHead>Delivered</TableHead>
                     <TableHead>Failed</TableHead>
                     <TableHead>Pending</TableHead>
+                    <TableHead>Brand & Location</TableHead>
                     <TableHead>Sent At</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -326,6 +330,15 @@ export const NotifyreFaxCampaigns = () => {
                       </TableCell>
                       <TableCell>
                         <span className="text-yellow-600 font-medium">{campaign.pending_count}</span>
+                      </TableCell>
+                      <TableCell>
+                        <CampaignBrandLocationSelect
+                          campaignId={campaign.id}
+                          campaignType="fax"
+                          currentBrandId={campaign.brand_id}
+                          currentLocationId={campaign.location_id}
+                          onUpdate={loadCampaigns}
+                        />
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatAUDateTimeFull(campaign.sent_at)}
