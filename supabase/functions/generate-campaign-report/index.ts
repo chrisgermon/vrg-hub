@@ -172,7 +172,7 @@ serve(async (req: Request) => {
 
     // Fetch email campaigns from Mailchimp API
     let emailData: Campaign[] = [];
-    let bouncedEmails: Array<{campaign: string, email: string}> = [];
+    let bouncedEmails: Array<{campaign_id: string, campaign: string, email_address: string, type: string, timestamp: string}> = [];
     
     if (mailchimpApiKey) {
       try {
@@ -248,8 +248,11 @@ serve(async (req: Request) => {
                   if (bouncesData.emails) {
                     bouncesData.emails.forEach((activity: any) => {
                       bouncedEmails.push({
+                        campaign_id: campaign.id,
                         campaign: campaign.settings.title || campaign.settings.subject_line || `Campaign ${campaign.web_id}`,
-                        email: activity.email_address
+                        email_address: activity.email_address,
+                        type: activity.action === 'bounce' ? (activity.bounce_type || 'hard') : 'bounce',
+                        timestamp: activity.timestamp || campaign.send_time || new Date().toISOString()
                       });
                     });
                   }
@@ -271,21 +274,23 @@ serve(async (req: Request) => {
     const campaignIds = faxData.map(c => c.id);
     const { data: failedFaxLogs } = await supabase
       .from('notifyre_fax_logs')
-      .select('campaign_id, recipient_number, recipient_name, error_message')
+      .select('campaign_id, recipient_number, recipient_name, error_message, created_at')
       .in('campaign_id', campaignIds)
       .in('status', ['failed', 'error']);
 
-    const failedFaxes: Array<{campaign: string, number: string, name: string | null, reason: string | null}> = [];
+    const failedFaxes: Array<{campaign_id: string, campaign: string, to_number: string, name: string | null, error_message: string | null, created_at: string}> = [];
     
     if (failedFaxLogs) {
       const campaignMap = new Map(faxData.map(c => [c.id, c.campaign_name]));
       
       failedFaxLogs.forEach(log => {
         failedFaxes.push({
+          campaign_id: log.campaign_id,
           campaign: campaignMap.get(log.campaign_id) || 'Unknown',
-          number: log.recipient_number,
+          to_number: log.recipient_number,
           name: log.recipient_name,
-          reason: log.error_message
+          error_message: log.error_message,
+          created_at: log.created_at
         });
       });
     }
@@ -389,7 +394,7 @@ serve(async (req: Request) => {
             ${bouncedEmails.map(bounce => `
               <tr style="border-bottom: 1px solid #fef2f2;">
                 <td style="padding: 12px; color: #7f1d1d;">${bounce.campaign}</td>
-                <td style="padding: 12px; color: #991b1b; font-family: monospace;">${bounce.email}</td>
+                <td style="padding: 12px; color: #991b1b; font-family: monospace;">${bounce.email_address}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -416,8 +421,8 @@ serve(async (req: Request) => {
               <tr style="border-bottom: 1px solid #fef2f2;">
                 <td style="padding: 12px; color: #7f1d1d;">${fax.campaign}</td>
                 <td style="padding: 12px; color: #991b1b;">${fax.name || 'Unknown'}</td>
-                <td style="padding: 12px; color: #991b1b; font-family: monospace;">${fax.number}</td>
-                <td style="padding: 12px; color: #7f1d1d; font-size: 12px;">${fax.reason || 'No reason provided'}</td>
+                <td style="padding: 12px; color: #991b1b; font-family: monospace;">${fax.to_number}</td>
+                <td style="padding: 12px; color: #7f1d1d; font-size: 12px;">${fax.error_message || 'No reason provided'}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -491,12 +496,52 @@ serve(async (req: Request) => {
       </html>
     `;
 
-    // Send email via Mailgun
+    // Generate CSV for failed faxes if any exist
+    let failedFaxesCsv = '';
+    if (failedFaxes.length > 0) {
+      failedFaxesCsv = 'Campaign,Fax Number,Recipient Name,Error,Timestamp\n';
+      failedFaxes.forEach(log => {
+        const campaignName = (log.campaign || 'Unknown Campaign').replace(/"/g, '""');
+        const faxNumber = log.to_number || 'N/A';
+        const recipientName = (log.name || 'Unknown').replace(/"/g, '""');
+        const error = (log.error_message || 'Unknown error').replace(/"/g, '""');
+        const timestamp = formatDate(log.created_at);
+        failedFaxesCsv += `"${campaignName}","${faxNumber}","${recipientName}","${error}","${timestamp}"\n`;
+      });
+    }
+
+    // Generate CSV for bounced emails if any exist
+    let bouncedEmailsCsv = '';
+    if (bouncedEmails.length > 0) {
+      bouncedEmailsCsv = 'Campaign,Email Address,Bounce Type,Timestamp\n';
+      bouncedEmails.forEach(bounce => {
+        const campaignName = (bounce.campaign || 'Unknown Campaign').replace(/"/g, '""');
+        const emailAddress = bounce.email_address || 'N/A';
+        const bounceType = (bounce.type || 'Unknown').replace(/"/g, '""');
+        const timestamp = formatDate(bounce.timestamp);
+        bouncedEmailsCsv += `"${campaignName}","${emailAddress}","${bounceType}","${timestamp}"\n`;
+      });
+    }
+
+    // Send email via Mailgun with attachments
     const formData = new FormData();
     formData.append("from", `CrowdHub Marketing <marketing@${mailgunDomain}>`);
     formData.append("to", recipientEmail);
     formData.append("subject", `Marketing Campaign Report - ${getTimeframeLabel(timeframe)}`);
     formData.append("html", emailHtml);
+
+    // Add CSV attachments if they exist
+    if (failedFaxesCsv) {
+      const failedFaxesBlob = new Blob([failedFaxesCsv], { type: 'text/csv' });
+      formData.append('attachment', failedFaxesBlob, 'failed-faxes.csv');
+      console.log('[generate-campaign-report] Adding failed faxes CSV with', failedFaxes.length, 'entries');
+    }
+
+    if (bouncedEmailsCsv) {
+      const bouncedEmailsBlob = new Blob([bouncedEmailsCsv], { type: 'text/csv' });
+      formData.append('attachment', bouncedEmailsBlob, 'bounced-emails.csv');
+      console.log('[generate-campaign-report] Adding bounced emails CSV with', bouncedEmails.length, 'entries');
+    }
 
     const mailgunResponse = await fetch(
       `https://api.mailgun.net/v3/${mailgunDomain}/messages`,
