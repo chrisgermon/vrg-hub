@@ -127,6 +127,20 @@ const getTimeframeLabel = (timeframe: string) => {
   return labels[timeframe] || "Custom Range";
 };
 
+const formatDateRange = (startDate: string, endDate: string) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  const formatOptions: Intl.DateTimeFormatOptions = {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Australia/Melbourne'
+  };
+  
+  return `${start.toLocaleDateString('en-AU', formatOptions)} - ${end.toLocaleDateString('en-AU', formatOptions)}`;
+};
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -459,8 +473,14 @@ serve(async (req: Request) => {
                 <img src="${supabaseUrl}/storage/v1/object/public/logos/vision-radiology-email-logo.png" alt="Vision Radiology" style="max-width: 250px; height: auto;" />
               </div>
               <h1 style="color: #1f2937; font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">Marketing Campaign Report</h1>
-              <p style="color: #6b7280; font-size: 16px; margin: 0 0 32px 0;">
-                ${getTimeframeLabel(timeframe)} • Generated on ${formatDate(new Date().toISOString())}
+              <p style="color: #6b7280; font-size: 16px; margin: 0 0 16px 0;">
+                <strong style="color: #1f2937;">${getTimeframeLabel(timeframe)}</strong>
+              </p>
+              <p style="color: #6b7280; font-size: 15px; margin: 0 0 8px 0;">
+                ${formatDateRange(startDate, endDate)}
+              </p>
+              <p style="color: #9ca3af; font-size: 14px; margin: 0 0 32px 0;">
+                Generated on ${formatDate(new Date().toISOString())}
               </p>
 
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px;">
