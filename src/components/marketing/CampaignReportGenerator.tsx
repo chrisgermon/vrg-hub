@@ -158,7 +158,7 @@ export const CampaignReportGenerator = ({ open, onOpenChange }: CampaignReportGe
                 <SelectItem value="last_month">Last Month</SelectItem>
                 <SelectItem value="custom">Custom Date Range</SelectItem>
               </SelectContent>
-          </Select>
+            </Select>
         </div>
 
         {timeframe === "custom" && (
