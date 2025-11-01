@@ -8,7 +8,9 @@ const corsHeaders = {
 
 interface ReportRequest {
   recipientEmail: string;
-  timeframe: 'this_week' | 'last_week' | 'this_month' | 'last_month';
+  timeframe: 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'custom';
+  startDate?: string;
+  endDate?: string;
 }
 
 interface Campaign {
@@ -139,7 +141,7 @@ serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { recipientEmail, timeframe }: ReportRequest = await req.json();
+    const { recipientEmail, timeframe, startDate: customStartDate, endDate: customEndDate }: ReportRequest = await req.json();
     console.log('[generate-campaign-report] Generating report for:', recipientEmail, 'Timeframe:', timeframe);
 
     if (!recipientEmail) {
@@ -149,7 +151,18 @@ serve(async (req: Request) => {
       );
     }
 
-    const { startDate, endDate } = getDateRange(timeframe);
+    let dateRange: { startDate: string; endDate: string };
+    
+    if (timeframe === 'custom' && customStartDate && customEndDate) {
+      dateRange = {
+        startDate: customStartDate,
+        endDate: customEndDate
+      };
+    } else {
+      dateRange = getDateRange(timeframe);
+    }
+    
+    const { startDate, endDate } = dateRange;
     console.log('[generate-campaign-report] Date range:', startDate, 'to', endDate);
 
     // Fetch fax campaigns from database with brand/location info

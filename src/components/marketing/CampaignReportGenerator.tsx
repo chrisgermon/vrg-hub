@@ -5,22 +5,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { FileText, Mail, Loader2, Clock } from "lucide-react";
+import { FileText, Mail, Loader2, Clock, CalendarIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface CampaignReportGeneratorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-type TimeframeOption = 'this_week' | 'last_week' | 'this_month' | 'last_month';
+type TimeframeOption = 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'custom';
 
 export const CampaignReportGenerator = ({ open, onOpenChange }: CampaignReportGeneratorProps) => {
   const [recipientEmail, setRecipientEmail] = useState("");
   const [timeframe, setTimeframe] = useState<TimeframeOption>("this_week");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState<Date>();
+  const [customEndDate, setCustomEndDate] = useState<Date>();
 
   // Fetch recent recipient emails for the logged-in user
   const { data: recentEmails, refetch } = useQuery({
@@ -75,14 +81,23 @@ export const CampaignReportGenerator = ({ open, onOpenChange }: CampaignReportGe
       return;
     }
 
+    if (timeframe === "custom" && (!customStartDate || !customEndDate)) {
+      toast.error("Please select both start and end dates for custom range");
+      return;
+    }
+
     setIsGenerating(true);
 
     try {
+      const body: any = { recipientEmail, timeframe };
+      
+      if (timeframe === "custom") {
+        body.startDate = customStartDate?.toISOString();
+        body.endDate = customEndDate?.toISOString();
+      }
+
       const { data, error } = await supabase.functions.invoke('generate-campaign-report', {
-        body: {
-          recipientEmail,
-          timeframe
-        }
+        body,
       });
 
       if (error) throw error;
@@ -110,7 +125,8 @@ export const CampaignReportGenerator = ({ open, onOpenChange }: CampaignReportGe
       this_week: "This Week",
       last_week: "Last Week",
       this_month: "This Month",
-      last_month: "Last Month"
+      last_month: "Last Month",
+      custom: "Custom Range"
     };
     return labels[value];
   };
@@ -140,11 +156,70 @@ export const CampaignReportGenerator = ({ open, onOpenChange }: CampaignReportGe
                 <SelectItem value="last_week">Last Week</SelectItem>
                 <SelectItem value="this_month">This Month</SelectItem>
                 <SelectItem value="last_month">Last Month</SelectItem>
+                <SelectItem value="custom">Custom Date Range</SelectItem>
               </SelectContent>
-            </Select>
-          </div>
+          </Select>
+        </div>
 
-          <div className="space-y-2">
+        {timeframe === "custom" && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Start Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !customStartDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customStartDate ? format(customStartDate, "PPP") : "Pick start date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customStartDate}
+                    onSelect={setCustomStartDate}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label>End Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !customEndDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customEndDate ? format(customEndDate, "PPP") : "Pick end date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customEndDate}
+                    onSelect={setCustomEndDate}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2">
             <Label htmlFor="email">Recipient Email</Label>
             <Input
               id="email"
