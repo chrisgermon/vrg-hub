@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { CCEmailsManager } from '@/components/requests/CCEmailsManager';
 import { RequestStatusChanger } from '@/components/requests/RequestStatusChanger';
 import { RequestPriorityChanger } from '@/components/requests/RequestPriorityChanger';
+import { RequestTypeChanger } from '@/components/requests/RequestTypeChanger';
 import DOMPurify from 'dompurify';
 
 type UnifiedRequest = {
@@ -527,8 +528,18 @@ export default function RequestDetail() {
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground">Request Type</p>
-                  <p className="text-sm">{(request as any).request_type?.name || 'General Request'}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Request Type</p>
+                  <p className="text-sm mb-2">{(request as any).request_type?.name || 'General Request'}</p>
+                  {request.type === 'department' && (
+                    <RequestTypeChanger
+                      requestId={request.id}
+                      currentTypeId={(request as any).request_type_id}
+                      requestUserId={request.user_id}
+                      onTypeChanged={() => {
+                        window.location.reload();
+                      }}
+                    />
+                  )}
                 </div>
 
                 <div>
@@ -579,9 +590,20 @@ export default function RequestDetail() {
                 )}
 
                 <div>
-                  <p className="text-xs text-muted-foreground">Assigned To</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-muted-foreground">Assigned To</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => setReassignDialogOpen(true)}
+                    >
+                      <UserCog className="w-3 h-3 mr-1" />
+                      Change
+                    </Button>
+                  </div>
                   {(request as any).assigned_profile ? (
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2">
                       <Avatar className="h-6 w-6">
                         <AvatarFallback className="text-xs bg-purple-500 text-white">
                           {(request as any).assigned_profile.full_name?.substring(0, 2).toUpperCase() || 'NA'}
