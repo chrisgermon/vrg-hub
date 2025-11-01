@@ -92,8 +92,16 @@ export const CampaignReportGenerator = ({ open, onOpenChange }: CampaignReportGe
       const body: any = { recipientEmail, timeframe };
       
       if (timeframe === "custom") {
-        body.startDate = customStartDate?.toISOString();
-        body.endDate = customEndDate?.toISOString();
+        // Set start date to beginning of day
+        const startOfDay = new Date(customStartDate!);
+        startOfDay.setHours(0, 0, 0, 0);
+        
+        // Set end date to end of day
+        const endOfDay = new Date(customEndDate!);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        body.startDate = startOfDay.toISOString();
+        body.endDate = endOfDay.toISOString();
       }
 
       const { data, error } = await supabase.functions.invoke('generate-campaign-report', {
