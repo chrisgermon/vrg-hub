@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { FileText, Mail, Loader2 } from "lucide-react";
+import { FileText, Mail, Loader2, Clock } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 interface CampaignReportGeneratorProps {
   open: boolean;
@@ -19,6 +21,48 @@ export const CampaignReportGenerator = ({ open, onOpenChange }: CampaignReportGe
   const [recipientEmail, setRecipientEmail] = useState("");
   const [timeframe, setTimeframe] = useState<TimeframeOption>("this_week");
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Fetch recent recipient emails for the logged-in user
+  const { data: recentEmails, refetch } = useQuery({
+    queryKey: ['recent-campaign-recipients'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('campaign_report_recipients')
+        .select('email, last_used_at')
+        .eq('user_id', user.id)
+        .order('last_used_at', { ascending: false })
+        .limit(5);
+
+      if (error) {
+        console.error('Error fetching recent emails:', error);
+        return [];
+      }
+
+      return data || [];
+    },
+    enabled: open,
+  });
+
+  const saveRecentEmail = async (email: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase
+      .from('campaign_report_recipients')
+      .upsert(
+        {
+          user_id: user.id,
+          email,
+          last_used_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'user_id,email',
+        }
+      );
+  };
 
   const handleGenerateReport = async () => {
     if (!recipientEmail) {
@@ -44,6 +88,8 @@ export const CampaignReportGenerator = ({ open, onOpenChange }: CampaignReportGe
       if (error) throw error;
 
       if (data?.success) {
+        await saveRecentEmail(recipientEmail);
+        await refetch();
         toast.success("Campaign report sent successfully!");
         setRecipientEmail("");
         setTimeframe("this_week");
@@ -107,6 +153,26 @@ export const CampaignReportGenerator = ({ open, onOpenChange }: CampaignReportGe
               value={recipientEmail}
               onChange={(e) => setRecipientEmail(e.target.value)}
             />
+            {recentEmails && recentEmails.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Recent recipients
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {recentEmails.map((item) => (
+                    <Badge
+                      key={item.email}
+                      variant="secondary"
+                      className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                      onClick={() => setRecipientEmail(item.email)}
+                    >
+                      {item.email}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

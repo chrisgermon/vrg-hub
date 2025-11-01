@@ -164,6 +164,30 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_report_recipients: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          last_used_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          last_used_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          last_used_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       canned_responses: {
         Row: {
           category: string | null
