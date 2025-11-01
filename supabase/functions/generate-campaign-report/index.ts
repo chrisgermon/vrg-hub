@@ -437,6 +437,9 @@ serve(async (req: Request) => {
         <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb;">
           <div style="max-width: 900px; margin: 0 auto; padding: 32px 16px;">
             <div style="background: white; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+              <div style="text-align: center; margin-bottom: 32px;">
+                <img src="${supabaseUrl}/storage/v1/object/public/logos/vision-radiology-email-logo.png" alt="Vision Radiology" style="max-width: 250px; height: auto;" />
+              </div>
               <h1 style="color: #1f2937; font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">Marketing Campaign Report</h1>
               <p style="color: #6b7280; font-size: 16px; margin: 0 0 32px 0;">
                 ${getTimeframeLabel(timeframe)} • Generated on ${formatDate(new Date().toISOString())}
