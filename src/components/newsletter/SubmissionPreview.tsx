@@ -63,6 +63,22 @@ export function SubmissionPreview({
     },
   });
 
+  // Fetch department template to get section names (must be before early returns)
+  const { data: departmentTemplate } = useQuery({
+    queryKey: ['department-template', submission?.department],
+    queryFn: async () => {
+      if (!submission?.department) return null;
+      const { data, error } = await supabase
+        .from('department_section_templates')
+        .select('*')
+        .eq('department_name', submission.department)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!submission?.department,
+  });
+
   const updateStatus = useMutation({
     mutationFn: async (status: 'approved' | 'rejected') => {
       const { error } = await supabase
@@ -90,20 +106,6 @@ export function SubmissionPreview({
   if (!submission) return <div>Submission not found</div>;
 
   const sectionsData = (submission.sections_data || []) as unknown as SectionData[];
-  
-  // Fetch department template to get section names
-  const { data: departmentTemplate } = useQuery({
-    queryKey: ['department-template', submission.department],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('department_section_templates')
-        .select('*')
-        .eq('department_name', submission.department)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-  });
 
   const departmentSections = (departmentTemplate?.sections as any[]) || [];
 
