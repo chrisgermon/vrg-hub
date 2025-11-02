@@ -8,11 +8,11 @@ import DOMPurify from 'dompurify';
  */
 export function sanitizeHtml(
   html: string | null | undefined,
-  config?: DOMPurify.Config
+  config?: any
 ): string {
   if (!html) return '';
 
-  const defaultConfig: DOMPurify.Config = {
+  const defaultConfig: any = {
     ALLOWED_TAGS: [
       'p', 'br', 'strong', 'em', 'u', 's', 'a', 'ul', 'ol', 'li',
       'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -31,7 +31,8 @@ export function sanitizeHtml(
 
   const finalConfig = { ...defaultConfig, ...config };
 
-  return DOMPurify.sanitize(html, finalConfig);
+  const result = DOMPurify.sanitize(html, finalConfig);
+  return typeof result === 'string' ? result : String(result);
 }
 
 /**
@@ -41,7 +42,7 @@ export function sanitizeHtml(
 export function sanitizeRichHtml(html: string | null | undefined): string {
   if (!html) return '';
 
-  return DOMPurify.sanitize(html, {
+  const result = DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
       'p', 'br', 'strong', 'em', 'u', 's', 'a', 'ul', 'ol', 'li',
       'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -60,6 +61,7 @@ export function sanitizeRichHtml(html: string | null | undefined): string {
     ADD_ATTR: ['frameborder', 'allowfullscreen', 'allow'],
     KEEP_CONTENT: true,
   });
+  return typeof result === 'string' ? result : String(result);
 }
 
 /**
@@ -70,8 +72,9 @@ export function sanitizeRichHtml(html: string | null | undefined): string {
 export function stripHtml(html: string | null | undefined): string {
   if (!html) return '';
 
-  return DOMPurify.sanitize(html, {
+  const result = DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [],
     KEEP_CONTENT: true,
   });
+  return typeof result === 'string' ? result : String(result);
 }

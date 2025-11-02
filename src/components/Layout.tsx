@@ -25,6 +25,9 @@ import { SystemBanners } from "./banners/SystemBanners";
 import { ProfileDialog } from "./ProfileDialog";
 import { FirstTimeSetupDialog } from "./FirstTimeSetupDialog";
 import { useToast } from "@/hooks/use-toast";
+import { AIAssistantDialog } from "./AIAssistantDialog";
+import { Sparkles } from "lucide-react";
+import crowdAutomationIcon from "@/assets/crowdautomation-icon.svg";
 
 interface LayoutProps {
   children: ReactNode;
@@ -35,6 +38,7 @@ export function Layout({ children }: LayoutProps) {
   const { effectiveRole, isImpersonating } = useRoleImpersonation();
   const [logoUrl, setLogoUrl] = useState<string>(crowdITLogo);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -108,6 +112,20 @@ export function Layout({ children }: LayoutProps) {
                 alt="Company Logo" 
                 className="h-10 md:h-12 object-contain" 
               />
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setAiAssistantOpen(true)}
+                className="ml-2 hover:bg-primary/10"
+                title="AI Assistant"
+              >
+                <img 
+                  src={crowdAutomationIcon} 
+                  alt="AI Assistant" 
+                  className="h-6 w-6" 
+                />
+              </Button>
               
               <NavigationMenu className="hidden lg:flex">
                 <NavigationMenuList>
@@ -202,6 +220,7 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
         <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
+        <AIAssistantDialog open={aiAssistantOpen} onOpenChange={setAiAssistantOpen} />
       </SidebarProvider>
     </>
   );

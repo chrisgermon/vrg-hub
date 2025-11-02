@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.generate-campaign-report]
 verify_jwt = false
+
+[functions.ai-assistant]
+verify_jwt = true
