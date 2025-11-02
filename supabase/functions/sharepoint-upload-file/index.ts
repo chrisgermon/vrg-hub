@@ -145,12 +145,17 @@ serve(async (req) => {
       console.log('Token refreshed successfully');
     }
 
-    // Construct upload URL
-    const cleanPath = folderPath === '/' ? '' : folderPath.replace(/^\/+/, '').replace(/\/+$/, '');
-    const uploadPath = cleanPath ? `/${cleanPath}/${file.name}` : `/${file.name}`;
+    // Construct upload URL using configured base folder + requested subfolder
+    const basePath = (config.folder_path || '').trim();
+    let effectiveFolder = (folderPath && folderPath !== '/') ? folderPath : (basePath || '/');
+    if (basePath && !effectiveFolder.startsWith(basePath)) {
+      effectiveFolder = `${basePath.replace(/\/+$/, '')}/${effectiveFolder.replace(/^\/+/, '')}`;
+    }
+    const cleanPath = effectiveFolder === '/' ? '' : effectiveFolder.replace(/^\/+/, '').replace(/\/+$/, '');
+    const uploadPath = `/${cleanPath ? cleanPath + '/' : ''}${file.name}`;
     const graphUrl = `https://graph.microsoft.com/v1.0/sites/${config.site_id}/drive/root:${uploadPath}:/content`;
 
-    console.log('Uploading to Graph API:', graphUrl);
+    console.log('Uploading to Graph API path:', uploadPath);
 
     // Upload file
     const fileBuffer = await file.arrayBuffer();
@@ -241,7 +246,7 @@ serve(async (req) => {
           company_id: companyId,
           item_type: 'file',
           item_id: uploadData.id,
-          parent_path: config.folder_path || '',
+          parent_path: effectiveFolder || '',
           name: uploadData.name,
           web_url: uploadData.webUrl,
           size: uploadData.size || 0,
