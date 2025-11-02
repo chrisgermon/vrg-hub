@@ -73,9 +73,6 @@ export function ContributorDashboard() {
                         {assignment.topic && (
                           <p className="text-sm">Topic: {assignment.topic}</p>
                         )}
-                        <p className="text-sm text-muted-foreground">
-                          Word count: {assignment.word_count || 200} words
-                        </p>
                         <p className="text-sm text-muted-foreground flex items-center gap-2">
                           <Clock className="h-4 w-4" />
                           Due: {new Date(assignment.cycle?.due_date).toLocaleDateString()}

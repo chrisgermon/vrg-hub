@@ -71,8 +71,6 @@ export function SubmissionPreview({ submissionId, onClose }: { submissionId: str
   if (isLoading) return <div>Loading...</div>;
   if (!submission) return <div>Submission not found</div>;
 
-  const wordCount = submission.content?.trim().split(/\s+/).filter(Boolean).length || 0;
-
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
@@ -83,8 +81,11 @@ export function SubmissionPreview({ submissionId, onClose }: { submissionId: str
               <span>{submission.contributor?.full_name}</span>
               <span>•</span>
               <span>{submission.department}</span>
-              <span>•</span>
-              <Badge variant={submission.status === 'approved' ? 'default' : 'secondary'}>
+              <Badge variant={
+                submission.status === 'approved' ? 'default' :
+                submission.status === 'rejected' ? 'destructive' :
+                'secondary'
+              }>
                 {submission.status}
               </Badge>
             </div>
@@ -96,9 +97,6 @@ export function SubmissionPreview({ submissionId, onClose }: { submissionId: str
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <p className="text-sm text-muted-foreground mb-2">
-            Word count: {wordCount} words
-          </p>
           <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg">
             <p className="whitespace-pre-wrap">{submission.content}</p>
           </div>

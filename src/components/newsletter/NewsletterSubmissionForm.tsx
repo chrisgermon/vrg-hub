@@ -146,8 +146,6 @@ export function NewsletterSubmissionForm({
     }
   };
 
-  const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
-
   return (
     <div className="space-y-6">
       <Card>
@@ -155,9 +153,6 @@ export function NewsletterSubmissionForm({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Newsletter Submission - {department}</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Target: {assignment?.word_count || 200} words • Current: {wordCount} words
-              </p>
             </div>
             <div className="flex items-center gap-4">
               {lastSaved && (
