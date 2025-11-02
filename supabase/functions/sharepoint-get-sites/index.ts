@@ -71,19 +71,23 @@ serve(async (req) => {
       if (userConn?.access_token) connection = userConn;
     }
 
-    if (!connection || !connection.access_token) {
-      throw new Error('Office 365 not connected. Please reconnect in Settings > Integrations.');
+    if (!connection) {
+      throw new Error('No Office 365 connection found. Please connect it in Settings > Integrations.');
     }
 
-    // Check if token needs refresh (expires within 5 minutes)
-    const tokenExpiresAt = new Date(connection.expires_at);
+    // Prepare access token, refreshing if needed or missing
+    let accessToken: string = connection.access_token || '';
+
+    // If no token or expiring soon, try to refresh using refresh_token
+    const expiresRaw = (connection as any).expires_at as string | null;
+    const tokenExpiresAt = expiresRaw ? new Date(expiresRaw) : null;
     const now = new Date();
     const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
 
-    let accessToken = connection.access_token;
+    const needsRefresh = !accessToken || !tokenExpiresAt || tokenExpiresAt <= fiveMinutesFromNow;
 
-    if (tokenExpiresAt <= fiveMinutesFromNow) {
-      console.log('Access token expired or expiring soon, refreshing...');
+    if (needsRefresh) {
+      console.log('Access token missing/expired or expiring soon, refreshing...');
       
       if (!connection.refresh_token) {
         throw new Error('Office 365 connection expired and cannot be refreshed. Please reconnect in Settings > Integrations.');
@@ -113,7 +117,7 @@ serve(async (req) => {
       }
 
       const tokens = await tokenResponse.json();
-      accessToken = tokens.access_token;
+      accessToken = tokens.access_token as string;
       
       // Update the connection in the database
       const updateData: any = {
