@@ -462,7 +462,7 @@ serve(async (req: Request) => {
       `;
     }
 
-    // Build summary HTML
+    // Build summary HTML with CID logo reference
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -475,7 +475,7 @@ serve(async (req: Request) => {
           <div style="max-width: 900px; margin: 0 auto; padding: 32px 16px;">
             <div style="background: white; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
               <div style="text-align: center; margin-bottom: 32px;">
-                <img src="${supabaseUrl}/storage/v1/object/public/logos/vision-radiology-email-logo.png" alt="Vision Radiology" style="max-width: 250px; height: auto;" />
+                <img src="cid:campaign-report-logo.png" alt="Vision Radiology" style="max-width: 250px; height: auto;" />
               </div>
               <h1 style="color: #1f2937; font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">Marketing Campaign Report</h1>
               <p style="color: #6b7280; font-size: 16px; margin: 0 0 16px 0;">
@@ -561,12 +561,47 @@ serve(async (req: Request) => {
       });
     }
 
-    // Send email via Mailgun with attachments
+    // Send email via Mailgun with attachments and inline logo
     const formData = new FormData();
     formData.append("from", `CrowdHub Marketing <marketing@${mailgunDomain}>`);
     formData.append("to", recipientEmail);
     formData.append("subject", `Marketing Campaign Report - ${getTimeframeLabel(timeframe)}`);
     formData.append("html", emailHtml);
+
+    // Attach logo as inline image
+    try {
+      const logoUrls = [
+        `${supabaseUrl}/storage/v1/object/public/company-assets/vision-radiology-email-logo.png`,
+        'https://hub.visionradiology.com.au/vision-radiology-email-logo.png',
+      ];
+      
+      let logoBuffer: ArrayBuffer | null = null;
+      let contentType = 'image/png';
+      
+      for (const url of logoUrls) {
+        try {
+          const logoResponse = await fetch(url);
+          if (logoResponse.ok) {
+            logoBuffer = await logoResponse.arrayBuffer();
+            contentType = logoResponse.headers.get('content-type') || 'image/png';
+            console.log('[generate-campaign-report] Logo fetched from:', url);
+            break;
+          }
+        } catch (e) {
+          console.warn('[generate-campaign-report] Failed to fetch logo from:', url);
+        }
+      }
+      
+      if (logoBuffer) {
+        const logoBlob = new Blob([logoBuffer], { type: contentType });
+        formData.append('inline', logoBlob, 'campaign-report-logo.png');
+        console.log('[generate-campaign-report] Logo attached as inline image');
+      } else {
+        console.warn('[generate-campaign-report] Failed to fetch logo from any URL');
+      }
+    } catch (e) {
+      console.warn('[generate-campaign-report] Error attaching logo:', e);
+    }
 
     // Add CSV attachments if they exist
     if (failedFaxesCsv) {
