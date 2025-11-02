@@ -145,11 +145,27 @@ export function Office365UserSync() {
   const checkConnection = useCallback(async () => {
     setLoading(true);
     try {
-      // Try to find a connection for this user (may be restricted by RLS)
+      // Get user's company_id from their profile
+      const { data: profile } = await (supabase as any)
+        .from('profiles')
+        .select('company_id')
+        .eq('user_id', user?.id || '')
+        .maybeSingle();
+
+      const companyId = profile?.company_id;
+
+      if (!companyId) {
+        setConnection({ id: '1', connected: false, last_sync: null, sync_enabled: false });
+        setLoading(false);
+        return;
+      }
+
+      // Check for company-level connection (not user-level)
       const { data: conn, error } = await ((supabase as any)
         .from('office365_connections')
-        .select('id, updated_at, company_id')
-        .eq('user_id', user?.id || '')
+        .select('id, updated_at, company_id, is_active')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
         .order('updated_at', { ascending: false })
         .maybeSingle());
 
@@ -161,13 +177,13 @@ export function Office365UserSync() {
           sync_enabled: true,
         });
         // Preload users for this company
-        await loadUsers((conn as any).company_id);
+        await loadUsers(companyId);
       } else {
         // Fallback: infer connectivity from existing synced users (tenant-wide)
-        const companyId = await getTenantCompanyId();
-        if (companyId) {
+        const fallbackCompanyId = await getTenantCompanyId();
+        if (fallbackCompanyId) {
           setConnection({ id: 'tenant', connected: true, last_sync: null, sync_enabled: true });
-          await loadUsers(companyId);
+          await loadUsers(fallbackCompanyId);
         } else {
           setConnection({ id: '1', connected: false, last_sync: null, sync_enabled: false });
         }
@@ -194,15 +210,26 @@ export function Office365UserSync() {
         return;
       }
 
-      // Use a default company_id or get it from the user context
-      // For now, we'll pass it in the state and retrieve it later
-      const company_id = 'default'; // This will be stored in the oauth state
+      // Get the user's company_id from their profile
+      const { data: profile, error: profileError } = await (supabase as any)
+        .from('profiles')
+        .select('company_id')
+        .eq('user_id', user?.id || '')
+        .maybeSingle();
+
+      if (profileError || !profile?.company_id) {
+        toast.error('Could not determine your company. Please contact support.');
+        console.error('Profile fetch error:', profileError);
+        return;
+      }
+
+      const company_id = profile.company_id;
 
       const { data, error } = await supabase.functions.invoke('office365-oauth-initiate', {
         body: { company_id },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      
+
       if (error) {
         console.error('OAuth initiate error:', error);
         throw error;
@@ -226,12 +253,14 @@ export function Office365UserSync() {
         }
 
         let connectionCheckInterval: NodeJS.Timeout | null = null;
-        
+
         const checkConnectionStatus = async () => {
+          // Check by company_id, not user_id (connections are company-level now)
           const { data: conn } = await supabase
             .from('office365_connections')
             .select('id, updated_at')
-            .eq('user_id', user?.id || '')
+            .eq('company_id', company_id)
+            .eq('is_active', true)
             .order('updated_at', { ascending: false })
             .maybeSingle();
 
