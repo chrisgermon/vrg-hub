@@ -39,24 +39,36 @@ export function useFileManager() {
     try {
       setLoading(true);
 
-      // Fetch folders
-      const { data: foldersData, error: foldersError } = await supabase
+      // Fetch folders - handle null parent_id correctly
+      let foldersQuery = supabase
         .from('file_folders')
         .select('*')
-        .eq('parent_id', folderId)
         .eq('is_active', true)
         .order('name');
+      
+      if (folderId === null) {
+        foldersQuery = foldersQuery.is('parent_id', null);
+      } else {
+        foldersQuery = foldersQuery.eq('parent_id', folderId);
+      }
 
+      const { data: foldersData, error: foldersError } = await foldersQuery;
       if (foldersError) throw foldersError;
 
-      // Fetch files
-      const { data: filesData, error: filesError } = await supabase
+      // Fetch files - handle null folder_id correctly
+      let filesQuery = supabase
         .from('file_documents')
         .select('*')
-        .eq('folder_id', folderId)
         .eq('is_active', true)
         .order('name');
+      
+      if (folderId === null) {
+        filesQuery = filesQuery.is('folder_id', null);
+      } else {
+        filesQuery = filesQuery.eq('folder_id', folderId);
+      }
 
+      const { data: filesData, error: filesError } = await filesQuery;
       if (filesError) throw filesError;
 
       setFolders(foldersData || []);
@@ -79,23 +91,25 @@ export function useFileManager() {
     }
 
     try {
-      const crumbs: Breadcrumb[] = [{ id: null, name: 'Home' }];
+      const crumbs: Breadcrumb[] = [];
       let currentId: string | null = folderId;
 
+      // Build chain from current folder to root
       while (currentId) {
         const { data, error } = await supabase
           .from('file_folders')
           .select('id, name, parent_id')
           .eq('id', currentId)
+          .eq('is_active', true)
           .single();
 
-        if (error) throw error;
+        if (error || !data) break;
 
-        crumbs.push({ id: data.id, name: data.name });
+        crumbs.unshift({ id: data.id, name: data.name });
         currentId = data.parent_id;
       }
 
-      setBreadcrumbs(crumbs.reverse());
+      setBreadcrumbs([{ id: null, name: 'Home' }, ...crumbs]);
     } catch (error: any) {
       console.error('Error building breadcrumbs:', error);
     }
