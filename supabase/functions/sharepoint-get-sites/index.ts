@@ -11,13 +11,34 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Default response shape so the UI can display more helpful messages
+  const baseResponse = {
+    sites: [] as any[],
+    configured: false,
+    needsO365: false,
+    message: undefined as string | undefined,
+  };
+
   try {
+    const authHeader = req.headers.get('Authorization');
+
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({
+          ...baseResponse,
+          needsO365: true,
+          message: 'Missing authorization header. Please refresh and try again.',
+        }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: authHeader },
         },
       }
     );
@@ -27,105 +48,142 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (!user) {
-      throw new Error('Not authenticated');
+      return new Response(
+        JSON.stringify({
+          ...baseResponse,
+          needsO365: true,
+          message: 'Not authenticated. Please log in again.',
+        }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    let company_id: string | null = null;
+    let requestBody: Record<string, any> = {};
     try {
-      const body = await req.json();
-      company_id = body?.company_id ?? null;
+      requestBody = await req.json();
     } catch {
-      // No body provided; will attempt to infer company_id from profile
+      // No body provided
     }
 
-    // Get Office 365 connection (prefer company-level via admin, fallback to user-level)
+    const requestedCompanyId = requestBody?.company_id as string | undefined;
+
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    let connection: { 
-      id: string;
-      access_token: string;
-      refresh_token: string | null;
-      expires_at: string;
-      company_id: string | null;
-      user_id: string | null;
-    } | null = null;
+    // Load the user's most recent Office 365 connection (used for company inference + fallback)
+    const { data: userConnections } = await supabaseAdmin
+      .from('office365_connections')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+      .limit(1);
 
-    // If company_id wasn't provided, try to infer it from the user's profile
-    if (!company_id) {
+    const userConnection = userConnections?.[0] ?? null;
+
+    let companyId = requestedCompanyId ?? userConnection?.company_id ?? null;
+
+    if (!companyId) {
       const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('company_id')
         .eq('id', user.id)
         .maybeSingle();
-      company_id = profile?.company_id ?? null;
+      companyId = profile?.company_id ?? null;
     }
 
-    if (!company_id) {
-      throw new Error('Company ID is required');
+    // Determine whether SharePoint has been configured for this company
+    let configured = false;
+    if (companyId) {
+      const { data: config } = await supabaseAdmin
+        .from('sharepoint_configurations')
+        .select('id')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .limit(1);
+      configured = (config?.length ?? 0) > 0;
+    } else {
+      const { data: anyConfigs } = await supabaseAdmin
+        .from('sharepoint_configurations')
+        .select('id')
+        .eq('is_active', true)
+        .limit(1);
+      configured = (anyConfigs?.length ?? 0) > 0;
     }
-    if (company_id) {
-      const { data: companyConn } = await supabaseAdmin
-        .from('office365_connections')
-        .select('id, access_token, refresh_token, expires_at, company_id, user_id')
-        .eq('company_id', company_id)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (companyConn?.access_token) connection = companyConn;
+
+    if (!companyId) {
+      return new Response(
+        JSON.stringify({
+          ...baseResponse,
+          configured,
+          needsO365: true,
+          message: configured
+            ? 'Connect your Office 365 account to view SharePoint sites.'
+            : 'SharePoint is not configured yet.',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Prefer company-level connection, then user-level, finally tenant-level
+    const { data: companyConnection } = await supabaseAdmin
+      .from('office365_connections')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+
+    let connection = companyConnection?.[0] ?? null;
+
+    if (!connection && userConnection?.access_token && userConnection.company_id === companyId) {
+      connection = userConnection;
     }
 
     if (!connection) {
-      const { data: userConn } = await supabaseAdmin
+      const { data: tenantConnection } = await supabaseAdmin
         .from('office365_connections')
-        .select('id, access_token, refresh_token, expires_at, company_id, user_id')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (userConn?.access_token) connection = userConn;
-    }
-
-    // Final fallback: use the most recent tenant/company-level connection
-    if (!connection) {
-      const { data: tenantConn } = await supabaseAdmin
-        .from('office365_connections')
-        .select('id, access_token, refresh_token, expires_at, company_id, user_id')
+        .select('*')
         .is('user_id', null)
         .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (tenantConn?.access_token) connection = tenantConn;
+        .limit(1);
+      connection = tenantConnection?.[0] ?? null;
     }
 
-    if (!connection) {
-      throw new Error('No Office 365 connection found. Please connect it in Settings > Integrations.');
+    if (!connection?.access_token) {
+      return new Response(
+        JSON.stringify({
+          ...baseResponse,
+          configured,
+          needsO365: true,
+          message: 'Office 365 not connected. Please connect it in Settings > Integrations.',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Prepare access token, refreshing if needed or missing
-    let accessToken: string = connection.access_token || '';
-
-    // If no token or expiring soon, try to refresh using refresh_token
-    const expiresRaw = (connection as any).expires_at as string | null;
-    const tokenExpiresAt = expiresRaw ? new Date(expiresRaw) : null;
-    const now = new Date();
-    const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
-
-    const needsRefresh = !accessToken || !tokenExpiresAt || tokenExpiresAt <= fiveMinutesFromNow;
+    // Refresh the token if it is missing or expiring soon
+    let accessToken = connection.access_token;
+    const expiresAtRaw = connection.expires_at ? new Date(connection.expires_at) : null;
+    const refreshThreshold = new Date(Date.now() + 5 * 60 * 1000);
+    const needsRefresh = !expiresAtRaw || expiresAtRaw <= refreshThreshold;
 
     if (needsRefresh) {
-      console.log('Access token missing/expired or expiring soon, refreshing...');
-      
       if (!connection.refresh_token) {
-        throw new Error('Office 365 connection expired and cannot be refreshed. Please reconnect in Settings > Integrations.');
+        return new Response(
+          JSON.stringify({
+            ...baseResponse,
+            configured,
+            needsO365: true,
+            message: 'Office 365 connection expired and cannot be refreshed. Please reconnect in Settings > Integrations.',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       const clientId = Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID');
       const clientSecret = Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET');
 
-      // Refresh the token
       const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
         method: 'POST',
         headers: {
@@ -142,45 +200,60 @@ serve(async (req) => {
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text();
         console.error('Token refresh failed:', errorText);
-        throw new Error('Failed to refresh Office 365 token. Please reconnect in Settings > Integrations.');
+        return new Response(
+          JSON.stringify({
+            ...baseResponse,
+            configured,
+            needsO365: true,
+            message: 'Failed to refresh Office 365 token. Please reconnect in Settings > Integrations.',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       const tokens = await tokenResponse.json();
       accessToken = tokens.access_token as string;
-      
-      // Update the connection in the database
-      const updateData: any = {
+
+      const updateData: Record<string, any> = {
         access_token: tokens.access_token,
         expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
         updated_at: new Date().toISOString(),
       };
-      
-      // Only update refresh_token if a new one was provided
+
       if (tokens.refresh_token) {
         updateData.refresh_token = tokens.refresh_token;
       }
 
-      await supabaseAdmin
+      const { error: updateError } = await supabaseAdmin
         .from('office365_connections')
         .update(updateData)
         .eq('id', connection.id);
-      
-      console.log('Token refreshed successfully');
+
+      if (updateError) {
+        console.error('Failed to persist refreshed token:', updateError);
+      } else {
+        connection = { ...connection, ...updateData };
+      }
     }
 
-    // Get SharePoint sites using the (potentially refreshed) access token
-    const sitesResponse = await fetch(
-      'https://graph.microsoft.com/v1.0/sites?search=*',
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const sitesResponse = await fetch('https://graph.microsoft.com/v1.0/sites?search=*', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
     if (!sitesResponse.ok) {
-      throw new Error(`Failed to fetch sites: ${sitesResponse.status}`);
+      const errorText = await sitesResponse.text();
+      console.error('SharePoint sites fetch failed:', sitesResponse.status, errorText);
+      return new Response(
+        JSON.stringify({
+          ...baseResponse,
+          configured,
+          message: `Failed to fetch sites: ${sitesResponse.status}`,
+        }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const sitesData = await sitesResponse.json();
@@ -193,15 +266,22 @@ serve(async (req) => {
     }));
 
     return new Response(
-      JSON.stringify({ sites }),
+      JSON.stringify({
+        sites,
+        configured,
+        needsO365: false,
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error fetching SharePoint sites:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({
+        ...baseResponse,
+        message: errorMessage,
+      }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
