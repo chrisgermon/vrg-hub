@@ -442,26 +442,6 @@ export function SharePointBrowser() {
 
   return (
     <div className="space-y-6">
-      {/* Current Configuration Alert */}
-      {spConfig && (
-        <Alert>
-          <Folder className="h-4 w-4" />
-          <AlertDescription>
-            <div className="flex items-center justify-between">
-              <div>
-                Currently syncing from: <strong>{spConfig.site_name}</strong>
-                {spConfig.folder_path && spConfig.folder_path !== '/' && (
-                  <span className="text-muted-foreground"> / {spConfig.folder_path}</span>
-                )}
-              </div>
-              <Button asChild variant="ghost" size="sm">
-                <a href="/integrations">Change Site</a>
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Navigation */}
       <div className="flex items-center justify-between">
         <Breadcrumb>

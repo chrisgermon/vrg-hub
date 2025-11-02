@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,11 +16,9 @@ interface SharePointSite {
 export function SharePointConfiguration() {
   const [loading, setLoading] = useState(false);
   const [connected, setConnected] = useState(false);
-  const [sites, setSites] = useState<SharePointSite[]>([]);
-  const [selectedSite, setSelectedSite] = useState<string>('');
-  const [folderPath, setFolderPath] = useState('/');
   const [currentConfig, setCurrentConfig] = useState<any>(null);
   const { toast } = useToast();
+  const TARGET_SITE_NAME = 'vrgdocuments';
 
   useEffect(() => {
     checkConnection();
@@ -44,7 +39,7 @@ export function SharePointConfiguration() {
       setConnected(!!connection);
       
       if (connection) {
-        await loadSites();
+        await autoConfigureVRGDocuments();
       }
     } catch (error) {
       console.error('Error checking connection:', error);
@@ -73,84 +68,17 @@ export function SharePointConfiguration() {
 
       if (config) {
         setCurrentConfig(config);
-        setSelectedSite(config.site_id || '');
-        setFolderPath(config.folder_path || '/');
       }
     } catch (error) {
       console.error('Error loading config:', error);
     }
   };
 
-  const loadSites = async () => {
+  const autoConfigureVRGDocuments = async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('No authenticated user');
-        return;
-      }
-
-      // Get company_id from the office365_connections table
-      const { data: connection } = await (supabase as any)
-        .from('office365_connections')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!connection?.company_id) {
-        console.error('No Office 365 connection found');
-        toast({
-          title: 'Error',
-          description: 'Please connect to Office 365 first',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke('sharepoint-get-sites', {
-        body: { company_id: connection.company_id }
-      });
-
-      if (error) {
-        console.error('SharePoint sites error:', error);
-        throw error;
-      }
-
-      setSites(data?.sites || []);
-      
-      if (!data?.sites || data.sites.length === 0) {
-        toast({
-          title: 'No sites found',
-          description: 'No SharePoint sites are accessible with the current connection',
-          variant: 'default'
-        });
-      }
-    } catch (error: any) {
-      console.error('Error loading sites:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to load SharePoint sites',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const saveConfiguration = async () => {
-    if (!selectedSite) {
-      toast({
-        title: 'Error',
-        description: 'Please select a SharePoint site',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!user) return;
 
       const { data: connection } = await supabase
         .from('office365_connections')
@@ -159,86 +87,90 @@ export function SharePointConfiguration() {
         .maybeSingle();
 
       if (!connection?.company_id) {
-        throw new Error('Office 365 connection not found or missing company ID');
+        toast({
+          title: 'Error',
+          description: 'Please connect to Office 365 first',
+          variant: 'destructive'
+        });
+        return;
       }
 
-      const site = sites.find(s => s.id === selectedSite);
-      if (!site) {
-        throw new Error('Selected site not found. Please try reloading the sites.');
-      }
-
-      // Validate site data
-      if (!site.id || !site.name || !site.webUrl) {
-        throw new Error('Invalid site data. Please select a different site.');
-      }
-
-      console.log('Saving SharePoint configuration:', {
-        company_id: connection.company_id,
-        site_id: site.id,
-        site_name: site.name,
-        site_url: site.webUrl,
-        folder_path: folderPath
+      // Fetch sites to find vrgdocuments
+      const { data, error } = await supabase.functions.invoke('sharepoint-get-sites', {
+        body: { company_id: connection.company_id }
       });
 
-      // Save config: update existing company record if present, else insert
-      // This avoids ON CONFLICT issues and ensures a single active config per company
-      const { data: existingConfig } = await (supabase as any)
+      if (error) throw error;
+
+      const vrgSite = data?.sites?.find((s: SharePointSite) => 
+        s.name.toLowerCase() === TARGET_SITE_NAME.toLowerCase()
+      );
+
+      if (!vrgSite) {
+        toast({
+          title: 'Site not found',
+          description: `Could not find SharePoint site "${TARGET_SITE_NAME}"`,
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Clear old cache for this company
+      await supabase
+        .from('sharepoint_cache')
+        .delete()
+        .eq('company_id', connection.company_id);
+
+      // Save configuration
+      const { data: existingConfig } = await supabase
         .from('sharepoint_configurations')
         .select('id')
         .eq('company_id', connection.company_id)
         .maybeSingle();
 
-      let saveError: any = null;
+      const configData = {
+        site_id: vrgSite.id,
+        site_name: vrgSite.name,
+        site_url: vrgSite.webUrl,
+        folder_path: '/',
+        configured_by: user.id,
+        is_active: true,
+      };
 
       if (existingConfig?.id) {
-        const { error } = await (supabase as any)
+        await supabase
           .from('sharepoint_configurations')
-          .update({
-            site_id: site.id,
-            site_name: site.name,
-            site_url: site.webUrl,
-            folder_path: folderPath || '/',
-            configured_by: user.id,
-            is_active: true,
-          })
+          .update(configData)
           .eq('id', existingConfig.id);
-        saveError = error;
       } else {
-        const { error } = await (supabase as any)
+        await supabase
           .from('sharepoint_configurations')
           .insert({
+            ...configData,
             company_id: connection.company_id,
-            site_id: site.id,
-            site_name: site.name,
-            site_url: site.webUrl,
-            folder_path: folderPath || '/',
-            configured_by: user.id,
-            is_active: true,
           });
-        saveError = error;
       }
-
-      if (saveError) {
-        console.error('Save error:', saveError);
-        throw new Error(`Failed to save configuration: ${saveError.message}`);
-      }
-
-      toast({
-        title: 'Success',
-        description: 'SharePoint configuration saved successfully'
-      });
 
       await loadCurrentConfig();
+      
+      toast({
+        title: 'Success',
+        description: `Connected to ${TARGET_SITE_NAME} - cache cleared`,
+      });
     } catch (error: any) {
-      console.error('Error saving configuration:', error);
+      console.error('Error configuring:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to save configuration',
+        description: error.message || 'Failed to configure SharePoint',
         variant: 'destructive'
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  const reconfigure = async () => {
+    await autoConfigureVRGDocuments();
   };
 
   if (!connected) {
@@ -277,7 +209,7 @@ export function SharePointConfiguration() {
           </Badge>
         </CardTitle>
         <CardDescription>
-          Configure which SharePoint location is visible to all users
+          Automatically connected to {TARGET_SITE_NAME}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -285,7 +217,7 @@ export function SharePointConfiguration() {
           <div className="p-4 bg-muted/50 rounded-lg space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium">
               <LinkIcon className="w-4 h-4" />
-              Current Configuration
+              Active Configuration
             </div>
             <div className="text-sm space-y-1">
               <div className="flex justify-between">
@@ -300,58 +232,15 @@ export function SharePointConfiguration() {
           </div>
         )}
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="sharepoint-site">SharePoint Site</Label>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={loadSites}
-              disabled={loading}
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
-          <Select value={selectedSite} onValueChange={setSelectedSite}>
-            <SelectTrigger id="sharepoint-site">
-              <SelectValue placeholder="Select a SharePoint site" />
-            </SelectTrigger>
-            <SelectContent>
-              {loading ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                </div>
-              ) : (
-                sites.map(site => (
-                  <SelectItem key={site.id} value={site.id}>
-                    {site.name}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="folder-path">Folder Path (optional)</Label>
-          <Input
-            id="folder-path"
-            value={folderPath}
-            onChange={(e) => setFolderPath(e.target.value)}
-            placeholder="/"
-          />
-          <p className="text-xs text-muted-foreground">
-            Leave as "/" to show the root folder, or specify a path like "/Documents/Public"
-          </p>
-        </div>
-
         <Button 
-          onClick={saveConfiguration} 
-          disabled={loading || !selectedSite}
+          onClick={reconfigure} 
+          disabled={loading}
           className="w-full"
+          variant="outline"
         >
           {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          Save Configuration
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Reconnect & Clear Cache
         </Button>
       </CardContent>
     </Card>
