@@ -55,7 +55,7 @@ serve(async (req) => {
     // Get user's O365 connection
     const { data: userO365 } = await supabaseAdmin
       .from('office365_connections')
-      .select('company_id, access_token, expires_at')
+      .select('id, company_id, access_token, refresh_token, expires_at')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
       .limit(1);
@@ -166,17 +166,78 @@ serve(async (req) => {
     // Cache miss or force refresh - fetch from Microsoft Graph
     console.log('Cache miss or force refresh, fetching from Microsoft Graph API');
 
-    if (!userConnection.access_token) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Office 365 connection expired', 
-          configured: true,
-          needsO365: true,
-          folders: [],
-          files: []
+    // Check if token needs refresh
+    let accessToken = userConnection.access_token;
+    const expiresAtRaw = userConnection.expires_at ? new Date(userConnection.expires_at) : null;
+    const refreshThreshold = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes buffer
+    const needsRefresh = !accessToken || !expiresAtRaw || expiresAtRaw <= refreshThreshold;
+
+    if (needsRefresh) {
+      if (!userConnection.refresh_token) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Office 365 connection expired. Please reconnect your Office 365 account.', 
+            configured: true,
+            needsO365: true,
+            folders: [],
+            files: []
+          }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const clientId = Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID');
+      const clientSecret = Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET');
+
+      console.log('Refreshing expired Office 365 token...');
+
+      const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: clientId!,
+          client_secret: clientSecret!,
+          refresh_token: userConnection.refresh_token,
+          grant_type: 'refresh_token',
         }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      });
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        console.error('Token refresh failed:', errorText);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to refresh Office 365 token. Please reconnect your Office 365 account.', 
+            configured: true,
+            needsO365: true,
+            folders: [],
+            files: []
+          }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const tokens = await tokenResponse.json();
+      accessToken = tokens.access_token;
+
+      const updateData: Record<string, any> = {
+        access_token: tokens.access_token,
+        expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      if (tokens.refresh_token) {
+        updateData.refresh_token = tokens.refresh_token;
+      }
+
+      await supabaseAdmin
+        .from('office365_connections')
+        .update(updateData)
+        .eq('id', userConnection.id);
+
+      console.log('Token refreshed successfully');
     }
 
     // Construct Graph API URL (without permissions expansion as it's not supported on all SharePoint types)
@@ -192,7 +253,7 @@ serve(async (req) => {
 
     const graphResponse = await fetch(graphUrl, {
       headers: {
-        'Authorization': `Bearer ${userConnection.access_token}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
     });
