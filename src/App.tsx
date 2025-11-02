@@ -70,6 +70,7 @@ const SharedModality = lazy(() => import("./pages/SharedModality"));
 const MissionStatement = lazy(() => import("./pages/MissionStatement"));
 const ExternalProviders = lazy(() => import("./pages/ExternalProviders"));
 const EmailTest = lazy(() => import("./pages/EmailTest"));
+const Documentation = lazy(() => import("./pages/Documentation"));
 
 const protectedLayoutRoutes: Array<{
   path: string;
@@ -90,7 +91,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/requests/new/:slug/:categorySlug", element: <NewDynamicRequest /> },
   { path: "/requests/tickets/new", element: <NewTicket /> },
   { path: "/catalog", element: <Catalog /> },
-  { path: "/documentation", element: <FileManager /> },
+  { path: "/documentation", element: <Documentation /> },
   { path: "/news/view-all", element: <NewsViewAll /> },
   { path: "/news", element: <NewsManagement /> },
   { path: "/news/new", element: <ArticleEditor /> },
