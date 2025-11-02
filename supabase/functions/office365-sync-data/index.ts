@@ -104,17 +104,46 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get the user's company_id if not provided
+    // Determine company_id with multiple fallbacks
     if (!company_id) {
-      console.log('No company_id provided, fetching from user profile...');
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .maybeSingle();
+      // 1) Try from user profile (ignore errors if column doesn't exist)
+      try {
+        console.log('No company_id provided, attempting to infer from profile...');
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('company_id')
+          .eq('id', user.id)
+          .maybeSingle();
+        company_id = profile?.company_id || null;
+      } catch (_) {
+        // ignore
+      }
 
-      company_id = profile?.company_id;
-      console.log('User company_id:', company_id);
+      // 2) Fallback to user's most recent Office 365 connection
+      if (!company_id) {
+        console.log('Inferring company_id from user Office 365 connection...');
+        const { data: userConnHint } = await supabase
+          .from('office365_connections')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        company_id = userConnHint?.company_id || null;
+      }
+
+      // 3) Final fallback: any active SharePoint configuration
+      if (!company_id) {
+        console.log('Inferring company_id from active SharePoint configuration...');
+        const { data: activeConfig } = await supabase
+          .from('sharepoint_configurations')
+          .select('company_id')
+          .eq('is_active', true)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        company_id = activeConfig?.company_id || null;
+      }
     }
 
     if (!company_id) {
@@ -173,6 +202,29 @@ serve(async (req) => {
     }
 
     let accessToken = connection.access_token;
+
+    // If access token is missing, attempt immediate refresh using refresh_token
+    if (!accessToken) {
+      if (!connection.refresh_token) {
+        return new Response(
+          JSON.stringify({ error: 'Office 365 not connected. Please connect or reconnect in Settings > Integrations.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const clientId = Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID');
+      const clientSecret = Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET');
+      const tokens = await refreshAccessToken(connection.refresh_token, clientId!, clientSecret!);
+      accessToken = tokens.access_token;
+      await supabase
+        .from('office365_connections')
+        .update({
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token || connection.refresh_token,
+          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+        })
+        .eq('id', connection.id);
+      console.log('Token created via refresh due to missing access token');
+    }
     
     // Check if token needs refresh (expires within 5 minutes)
     const tokenExpiresAt = new Date(connection.expires_at);
