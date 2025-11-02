@@ -41,42 +41,96 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
     },
   });
 
+  // Save mutation
   const saveCycle = useMutation({
-    mutationFn: async (formData: FormData) => {
-      const cycleData = {
-        name: formData.get('name') as string,
-        month: parseInt(formData.get('month') as string),
-        year: parseInt(formData.get('year') as string),
-        due_date: formData.get('due_date') as string,
-        status: formData.get('status') as string,
-        notes: formData.get('notes') as string,
-        created_by: user?.id,
-      };
-
+    mutationFn: async (cycleData: any) => {
+      let cycleId = editing;
+      
       if (editing) {
         const { error } = await supabase
-          .from('newsletter_cycles')
+          .from("newsletter_cycles")
           .update(cycleData)
-          .eq('id', editing.id);
-
+          .eq("id", editing);
+        
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('newsletter_cycles')
-          .insert(cycleData);
-
+        const { data, error } = await supabase
+          .from("newsletter_cycles")
+          .insert(cycleData)
+          .select()
+          .single();
+        
         if (error) throw error;
+        cycleId = data.id;
+
+        // Fetch all department assignments
+        const { data: deptAssignments, error: deptError } = await supabase
+          .from('department_assignments')
+          .select('*');
+
+        if (deptError) {
+          console.error('Failed to fetch department assignments:', deptError);
+        } else if (deptAssignments && deptAssignments.length > 0) {
+          // Create newsletter_assignments for each department assignee
+          const newsletterAssignments = [];
+          for (const dept of deptAssignments) {
+            if (dept.assignee_ids && dept.assignee_ids.length > 0) {
+              for (const userId of dept.assignee_ids) {
+                newsletterAssignments.push({
+                  cycle_id: cycleId,
+                  contributor_id: userId,
+                  department: dept.department,
+                  status: 'pending',
+                });
+              }
+            }
+          }
+
+          if (newsletterAssignments.length > 0) {
+            const { error: assignError } = await supabase
+              .from('newsletter_assignments')
+              .insert(newsletterAssignments);
+            
+            if (assignError) {
+              console.error('Failed to create newsletter assignments:', assignError);
+            }
+          }
+        }
+
+        // Trigger notification edge function for new cycle
+        try {
+          const { error: notifyError } = await supabase.functions.invoke(
+            'notify-newsletter-cycle-created',
+            { body: { cycleId } }
+          );
+          
+          if (notifyError) {
+            console.error("Failed to send notifications:", notifyError);
+          }
+        } catch (err) {
+          console.error("Failed to invoke notification function:", err);
+        }
       }
+      
+      return cycleId;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['newsletter-cycles'] });
-      toast.success(`Cycle ${editing ? 'updated' : 'created'}`);
+    onSuccess: (cycleId, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["newsletter-cycles"] });
+      queryClient.invalidateQueries({ queryKey: ["newsletter-assignments"] });
+      toast.success(
+        editing 
+          ? "Cycle updated successfully."
+          : "Cycle created and contributors notified."
+      );
       setOpen(false);
       setEditing(null);
-      onCycleCreated();
+      
+      if (!editing && onCycleCreated) {
+        onCycleCreated();
+      }
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to save cycle');
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to save cycle");
     },
   });
 
@@ -100,7 +154,17 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    saveCycle.mutate(new FormData(e.currentTarget));
+    const formData = new FormData(e.currentTarget);
+    const cycleData = {
+      name: formData.get('name') as string,
+      month: parseInt(formData.get('month') as string),
+      year: parseInt(formData.get('year') as string),
+      due_date: formData.get('due_date') as string,
+      status: formData.get('status') as string,
+      notes: formData.get('notes') as string,
+      created_by: user?.id,
+    };
+    saveCycle.mutate(cycleData);
   };
 
   if (isLoading) {
