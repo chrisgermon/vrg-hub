@@ -62,6 +62,38 @@ export function SharePointBrowser() {
   const [uploading, setUploading] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
+  const checkConfigured = async (): Promise<{ configured: boolean; companyId?: string }> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return { configured: false };
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { configured: false };
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('brand_id')
+        .eq('id', user.id)
+        .single();
+
+      const companyId = profile?.brand_id || user.id;
+
+      const { data: spConfig, error: spError } = await supabase
+        .from('sharepoint_configurations')
+        .select('id')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      const isConfigured = !!spConfig && !spError;
+      setConfigured(isConfigured);
+      return { configured: isConfigured, companyId };
+    } catch {
+      setConfigured(false);
+      return { configured: false };
+    }
+  };
+
   const syncSharePointFiles = async () => {
     setSyncing(true);
     try {
@@ -71,13 +103,34 @@ export function SharePointBrowser() {
         return;
       }
 
-      const { error } = await supabase.functions.invoke('sync-sharepoint-files', {
+      const { data, error } = await supabase.functions.invoke('sync-sharepoint-files', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
       if (error) {
-        console.error('Sync error:', error);
-        toast.error('Failed to sync SharePoint files');
+        // Try extracting more details
+        let status: number | undefined = (error as any)?.status;
+        let bodyText = '';
+        try {
+          const res = (error as any)?.context?.response as Response | undefined;
+          if (res) {
+            status = res.status || status;
+            const bodyAny = await res.clone().json().catch(async () => await res.text());
+            bodyText = typeof bodyAny === 'string' ? bodyAny : (bodyAny?.error || JSON.stringify(bodyAny));
+          }
+        } catch {}
+
+        const lower = (bodyText || '').toLowerCase();
+        if (status === 404 || lower.includes('not configured')) {
+          setConfigured(false);
+          toast.error('SharePoint not configured. Please set it up in Integrations.');
+        } else if (status === 401 || lower.includes('unauthorized')) {
+          setNeedsO365(true);
+          toast.error('Connect your Office 365 account to continue.');
+        } else {
+          console.error('Sync error:', error);
+          toast.error('Failed to sync SharePoint files');
+        }
       } else {
         toast.success('SharePoint files synced successfully');
         await loadItems(currentPath, true);
@@ -91,9 +144,17 @@ export function SharePointBrowser() {
   };
 
   useEffect(() => {
-    loadItems(currentPath);
-    // Auto-sync on mount
-    syncSharePointFiles();
+    const init = async () => {
+      const result = await checkConfigured();
+      if (!result.configured) {
+        setLoading(false);
+        return;
+      }
+      await loadItems(currentPath);
+      // Auto-sync on mount
+      await syncSharePointFiles();
+    };
+    init();
   }, [currentPath]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,20 +237,15 @@ export function SharePointBrowser() {
         return;
       }
 
-      // Get user's company/brand ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Not authenticated');
+      // Determine configuration and company
+      const res = await checkConfigured();
+      if (!res.configured || !res.companyId) {
+        setConfigured(false);
+        setLoading(false);
         return;
       }
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('brand_id')
-        .eq('id', user.id)
-        .single();
-
-      const companyId = profile?.brand_id || user.id;
+      const companyId = res.companyId;
 
       // If force refresh, sync from SharePoint first
       if (forceRefresh) {
@@ -324,8 +380,14 @@ export function SharePointBrowser() {
           <div className="text-center space-y-2">
             <h3 className="text-lg font-semibold">SharePoint Not Configured</h3>
             <p className="text-sm text-muted-foreground max-w-md">
-              A Super Admin needs to configure SharePoint access in the Integrations page before documents can be viewed.
+              A Super Admin needs to configure SharePoint access in Integrations before documents can be viewed.
             </p>
+          </div>
+          <div className="flex gap-3">
+            <Button asChild>
+              <a href="/integrations">Open Integrations</a>
+            </Button>
+            <ConnectOffice365Button />
           </div>
         </CardContent>
       </Card>
