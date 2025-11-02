@@ -61,6 +61,7 @@ export function SharePointBrowser() {
   const [selectedItem, setSelectedItem] = useState<SharePointFile | SharePointFolder | null>(null);
   const [uploading, setUploading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [spConfig, setSpConfig] = useState<any>(null);
 
   const checkConfigured = async (): Promise<{ configured: boolean; companyId?: string }> => {
     try {
@@ -89,15 +90,16 @@ export function SharePointBrowser() {
         companyId = (profile?.brand_id as any) || user.id;
       }
 
-      const { data: spConfig, error: spError } = await (supabase as any)
+      const { data: spConfigData, error: spError } = await (supabase as any)
         .from('sharepoint_configurations')
-        .select('id')
+        .select('*')
         .eq('company_id', companyId)
         .eq('is_active', true)
         .maybeSingle();
 
-      const isConfigured = !!spConfig && !spError;
+      const isConfigured = !!spConfigData && !spError;
       setConfigured(isConfigured);
+      setSpConfig(spConfigData);
       return { configured: isConfigured, companyId };
     } catch {
       setConfigured(false);
@@ -426,6 +428,26 @@ export function SharePointBrowser() {
 
   return (
     <div className="space-y-6">
+      {/* Current Configuration Alert */}
+      {spConfig && (
+        <Alert>
+          <Folder className="h-4 w-4" />
+          <AlertDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                Currently syncing from: <strong>{spConfig.site_name}</strong>
+                {spConfig.folder_path && spConfig.folder_path !== '/' && (
+                  <span className="text-muted-foreground"> / {spConfig.folder_path}</span>
+                )}
+              </div>
+              <Button asChild variant="ghost" size="sm">
+                <a href="/integrations">Change Site</a>
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Navigation */}
       <div className="flex items-center justify-between">
         <Breadcrumb>
