@@ -42,12 +42,19 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    let connection: { access_token: string } | null = null;
+    let connection: { 
+      id: string;
+      access_token: string;
+      refresh_token: string | null;
+      token_expires_at: string;
+      company_id: string | null;
+      user_id: string | null;
+    } | null = null;
 
     if (company_id) {
       const { data: companyConn } = await supabaseAdmin
         .from('office365_connections')
-        .select('access_token')
+        .select('id, access_token, refresh_token, token_expires_at, company_id, user_id')
         .eq('company_id', company_id)
         .order('updated_at', { ascending: false })
         .maybeSingle();
@@ -57,7 +64,7 @@ serve(async (req) => {
     if (!connection) {
       const { data: userConn } = await supabaseAdmin
         .from('office365_connections')
-        .select('access_token')
+        .select('id, access_token, refresh_token, token_expires_at, company_id, user_id')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
         .maybeSingle();
@@ -68,12 +75,72 @@ serve(async (req) => {
       throw new Error('Office 365 not connected');
     }
 
-    // Get SharePoint sites
+    // Check if token needs refresh (expires within 5 minutes)
+    const tokenExpiresAt = new Date(connection.token_expires_at);
+    const now = new Date();
+    const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+
+    let accessToken = connection.access_token;
+
+    if (tokenExpiresAt <= fiveMinutesFromNow) {
+      console.log('Access token expired or expiring soon, refreshing...');
+      
+      if (!connection.refresh_token) {
+        throw new Error('Office 365 connection expired and cannot be refreshed. Please reconnect in Settings > Integrations.');
+      }
+
+      const clientId = Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID');
+      const clientSecret = Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET');
+
+      // Refresh the token
+      const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: clientId!,
+          client_secret: clientSecret!,
+          refresh_token: connection.refresh_token,
+          grant_type: 'refresh_token',
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        console.error('Token refresh failed:', errorText);
+        throw new Error('Failed to refresh Office 365 token. Please reconnect in Settings > Integrations.');
+      }
+
+      const tokens = await tokenResponse.json();
+      accessToken = tokens.access_token;
+      
+      // Update the connection in the database
+      const updateData: any = {
+        access_token: tokens.access_token,
+        token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Only update refresh_token if a new one was provided
+      if (tokens.refresh_token) {
+        updateData.refresh_token = tokens.refresh_token;
+      }
+
+      await supabaseAdmin
+        .from('office365_connections')
+        .update(updateData)
+        .eq('id', connection.id);
+      
+      console.log('Token refreshed successfully');
+    }
+
+    // Get SharePoint sites using the (potentially refreshed) access token
     const sitesResponse = await fetch(
       'https://graph.microsoft.com/v1.0/sites?search=*',
       {
         headers: {
-          'Authorization': `Bearer ${connection.access_token}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
       }
