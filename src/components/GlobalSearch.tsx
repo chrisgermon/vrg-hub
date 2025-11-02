@@ -36,6 +36,7 @@ export function GlobalSearch() {
   const [loading, setLoading] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [savedSearchName, setSavedSearchName] = useState("");
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const navigate = useNavigate();
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
@@ -56,8 +57,29 @@ export function GlobalSearch() {
     enabled: !!user?.id,
   });
 
-  // Fetch recent searches from localStorage
-  const recentSearches = JSON.parse(localStorage.getItem("recentSearches") || "[]").slice(0, 5);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      const stored = window.localStorage.getItem("recentSearches");
+      if (!stored) {
+        setRecentSearches([]);
+        return;
+      }
+
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        setRecentSearches(parsed.slice(0, 5));
+      } else {
+        setRecentSearches([]);
+      }
+    } catch (error) {
+      console.error("Failed to load recent searches from localStorage", error);
+      setRecentSearches([]);
+    }
+  }, []);
 
   // Save search mutation
   const saveSearchMutation = useMutation({
@@ -95,10 +117,18 @@ export function GlobalSearch() {
 
   // Save to recent searches
   const addToRecentSearches = (query: string) => {
-    if (!query.trim()) return;
-    const recent = JSON.parse(localStorage.getItem("recentSearches") || "[]");
-    const updated = [query, ...recent.filter((q: string) => q !== query)].slice(0, 10);
-    localStorage.setItem("recentSearches", JSON.stringify(updated));
+    if (!query.trim() || typeof window === "undefined") return;
+
+    try {
+      const stored = window.localStorage.getItem("recentSearches");
+      const recent = stored ? JSON.parse(stored) : [];
+      const normalized = Array.isArray(recent) ? recent : [];
+      const updated = [query, ...normalized.filter((q: string) => q !== query)].slice(0, 10);
+      window.localStorage.setItem("recentSearches", JSON.stringify(updated));
+      setRecentSearches(updated.slice(0, 5));
+    } catch (error) {
+      console.error("Failed to update recent searches", error);
+    }
   };
 
   const performSearch = useCallback(async (query: string) => {
@@ -138,7 +168,7 @@ export function GlobalSearch() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [hasPermission]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
