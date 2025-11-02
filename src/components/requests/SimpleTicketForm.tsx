@@ -200,6 +200,35 @@ export function SimpleTicketForm({
     return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100} ${sizes[i]}`;
   };
 
+  const uploadTicketAttachments = async (ticketId: string): Promise<string[]> => {
+    const uploadedFiles: string[] = [];
+
+    try {
+      for (const file of attachments) {
+        const extension = file.name.includes('.') ? `.${file.name.split('.').pop()}` : '';
+        const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const fileName = `${ticketId}/${uniqueSuffix}${extension}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('request-attachments')
+          .upload(fileName, file);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        uploadedFiles.push(fileName);
+      }
+
+      return uploadedFiles;
+    } catch (error) {
+      if (uploadedFiles.length > 0) {
+        await supabase.storage.from('request-attachments').remove(uploadedFiles);
+      }
+      throw error;
+    }
+  };
+
   const onSubmit = async (data: TicketFormData) => {
     if (!user) {
       toast({
@@ -222,11 +251,36 @@ export function SimpleTicketForm({
           department_id: data.department_id || null,
           user_id: user.id,
           status: 'inbox',
+          metadata: {
+            contact_name: data.contact_name || null,
+            contact_email: data.contact_email || null,
+            contact_phone: data.contact_phone || null,
+          },
         })
         .select('id, request_number')
         .single();
 
       if (error || !ticket) throw error || new Error('Ticket not returned');
+
+      let uploadedFiles: string[] = [];
+
+      if (allowAttachments && attachments.length > 0) {
+        try {
+          uploadedFiles = await uploadTicketAttachments(ticket.id);
+
+          const { error: attachmentUpdateError } = await supabase
+            .from('tickets')
+            .update({ attachments: uploadedFiles })
+            .eq('id', ticket.id);
+
+          if (attachmentUpdateError) {
+            throw attachmentUpdateError;
+          }
+        } catch (attachmentError) {
+          await supabase.from('tickets').delete().eq('id', ticket.id);
+          throw attachmentError;
+        }
+      }
 
       await supabase.from('ticket_events').insert({
         ticket_id: ticket.id,
@@ -236,6 +290,7 @@ export function SimpleTicketForm({
           contact_name: data.contact_name,
           contact_email: data.contact_email,
           contact_phone: data.contact_phone,
+          attachments: uploadedFiles,
           attachment_names: attachments.map((file) => file.name),
         },
       });
