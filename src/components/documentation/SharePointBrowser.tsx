@@ -334,6 +334,7 @@ export function SharePointBrowser() {
   };
 
   const navigateToFolder = (folderName: string) => {
+    if (loading) return; // Prevent navigation while loading
     const newPath = currentPath === '/' ? `/${folderName}` : `${currentPath}/${folderName}`;
     setPathHistory([...pathHistory, currentPath]);
     setCurrentPath(newPath);
@@ -530,7 +531,7 @@ export function SharePointBrowser() {
                 {folders.map((folder) => (
                   <TableRow 
                     key={folder.id}
-                    className="cursor-pointer hover:bg-muted/50"
+                    className={`cursor-pointer hover:bg-muted/50 ${loading ? 'opacity-50 pointer-events-none' : ''}`}
                     onClick={() => navigateToFolder(folder.name)}
                   >
                     <TableCell>
