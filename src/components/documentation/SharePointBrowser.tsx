@@ -90,7 +90,30 @@ export function SharePointBrowser() {
 
         if (error) {
           console.error('Upload error:', error);
-          toast.error(`Failed to upload ${file.name}`);
+          // Try to extract status and error body for better UX
+          let status: number | undefined = (error as any)?.status;
+          let bodyText = '';
+          try {
+            const res = (error as any)?.context?.response as Response | undefined;
+            if (res) {
+              status = res.status || status;
+              const bodyAny = await res.clone().json().catch(async () => await res.text());
+              bodyText = typeof bodyAny === 'string' ? bodyAny : (bodyAny?.error || JSON.stringify(bodyAny));
+            }
+          } catch {}
+
+          const lower = (bodyText || '').toLowerCase();
+          if (status === 401 || lower.includes('token expired')) {
+            setNeedsO365(true);
+            toast.error('Your Microsoft 365 session expired. Please reconnect your Office 365 account to continue.');
+          } else if (status === 403 || lower.includes('access denied') || lower.includes('insufficient')) {
+            setNeedsO365(true);
+            toast.error('Permission denied. Reconnect your Office 365 account to grant write access, or ask an admin for permission to this folder.');
+          } else if (status === 404 || lower.includes('not found')) {
+            toast.error('Folder path not found in SharePoint configuration. Please verify the configured folder.');
+          } else {
+            toast.error(`Failed to upload ${file.name}`);
+          }
         } else {
           toast.success(`Uploaded ${file.name} to SharePoint`);
         }

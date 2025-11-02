@@ -164,16 +164,57 @@ serve(async (req) => {
     });
 
     if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      console.error('Graph API upload error:', errorText);
-      
+      // Try to parse Graph error for clearer messaging
+      let errCode = '';
+      let errMessage = '';
+      try {
+        const errJson = await uploadResponse.clone().json();
+        errCode = errJson?.error?.code || '';
+        errMessage = errJson?.error?.message || '';
+        console.error('Graph API upload error:', JSON.stringify(errJson));
+      } catch {
+        const errorText = await uploadResponse.text();
+        console.error('Graph API upload error:', errorText);
+        errMessage = errorText;
+      }
+
+      // Expired/invalid token → ask user to reconnect O365
       if (uploadResponse.status === 401) {
         return new Response(
-          JSON.stringify({ error: 'Office 365 token expired. Please reconnect.' }),
+          JSON.stringify({ 
+            error: 'Office 365 token expired. Please reconnect your Office 365 account.',
+            configured: true,
+            needsO365: true
+          }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
+      // Missing write permissions or no consent for write scopes
+      const accessDenied = uploadResponse.status === 403 || /accessdenied|insufficient/i.test(errCode + ' ' + errMessage);
+      if (accessDenied) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Access denied by SharePoint. Your account may not have write permission to this location, or the integration lacks write consent (Files.ReadWrite.All, Sites.ReadWrite.All). Please reconnect your Office 365 account. If the issue persists, ask an administrator to grant access to this SharePoint folder.',
+            configured: true,
+            needsO365: true,
+            requires_admin_consent: /admin|consent|insufficient privileges/i.test(errMessage)
+          }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Not found → likely invalid path
+      if (uploadResponse.status === 404) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Folder path not found in SharePoint. Please verify the configured folder path.',
+            configured: true
+          }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       return new Response(
         JSON.stringify({ error: `Upload failed: ${uploadResponse.status}` }),
         { status: uploadResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
