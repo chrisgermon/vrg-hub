@@ -59,10 +59,53 @@ export function SharePointBrowser() {
   const [fromCache, setFromCache] = useState(false);
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<SharePointFile | SharePointFolder | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     loadItems(currentPath);
   }, [currentPath]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please log in to upload files');
+        return;
+      }
+
+      // Upload each file to storage
+      for (const file of Array.from(files)) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        const filePath = `sharepoint-uploads/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('company-assets')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          toast.error(`Failed to upload ${file.name}`);
+        } else {
+          toast.success(`Uploaded ${file.name}`);
+        }
+      }
+
+      // Refresh the current view
+      await loadItems(currentPath, true);
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload files');
+    } finally {
+      setUploading(false);
+      // Reset file input
+      e.target.value = '';
+    }
+  };
 
   const loadItems = async (path: string, forceRefresh = false) => {
     try {
@@ -408,11 +451,41 @@ export function SharePointBrowser() {
           <CardContent className="py-12 text-center">
             <Folder className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-xl font-semibold mb-2">This folder is empty</h3>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4">
               There are no files or folders in this location.
             </p>
+            <Button onClick={() => document.getElementById('sharepoint-upload')?.click()}>
+              Upload Files
+            </Button>
+            <input
+              id="sharepoint-upload"
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileUpload}
+            />
           </CardContent>
         </Card>
+      )}
+
+      {/* Upload button for non-empty folders */}
+      {(folders.length > 0 || files.length > 0) && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            size="lg"
+            onClick={() => document.getElementById('sharepoint-upload-fab')?.click()}
+            className="rounded-full h-14 w-14 shadow-lg"
+          >
+            <input
+              id="sharepoint-upload-fab"
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+            +
+          </Button>
+        </div>
       )}
 
     </div>
