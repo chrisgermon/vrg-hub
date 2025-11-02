@@ -48,10 +48,16 @@ Deno.serve(async (req) => {
       companyId = profile?.brand_id || user.id;
     }
 
-    // Get the request body to check for custom folder path
+    // Get the request body to check for custom folder path and overrides
     const body = await req.json().catch(() => ({}));
-    const requestedFolderPath = body.folder_path;
+    const requestedFolderPath = body.folder_path as string | undefined;
+    const requestedCompanyId = body.company_id as string | undefined;
+    const requestedSiteId = body.site_id as string | undefined;
 
+    // If a company_id was provided in the request, prefer it
+    if (requestedCompanyId) {
+      companyId = requestedCompanyId;
+    }
     // Get SharePoint configuration for the resolved company
     const { data: spConfig } = await supabaseClient
       .from('sharepoint_configurations')
@@ -67,8 +73,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use the user's O365 connection (preferred) or fallback to company-based
-    let o365Connection = userConnection;
+    // Use the user's O365 connection (preferred) if it matches the target company, otherwise fallback to company-based
+    let o365Connection = (userConnection && userConnection.company_id === companyId) ? userConnection : undefined;
     if (!o365Connection) {
       const { data } = await supabaseClient
         .from('office365_connections')
@@ -119,7 +125,7 @@ Deno.serve(async (req) => {
     // Fetch files from SharePoint
     // Use requested folder path if provided, otherwise use config default
     const folderPath = requestedFolderPath !== undefined ? requestedFolderPath : (spConfig.folder_path || '/');
-    const siteId = spConfig.site_id;
+    const siteId = requestedSiteId || spConfig.site_id;
     
     console.log(`Syncing SharePoint folder: "${folderPath}" for company: ${companyId}`);
     
