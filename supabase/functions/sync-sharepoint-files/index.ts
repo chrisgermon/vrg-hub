@@ -29,22 +29,32 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get user's company_id from profile
-    const { data: profile } = await supabaseClient
-      .from('profiles')
-      .select('brand_id')
-      .eq('id', user.id)
-      .single();
+    // Determine company context from Office 365 connection first
+    const { data: userConnection } = await supabaseClient
+      .from('office365_connections')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('connection_type', 'user')
+      .maybeSingle();
 
-    const companyId = profile?.brand_id || user.id;
+    // Fallback to profile brand if no connection yet
+    let companyId = userConnection?.company_id as string | undefined;
+    if (!companyId) {
+      const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('brand_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      companyId = profile?.brand_id || user.id;
+    }
 
-    // Get SharePoint configuration
+    // Get SharePoint configuration for the resolved company
     const { data: spConfig } = await supabaseClient
       .from('sharepoint_configurations')
       .select('*')
       .eq('company_id', companyId)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
     if (!spConfig) {
       return new Response(
@@ -53,13 +63,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get Office 365 connection
-    const { data: o365Connection } = await supabaseClient
-      .from('office365_connections')
-      .select('*')
-      .eq('company_id', companyId)
-      .eq('connection_type', 'user')
-      .single();
+    // Use the user's O365 connection (preferred) or fallback to company-based
+    let o365Connection = userConnection;
+    if (!o365Connection) {
+      const { data } = await supabaseClient
+        .from('office365_connections')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('connection_type', 'user')
+        .maybeSingle();
+      o365Connection = data || undefined;
+    }
 
     if (!o365Connection?.access_token) {
       return new Response(

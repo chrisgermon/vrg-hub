@@ -70,15 +70,26 @@ export function SharePointBrowser() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { configured: false };
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('brand_id')
-        .eq('id', user.id)
-        .single();
+      // Prefer company_id from Office 365 connection
+      const { data: connection } = await (supabase as any)
+        .from('office365_connections')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .eq('connection_type', 'user')
+        .maybeSingle();
 
-      const companyId = profile?.brand_id || user.id;
+      let companyId: string | undefined = (connection?.company_id as string | undefined);
 
-      const { data: spConfig, error: spError } = await supabase
+      if (!companyId) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('brand_id')
+          .eq('id', user.id)
+          .maybeSingle();
+        companyId = (profile?.brand_id as any) || user.id;
+      }
+
+      const { data: spConfig, error: spError } = await (supabase as any)
         .from('sharepoint_configurations')
         .select('id')
         .eq('company_id', companyId)
