@@ -116,9 +116,16 @@ Deno.serve(async (req) => {
     const folderPath = spConfig.folder_path || '';
     const siteId = spConfig.site_id;
     
-    const graphUrl = folderPath
-      ? `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/root:${folderPath}:/children`
-      : `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/root/children`;
+    // Construct proper Graph API URL
+    let graphUrl: string;
+    if (folderPath && folderPath !== '/' && folderPath.trim() !== '') {
+      // Ensure folder path starts with / and doesn't end with /
+      const normalizedPath = folderPath.startsWith('/') ? folderPath : `/${folderPath}`;
+      const cleanPath = normalizedPath.endsWith('/') ? normalizedPath.slice(0, -1) : normalizedPath;
+      graphUrl = `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/root:${cleanPath}:/children`;
+    } else {
+      graphUrl = `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/root/children`;
+    }
 
     const graphResponse = await fetch(graphUrl, {
       headers: {
