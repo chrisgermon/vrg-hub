@@ -179,7 +179,19 @@ serve(async (req) => {
 
     // Fetch users with phone numbers and groups
     const effectiveCompanyId = company_id ?? connection.company_id;
-    const usersData = await fetchGraphData(accessToken, 'users?$select=userPrincipalName,displayName,mail,jobTitle,department,officeLocation,assignedLicenses,businessPhones,mobilePhone,memberOf&$expand=memberOf($select=id,displayName)');
+    let usersData;
+    try {
+      usersData = await fetchGraphData(
+        accessToken,
+        'users?$select=userPrincipalName,displayName,mail,jobTitle,department,officeLocation,assignedLicenses,businessPhones,mobilePhone,memberOf&$expand=memberOf($select=id,displayName)'
+      );
+    } catch (error) {
+      console.error('Failed to fetch extended user data with group memberships. Falling back to basic user fields.', error);
+      usersData = await fetchGraphData(
+        accessToken,
+        'users?$select=userPrincipalName,displayName,mail,jobTitle,department,officeLocation,assignedLicenses,businessPhones,mobilePhone'
+      );
+    }
     
     // Track sync statistics
     let totalUsers = 0;
@@ -260,34 +272,58 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
-    
+
     let usersCreated = 0;
     let usersExisted = 0;
-    
+    const existingEmails = new Set<string>();
+
+    try {
+      const perPage = 1000;
+      let page = 1;
+      while (true) {
+        const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+        if (error) {
+          console.error('Failed to preload existing auth users for Office 365 sync:', error);
+          break;
+        }
+
+        for (const existingUser of data?.users || []) {
+          if (existingUser.email) {
+            existingEmails.add(existingUser.email.toLowerCase());
+          }
+        }
+
+        if (!data?.users || data.users.length < perPage) {
+          break;
+        }
+        page++;
+      }
+    } catch (error) {
+      console.error('Unexpected error preloading auth users for Office 365 sync:', error);
+    }
+
     for (const syncedUser of usersData.value || []) {
       if (!syncedUser.mail) continue;
-      
-      // Check if user already exists
-      const { data: existingUser } = await adminClient.auth.admin.listUsers();
-      const userExists = existingUser?.users?.some((u: any) => u.email === syncedUser.mail);
-      
-      if (!userExists) {
-        try {
-          // Create auth user marked as O365 import
-          await adminClient.auth.admin.createUser({
-            email: syncedUser.mail,
-            email_confirm: true,
-            user_metadata: {
-              full_name: syncedUser.displayName,
-              imported_from_o365: true,
-            },
-          });
-          usersCreated++;
-        } catch (error) {
-          console.error(`Failed to create user ${syncedUser.mail}:`, error);
-        }
-      } else {
+
+      const normalizedEmail = syncedUser.mail.toLowerCase();
+      if (existingEmails.has(normalizedEmail)) {
         usersExisted++;
+        continue;
+      }
+
+      try {
+        await adminClient.auth.admin.createUser({
+          email: syncedUser.mail,
+          email_confirm: true,
+          user_metadata: {
+            full_name: syncedUser.displayName,
+            imported_from_o365: true,
+          },
+        });
+        usersCreated++;
+        existingEmails.add(normalizedEmail);
+      } catch (error) {
+        console.error(`Failed to create user ${syncedUser.mail}:`, error);
       }
     }
 
