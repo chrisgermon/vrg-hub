@@ -1,67 +1,85 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { X, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { getDepartmentSections } from '@/lib/newsletterDepartments';
 
-export function SubmissionPreview({ submissionId, onClose }: { submissionId: string; onClose: () => void }) {
-  const queryClient = useQueryClient();
+interface SectionData {
+  section: string;
+  content: string;
+  isRequired: boolean;
+}
+
+export function SubmissionPreview({
+  submissionId,
+  onClose,
+}: {
+  submissionId: string;
+  onClose: () => void;
+}) {
   const [reviewNotes, setReviewNotes] = useState('');
+  const queryClient = useQueryClient();
 
   const { data: submission, isLoading } = useQuery({
-    queryKey: ['newsletter-submission-detail', submissionId],
+    queryKey: ['newsletter-submission', submissionId],
     queryFn: async () => {
-      // Fetch submission
       const { data: submissionData, error: submissionError } = await supabase
         .from('newsletter_submissions')
         .select('*')
         .eq('id', submissionId)
         .single();
-      
+
       if (submissionError) throw submissionError;
-      
+
       // Fetch contributor profile
-      const { data: contributorData } = await supabase
+      const { data: contributor } = await supabase
         .from('profiles')
-        .select('full_name, email')
+        .select('full_name')
         .eq('id', submissionData.contributor_id)
         .single();
-      
-      // Fetch cycle
-      const { data: cycleData } = await supabase
-        .from('newsletter_cycles')
-        .select('name, due_date')
-        .eq('id', submissionData.cycle_id)
-        .single();
-      
+
+      // Fetch reviewer profile if exists
+      let reviewer = null;
+      if (submissionData.reviewed_by) {
+        const { data: reviewerData } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', submissionData.reviewed_by)
+          .single();
+        reviewer = reviewerData;
+      }
+
       return {
         ...submissionData,
-        contributor: contributorData,
-        cycle: cycleData,
+        contributor,
+        reviewer
       };
     },
   });
 
-  const updateSubmissionStatus = useMutation({
-    mutationFn: async ({ status, notes }: { status: string; notes?: string }) => {
+  const updateStatus = useMutation({
+    mutationFn: async (status: 'approved' | 'rejected') => {
       const { error } = await supabase
         .from('newsletter_submissions')
         .update({
           status,
-          review_notes: notes || null,
+          review_notes: reviewNotes,
           reviewed_at: new Date().toISOString(),
+          reviewed_by: (await supabase.auth.getUser()).data.user?.id,
         })
         .eq('id', submissionId);
+
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['newsletter-submission-detail'] });
-      queryClient.invalidateQueries({ queryKey: ['newsletter-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['newsletter-submission', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['newsletter-submissions'] });
       toast.success('Submission status updated');
       onClose();
     },
@@ -70,6 +88,9 @@ export function SubmissionPreview({ submissionId, onClose }: { submissionId: str
 
   if (isLoading) return <div>Loading...</div>;
   if (!submission) return <div>Submission not found</div>;
+
+  const sectionsData = (submission.sections_data || []) as unknown as SectionData[];
+  const departmentSections = getDepartmentSections(submission.department);
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
@@ -96,11 +117,31 @@ export function SubmissionPreview({ submissionId, onClose }: { submissionId: str
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div>
-          <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg">
-            <p className="whitespace-pre-wrap">{submission.content}</p>
+        {submission.no_update_this_month ? (
+          <div className="bg-muted/30 p-4 rounded-lg text-center">
+            <p className="text-muted-foreground">No updates this month</p>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-6">
+            {sectionsData.map((sectionData) => {
+              const section = departmentSections.find(s => s.key === sectionData.section);
+              if (!section || !sectionData.content) return null;
+
+              return (
+                <div key={sectionData.section} className="space-y-2">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    {section.name}
+                    {section.isRequired && <Badge variant="outline" className="text-xs">Required</Badge>}
+                  </h3>
+                  <div 
+                    className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg"
+                    dangerouslySetInnerHTML={{ __html: sectionData.content }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {submission.status === 'submitted' && (
           <>
@@ -117,15 +158,15 @@ export function SubmissionPreview({ submissionId, onClose }: { submissionId: str
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"
-                onClick={() => updateSubmissionStatus.mutate({ status: 'revision_requested', notes: reviewNotes })}
-                disabled={updateSubmissionStatus.isPending}
+                onClick={() => updateStatus.mutate('rejected')}
+                disabled={updateStatus.isPending}
               >
                 <XCircle className="h-4 w-4 mr-2" />
-                Request Revision
+                Request Changes
               </Button>
               <Button
-                onClick={() => updateSubmissionStatus.mutate({ status: 'approved', notes: reviewNotes })}
-                disabled={updateSubmissionStatus.isPending}
+                onClick={() => updateStatus.mutate('approved')}
+                disabled={updateStatus.isPending}
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Approve
@@ -134,15 +175,17 @@ export function SubmissionPreview({ submissionId, onClose }: { submissionId: str
           </>
         )}
 
-        {submission.review_notes && (
-          <div className="bg-muted/50 p-4 rounded-lg">
-            <h4 className="font-semibold mb-2">Review Notes</h4>
+        {submission.status === 'rejected' && submission.review_notes && (
+          <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-lg">
+            <h4 className="font-semibold text-destructive mb-2">Review Notes</h4>
             <p className="text-sm">{submission.review_notes}</p>
-            {submission.reviewed_at && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Reviewed on {new Date(submission.reviewed_at).toLocaleDateString()}
-              </p>
-            )}
+          </div>
+        )}
+
+        {submission.status === 'approved' && submission.review_notes && (
+          <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+            <h4 className="font-semibold text-green-700 dark:text-green-300 mb-2">Review Notes</h4>
+            <p className="text-sm">{submission.review_notes}</p>
           </div>
         )}
       </CardContent>

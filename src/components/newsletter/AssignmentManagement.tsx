@@ -9,15 +9,9 @@ import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 
-const DEPARTMENTS = [
-  'Admin Managers',
-  'CMO',
-  'Commercial/Marketing',
-  'Finance',
-  'HR / People & Culture / OHS',
-  'IT',
-  'Operations Managers',
-];
+import { getDepartmentNames } from '@/lib/newsletterDepartments';
+
+const DEPARTMENTS = getDepartmentNames();
 
 export function AssignmentManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);

@@ -1539,6 +1539,8 @@ export type Database = {
           cycle_id: string
           department: string
           id: string
+          is_required: boolean | null
+          section: string | null
           status: string
           submitted_at: string | null
           template_id: string | null
@@ -1553,6 +1555,8 @@ export type Database = {
           cycle_id: string
           department: string
           id?: string
+          is_required?: boolean | null
+          section?: string | null
           status?: string
           submitted_at?: string | null
           template_id?: string | null
@@ -1567,6 +1571,8 @@ export type Database = {
           cycle_id?: string
           department?: string
           id?: string
+          is_required?: boolean | null
+          section?: string | null
           status?: string
           submitted_at?: string | null
           template_id?: string | null
@@ -1639,6 +1645,8 @@ export type Database = {
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          section: string | null
+          sections_data: Json | null
           status: string
           submitted_at: string | null
           title: string
@@ -1659,6 +1667,8 @@ export type Database = {
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          section?: string | null
+          sections_data?: Json | null
           status?: string
           submitted_at?: string | null
           title: string
@@ -1679,6 +1689,8 @@ export type Database = {
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          section?: string | null
+          sections_data?: Json | null
           status?: string
           submitted_at?: string | null
           title?: string

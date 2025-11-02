@@ -1,94 +1,104 @@
 import { useState, useEffect } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { toast } from 'sonner';
-import { ArrowLeft, Save, Send, CheckCircle } from 'lucide-react';
+import { CheckCircle, Send } from 'lucide-react';
+import { getDepartmentSections, type DepartmentSection } from '@/lib/newsletterDepartments';
 
-export function NewsletterSubmissionForm({
-  cycleId,
+interface SectionData {
+  section: string;
+  content: string;
+  isRequired: boolean;
+}
+
+export function NewsletterSubmissionForm({ 
+  assignmentId, 
+  cycleId, 
   department,
   onSuccess,
-  onCancel,
-}: {
-  cycleId: string;
+  onCancel
+}: { 
+  assignmentId: string; 
+  cycleId: string; 
   department: string;
-  onSuccess: () => void;
-  onCancel: () => void;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [noUpdate, setNoUpdate] = useState(false);
+  const [sectionsData, setSectionsData] = useState<SectionData[]>([]);
+  const [noUpdateThisMonth, setNoUpdateThisMonth] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
+
+  const departmentSections = getDepartmentSections(department);
+
+  // Initialize sections data
+  useEffect(() => {
+    const initialSections = departmentSections.map(section => ({
+      section: section.key,
+      content: '',
+      isRequired: section.isRequired,
+    }));
+    setSectionsData(initialSections);
+  }, [department]);
 
   const { data: assignment } = useQuery({
-    queryKey: ['newsletter-assignment', cycleId, department, user?.id],
+    queryKey: ['newsletter-assignment', assignmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('newsletter_assignments')
-        .select('*, template:template_id(*)')
-        .eq('cycle_id', cycleId)
-        .eq('department', department)
-        .eq('contributor_id', user?.id)
+        .select('*, cycle:newsletter_cycles(*)')
+        .eq('id', assignmentId)
         .single();
       if (error) throw error;
       return data;
     },
   });
 
-  const { data: existingSubmission } = useQuery({
-    queryKey: ['newsletter-submission', assignment?.id],
+  const { data: existingSubmission, isLoading } = useQuery({
+    queryKey: ['newsletter-submission', assignmentId],
     queryFn: async () => {
-      if (!assignment?.id) return null;
       const { data, error } = await supabase
         .from('newsletter_submissions')
         .select('*')
-        .eq('assignment_id', assignment.id)
-        .single();
-      if (error && error.code !== 'PGRST116') throw error;
+        .eq('assignment_id', assignmentId)
+        .maybeSingle();
+      if (error) throw error;
       return data;
     },
-    enabled: !!assignment?.id,
   });
 
   useEffect(() => {
     if (existingSubmission) {
       setTitle(existingSubmission.title || '');
-      setContent(existingSubmission.content || '');
-      setNoUpdate(existingSubmission.no_update_this_month || false);
+      setNoUpdateThisMonth(existingSubmission.no_update_this_month || false);
+      
+      if (existingSubmission.sections_data) {
+        setSectionsData(existingSubmission.sections_data as unknown as SectionData[]);
+      }
     }
   }, [existingSubmission]);
 
-  // Auto-save every 30 seconds
-  useEffect(() => {
-    if (!isDirty || !assignment?.id) return;
-    const timer = setTimeout(() => {
-      saveSubmission.mutate({ status: 'draft', silent: true });
-      setIsDirty(false);
-    }, 30000);
-    return () => clearTimeout(timer);
-  }, [title, content, noUpdate, isDirty, assignment?.id]);
-
   const saveSubmission = useMutation({
-    mutationFn: async ({ status, silent }: { status: 'draft' | 'submitted'; silent?: boolean }) => {
+    mutationFn: async ({ status }: { status: string }) => {
       const submissionData = {
+        assignment_id: assignmentId,
         cycle_id: cycleId,
-        assignment_id: assignment?.id,
         contributor_id: user?.id,
         department,
         title,
-        content,
+        content: '', // Keep for backward compatibility
+        sections_data: sectionsData as any,
+        no_update_this_month: noUpdateThisMonth,
         status,
-        no_update_this_month: noUpdate,
         submitted_at: status === 'submitted' ? new Date().toISOString() : null,
       };
 
@@ -105,46 +115,87 @@ export function NewsletterSubmissionForm({
         if (error) throw error;
       }
 
-      if (assignment?.id && status === 'submitted') {
+      if (status === 'submitted') {
         await supabase
           .from('newsletter_assignments')
-          .update({ status: 'submitted', submitted_at: new Date().toISOString() })
-          .eq('id', assignment.id);
+          .update({ 
+            status: 'submitted',
+            submitted_at: new Date().toISOString()
+          })
+          .eq('id', assignmentId);
       }
-      return { silent };
     },
-    onSuccess: ({ silent }, { status }) => {
+    onSuccess: (_, { status }) => {
+      queryClient.invalidateQueries({ queryKey: ['newsletter-submission', assignmentId] });
       queryClient.invalidateQueries({ queryKey: ['newsletter-assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['newsletter-submission'] });
       setLastSaved(new Date());
-      if (!silent) {
-        toast.success(status === 'submitted' ? 'Submission sent!' : 'Draft saved');
-        if (status === 'submitted') onSuccess();
+      toast.success(status === 'submitted' ? 'Submission sent!' : 'Draft saved');
+      if (status === 'submitted' && onSuccess) {
+        onSuccess();
       }
     },
-    onError: () => toast.error('Failed to save submission'),
+    onError: (error: Error) => {
+      toast.error(`Failed to save: ${error.message}`);
+    },
   });
 
+  const handleSectionChange = (sectionKey: string, content: string) => {
+    setSectionsData(prev => 
+      prev.map(section => 
+        section.section === sectionKey 
+          ? { ...section, content }
+          : section
+      )
+    );
+  };
+
   const handleSaveDraft = () => {
+    if (!title.trim()) {
+      toast.error('Please enter a title');
+      return;
+    }
     saveSubmission.mutate({ status: 'draft' });
-    setIsDirty(false);
   };
 
   const handleSubmit = () => {
-    if (noUpdate) {
-      if (confirm('Submit "No update this month"?')) {
-        saveSubmission.mutate({ status: 'submitted' });
-      }
+    if (!title.trim()) {
+      toast.error('Please enter a title');
       return;
     }
-    if (!title.trim() || !content.trim()) {
-      toast.error('Please fill in both title and content');
+
+    const requiredSections = sectionsData.filter(s => s.isRequired);
+    const missingRequired = requiredSections.filter(s => !s.content.trim());
+    
+    if (missingRequired.length > 0 && !noUpdateThisMonth) {
+      const sectionNames = missingRequired
+        .map(s => departmentSections.find(ds => ds.key === s.section)?.name)
+        .join(', ');
+      toast.error(`Please fill in required sections: ${sectionNames}`);
       return;
     }
+
     if (confirm('Submit your contribution? You cannot edit after submission.')) {
       saveSubmission.mutate({ status: 'submitted' });
     }
   };
+
+  if (isLoading) {
+    return <div className="text-center py-8">Loading...</div>;
+  }
+
+  if (existingSubmission?.status === 'submitted') {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Submission Complete</h3>
+          <p className="text-muted-foreground">
+            Your contribution has been submitted and is under review.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -161,75 +212,69 @@ export function NewsletterSubmissionForm({
                   <span>Saved {lastSaved.toLocaleTimeString()}</span>
                 </div>
               )}
-              <Button variant="ghost" size="sm" onClick={onCancel}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+              <Button
+                variant="outline"
+                onClick={handleSaveDraft}
+                disabled={saveSubmission.isPending}
+              >
+                Save Draft
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={saveSubmission.isPending}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Submit
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {existingSubmission?.status === 'submitted' ? (
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-              <p className="text-sm text-green-800 dark:text-green-200">
-                ✓ Submission completed on {new Date(existingSubmission.submitted_at!).toLocaleDateString()}
-              </p>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="title">Newsletter Title *</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g., January 2024 IT Updates"
+              disabled={existingSubmission?.status === 'submitted'}
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="no-update"
+              checked={noUpdateThisMonth}
+              onCheckedChange={(checked) => setNoUpdateThisMonth(checked as boolean)}
+              disabled={existingSubmission?.status === 'submitted'}
+            />
+            <label
+              htmlFor="no-update"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              No updates this month
+            </label>
+          </div>
+
+          {!noUpdateThisMonth && (
+            <div className="space-y-6">
+              {departmentSections.map((section) => {
+                const sectionData = sectionsData.find(s => s.section === section.key);
+                return (
+                  <div key={section.key} className="space-y-2">
+                    <Label htmlFor={section.key}>
+                      {section.name} {section.isRequired && <span className="text-destructive">*</span>}
+                    </Label>
+                    <RichTextEditor
+                      value={sectionData?.content || ''}
+                      onChange={(content) => handleSectionChange(section.key, content)}
+                      placeholder={`Enter ${section.name.toLowerCase()}...`}
+                      disabled={existingSubmission?.status === 'submitted'}
+                    />
+                  </div>
+                );
+              })}
             </div>
-          ) : (
-            <>
-              <div className="flex items-center space-x-2 bg-muted/50 p-3 rounded-lg">
-                <Switch
-                  id="no-update"
-                  checked={noUpdate}
-                  onCheckedChange={(checked) => {
-                    setNoUpdate(checked);
-                    setIsDirty(true);
-                  }}
-                />
-                <Label htmlFor="no-update">No update this month</Label>
-              </div>
-
-              {!noUpdate && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Title *</Label>
-                    <Input
-                      id="title"
-                      value={title}
-                      onChange={(e) => {
-                        setTitle(e.target.value);
-                        setIsDirty(true);
-                      }}
-                      placeholder="Enter title"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="content">Content *</Label>
-                    <Textarea
-                      id="content"
-                      value={content}
-                      onChange={(e) => {
-                        setContent(e.target.value);
-                        setIsDirty(true);
-                      }}
-                      placeholder="Write your content..."
-                      rows={15}
-                    />
-                  </div>
-                </>
-              )}
-
-              <div className="flex gap-2 justify-end pt-4 border-t">
-                <Button variant="outline" onClick={handleSaveDraft} disabled={saveSubmission.isPending}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Draft
-                </Button>
-                <Button onClick={handleSubmit} disabled={saveSubmission.isPending || (noUpdate ? false : !title || !content)}>
-                  <Send className="h-4 w-4 mr-2" />
-                  Submit
-                </Button>
-              </div>
-            </>
           )}
         </CardContent>
       </Card>

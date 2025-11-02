@@ -37,6 +37,7 @@ export function ContributorDashboard() {
   if (selectedAssignment) {
     return (
       <NewsletterSubmissionForm
+        assignmentId={selectedAssignment.id}
         cycleId={selectedAssignment.cycle_id}
         department={selectedAssignment.department}
         onSuccess={() => setSelectedAssignment(null)}
@@ -70,9 +71,6 @@ export function ContributorDashboard() {
                         <p className="text-sm text-muted-foreground">
                           Department: {assignment.department}
                         </p>
-                        {assignment.topic && (
-                          <p className="text-sm">Topic: {assignment.topic}</p>
-                        )}
                         <p className="text-sm text-muted-foreground flex items-center gap-2">
                           <Clock className="h-4 w-4" />
                           Due: {new Date(assignment.cycle?.due_date).toLocaleDateString()}
