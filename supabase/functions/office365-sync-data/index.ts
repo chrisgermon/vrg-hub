@@ -153,6 +153,16 @@ serve(async (req) => {
       );
     }
 
+    // Debug visibility into connections available
+    try {
+      const { count: totalConns } = await supabase
+        .from('office365_connections')
+        .select('id', { count: 'exact', head: true });
+      console.log('DEBUG office365_connections total:', totalConns, 'company_id:', company_id, 'user_id:', user.id);
+    } catch (e) {
+      console.error('DEBUG failed counting office365_connections:', e);
+    }
+
     // Try multiple strategies to find a connection
     console.log('Sync request received. Company_id:', company_id, 'user_id:', user.id);
 
