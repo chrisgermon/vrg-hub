@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
       .from('office365_connections')
       .select('*')
       .eq('user_id', user.id)
-      .eq('connection_type', 'user')
+      .order('updated_at', { ascending: false })
       .maybeSingle();
 
     // Fallback to profile brand if no connection yet
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
         .from('office365_connections')
         .select('*')
         .eq('company_id', companyId)
-        .eq('connection_type', 'user')
+        .order('updated_at', { ascending: false })
         .maybeSingle();
       o365Connection = data || undefined;
     }

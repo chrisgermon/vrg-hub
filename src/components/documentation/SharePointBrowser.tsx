@@ -75,7 +75,7 @@ export function SharePointBrowser() {
         .from('office365_connections')
         .select('company_id')
         .eq('user_id', user.id)
-        .eq('connection_type', 'user')
+        .order('updated_at', { ascending: false })
         .maybeSingle();
 
       let companyId: string | undefined = (connection?.company_id as string | undefined);
