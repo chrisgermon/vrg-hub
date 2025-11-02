@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, CheckCircle2, FolderOpen, Link as LinkIcon } from 'lucide-react';
+import { Loader2, CheckCircle2, FolderOpen, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import { ConnectOffice365Button } from '@/components/documentation/ConnectOffice365Button';
 
 interface SharePointSite {
@@ -301,7 +301,17 @@ export function SharePointConfiguration() {
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="sharepoint-site">SharePoint Site</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="sharepoint-site">SharePoint Site</Label>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={loadSites}
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
           <Select value={selectedSite} onValueChange={setSelectedSite}>
             <SelectTrigger id="sharepoint-site">
               <SelectValue placeholder="Select a SharePoint site" />

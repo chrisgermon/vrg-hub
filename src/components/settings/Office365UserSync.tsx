@@ -157,7 +157,7 @@ export function Office365UserSync() {
         setConnection({
           id: (conn as any).id,
           connected: true,
-          last_sync: null,
+          last_sync: (conn as any).updated_at,
           sync_enabled: true,
         });
         // Preload users for this company
