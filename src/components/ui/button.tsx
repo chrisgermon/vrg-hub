@@ -10,27 +10,28 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]",
+          "bg-primary text-primary-foreground shadow-sm hover:shadow-md hover:bg-primary/90 transition-all duration-200",
         destructive:
-          "bg-gradient-to-r from-destructive to-red-600 text-destructive-foreground shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]",
+          "bg-destructive text-destructive-foreground shadow-sm hover:shadow-md hover:bg-destructive/90 transition-all duration-200",
         outline:
-          "border-2 border-primary bg-background text-primary hover:bg-primary hover:text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200",
+          "border-2 border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors duration-200",
         secondary:
-          "bg-gradient-to-r from-secondary to-secondary/90 text-secondary-foreground shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
-        ghost: "hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors duration-150",
+          "bg-secondary text-secondary-foreground shadow-sm hover:shadow-md hover:bg-secondary/80 transition-all duration-200",
+        ghost: "hover:bg-accent hover:text-accent-foreground transition-colors duration-150",
         link: "text-primary underline-offset-4 hover:underline",
-        premium: 
-          "bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 text-white shadow-lg hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] border border-white/20",
+        // Deprecated variants below - use className for custom styling
+        premium:
+          "bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] border border-white/20",
         glass:
-          "bg-white/10 backdrop-blur-md border border-white/20 text-foreground shadow-lg hover:bg-white/20 hover:shadow-xl transition-all duration-200",
+          "bg-white/10 backdrop-blur-md border border-white/20 text-foreground shadow-md hover:bg-white/20 transition-all duration-200",
         neon:
           "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/50 hover:shadow-cyan-500/70 hover:scale-[1.02] active:scale-[0.98] border border-cyan-400/30",
         approve:
-          "bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]",
+          "bg-green-600 text-white shadow-sm hover:shadow-md hover:bg-green-700 transition-all duration-200",
         decline:
-          "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]",
+          "bg-red-600 text-white shadow-sm hover:shadow-md hover:bg-red-700 transition-all duration-200",
         hero:
-          "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-xl hover:shadow-2xl hover:scale-[1.05] active:scale-[0.98] border border-white/30"
+          "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] border border-white/20"
       },
       size: {
         default: "h-11 px-6 py-2",

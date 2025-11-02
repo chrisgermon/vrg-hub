@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,12 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { 
-  Cloud, 
-  RefreshCw, 
-  UserPlus, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  Cloud,
+  RefreshCw,
+  UserPlus,
+  CheckCircle2,
+  XCircle,
   AlertCircle,
   Link as LinkIcon,
   Unlink,
@@ -22,7 +22,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { 
+import {
   Pagination,
   PaginationContent,
   PaginationItem,
@@ -31,6 +31,8 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { logger } from '@/lib/logger';
 
 interface Office365Connection {
   id: string;
@@ -65,57 +67,82 @@ export function Office365UserSync() {
 
   const isAdmin = userRole === 'super_admin' || userRole === 'tenant_admin';
 
-  const getTenantCompanyId = async (): Promise<string | null> => {
+  // Memoize filtered and paginated users for performance
+  const filteredUsers = useMemo(() => {
+    return office365Users.filter(user =>
+      user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (user.mail && user.mail.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      user.userPrincipalName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [office365Users, searchQuery]);
+
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * usersPerPage;
+    const endIndex = startIndex + usersPerPage;
+    return filteredUsers.slice(startIndex, endIndex);
+  }, [filteredUsers, currentPage, usersPerPage]);
+
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredUsers.length / usersPerPage);
+  }, [filteredUsers.length, usersPerPage]);
+
+  const getTenantCompanyId = useCallback(async (): Promise<string | null> => {
     try {
-      const { data } = await (supabase as any)
+      const { data, error } = await (supabase as any)
         .from('synced_office365_users')
         .select('company_id')
         .limit(1)
         .maybeSingle();
+
+      if (error) {
+        logger.error('Error fetching tenant company ID', error);
+        return null;
+      }
+
       return data?.company_id ?? null;
-    } catch {
+    } catch (error) {
+      logger.error('Unexpected error fetching tenant company ID', error);
+      toast.error('Failed to load company information');
       return null;
     }
-  };
+  }, []);
 
-  const loadUsers = async (companyIdParam?: string) => {
-    const companyId = companyIdParam || (await getTenantCompanyId());
-    if (!companyId) {
+  const loadUsers = useCallback(async (companyIdParam?: string) => {
+    try {
+      const companyId = companyIdParam || (await getTenantCompanyId());
+      if (!companyId) {
+        setOffice365Users([]);
+        return;
+      }
+      const { data: syncedUsers, error: queryError } = await (supabase as any)
+        .from('synced_office365_users')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .order('display_name');
+      if (queryError) {
+        logger.error('Error loading synced users', queryError);
+        toast.error('Failed to load synced users');
+        setOffice365Users([]);
+        return;
+      }
+      const users = (syncedUsers || []).map((u: any) => ({
+        id: u.user_principal_name,
+        displayName: u.display_name,
+        mail: u.mail,
+        userPrincipalName: u.user_principal_name,
+        jobTitle: u.job_title,
+        department: u.department,
+      }));
+      setOffice365Users(users);
+    } catch (error) {
+      logger.error('Unexpected error loading users', error);
+      toast.error('An unexpected error occurred');
       setOffice365Users([]);
-      return;
     }
-    const { data: syncedUsers, error: queryError } = await (supabase as any)
-      .from('synced_office365_users')
-      .select('*')
-      .eq('company_id', companyId)
-      .eq('is_active', true)
-      .order('display_name');
-    if (queryError) {
-      console.error('Error loading synced users:', queryError);
-      toast.error('Failed to load synced users');
-      setOffice365Users([]);
-      return;
-    }
-    const users = (syncedUsers || []).map((u: any) => ({
-      id: u.user_principal_name,
-      displayName: u.display_name,
-      mail: u.mail,
-      userPrincipalName: u.user_principal_name,
-      jobTitle: u.job_title,
-      department: u.department,
-    }));
-    setOffice365Users(users);
-  };
+  }, [getTenantCompanyId]);
 
-  useEffect(() => {
-    if (isAdmin) {
-      checkConnection();
-      // Also try to show any already-synced users
-      loadUsers();
-    }
-  }, [isAdmin]);
-
-  const checkConnection = async () => {
+  const checkConnection = useCallback(async () => {
     setLoading(true);
     try {
       // Try to find a connection for this user (may be restricted by RLS)
@@ -146,12 +173,18 @@ export function Office365UserSync() {
         }
       }
     } catch (error) {
-      console.error('Error checking connection:', error);
+      logger.error('Error checking Office 365 connection', error);
       setConnection({ id: '1', connected: false, last_sync: null, sync_enabled: false });
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, loadUsers, getTenantCompanyId]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      checkConnection();
+    }
+  }, [isAdmin, checkConnection]);
 
   const connectOffice365 = async () => {
     try {
@@ -435,8 +468,23 @@ export function Office365UserSync() {
   if (loading) {
     return (
       <Card>
-        <CardContent className="py-8">
-          <p className="text-center text-muted-foreground">Loading...</p>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-6 w-64" />
+              <Skeleton className="h-4 w-96" />
+            </div>
+            <Skeleton className="h-8 w-24" />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
         </CardContent>
       </Card>
     );
@@ -581,68 +629,44 @@ export function Office365UserSync() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(() => {
-                  const filteredUsers = office365Users.filter(user => 
-                    user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    (user.mail && user.mail.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                    user.userPrincipalName.toLowerCase().includes(searchQuery.toLowerCase())
-                  );
-                  
-                  const startIndex = (currentPage - 1) * usersPerPage;
-                  const endIndex = startIndex + usersPerPage;
-                  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
-                  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-
-                  return (
-                    <>
-                      {paginatedUsers.map((o365User) => (
-                        <TableRow key={o365User.id}>
-                          <TableCell className="font-medium">
-                            {o365User.displayName}
-                          </TableCell>
-                          <TableCell>{o365User.mail || o365User.userPrincipalName}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {o365User.jobTitle || '-'}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {o365User.department || '-'}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedUser(o365User);
-                                setImportDialogOpen(true);
-                              }}
-                              disabled={bulkImporting}
-                            >
-                              <UserPlus className="h-4 w-4 mr-2" />
-                              Import
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {paginatedUsers.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                            No users found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </>
-                  );
-                })()}
+                {paginatedUsers.map((o365User) => (
+                  <TableRow key={o365User.id}>
+                    <TableCell className="font-medium">
+                      {o365User.displayName}
+                    </TableCell>
+                    <TableCell>{o365User.mail || o365User.userPrincipalName}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {o365User.jobTitle || '-'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {o365User.department || '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedUser(o365User);
+                          setImportDialogOpen(true);
+                        }}
+                        disabled={bulkImporting}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Import
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {paginatedUsers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No users found
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
             {(() => {
-              const filteredUsers = office365Users.filter(user => 
-                user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (user.mail && user.mail.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                user.userPrincipalName.toLowerCase().includes(searchQuery.toLowerCase())
-              );
-              const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-              
               if (totalPages <= 1) return null;
               
               return (

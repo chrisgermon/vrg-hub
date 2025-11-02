@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Calendar, User } from 'lucide-react';
 import { formatAUDateTimeFull } from '@/lib/dateUtils';
+import { sanitizeRichHtml } from '@/lib/sanitizer';
 
 export default function ArticleView() {
   const { slug } = useParams<{ slug: string }>();
@@ -118,7 +119,7 @@ export default function ArticleView() {
 
         <div
           className="prose prose-slate dark:prose-invert max-w-none"
-          dangerouslySetInnerHTML={{ __html: article.content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(article.content) }}
         />
 
         {article.tags && article.tags.length > 0 && (

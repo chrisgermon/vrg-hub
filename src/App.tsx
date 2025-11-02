@@ -8,6 +8,7 @@ import { InlineEditProvider } from "@/contexts/InlineEditContext";
 import { ProtectedLayoutRoute } from "@/components/ProtectedLayoutRoute";
 import { RouteLoading } from "@/components/RouteLoading";
 import { ThemeApplier } from "./components/ThemeApplier";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Eager imports for high-traffic pages
 import Auth from "./pages/Auth";
@@ -21,8 +22,8 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 // Lazy imports for low-traffic pages
-import NewRequest from "./pages/NewRequest";
-import NewRequestCategory from "./pages/NewRequestCategory";
+const NewRequest = lazy(() => import("./pages/NewRequest"));
+const NewRequestCategory = lazy(() => import("./pages/NewRequestCategory"));
 const NewDynamicRequest = lazy(() => import("./pages/NewDynamicRequest"));
 const NewTicket = lazy(() => import("./pages/NewTicket"));
 const MonthlyNewsletter = lazy(() => import("./pages/MonthlyNewsletter"));
@@ -143,42 +144,44 @@ const queryClient = new QueryClient();
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <InlineEditProvider>
-          <ThemeApplier />
-          <TooltipProvider>
-            <Toaster />
-            <BrowserRouter>
-              <Suspense fallback={<RouteLoading />}>
-                <Routes>
-                  <Route path="/" element={<Navigate to="/home" replace />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/system-login" element={<SystemLogin />} />
-                  <Route path="/create-system-admin" element={<CreateSystemAdmin />} />
-                  {protectedLayoutRoutes.map(({ path, element, requiredRole }) => (
-                    <Route
-                      key={path}
-                      path={path}
-                      element={
-                        <ProtectedLayoutRoute requiredRole={requiredRole}>
-                          {element}
-                        </ProtectedLayoutRoute>
-                      }
-                    />
-                  ))}
-                  <Route path="/shared/:token" element={<SharedClinic />} />
-                  <Route path="/shared-clinic/:token" element={<SharedModality />} />
-                  <Route path="/confirm-order/:token" element={<ConfirmOrder />} />
-                  <Route path="/upload-logo" element={<UploadLogoToStorage />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </BrowserRouter>
-          </TooltipProvider>
-        </InlineEditProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <InlineEditProvider>
+            <ThemeApplier />
+            <TooltipProvider>
+              <Toaster />
+              <BrowserRouter>
+                <Suspense fallback={<RouteLoading />}>
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/home" replace />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/system-login" element={<SystemLogin />} />
+                    <Route path="/create-system-admin" element={<CreateSystemAdmin />} />
+                    {protectedLayoutRoutes.map(({ path, element, requiredRole }) => (
+                      <Route
+                        key={path}
+                        path={path}
+                        element={
+                          <ProtectedLayoutRoute requiredRole={requiredRole}>
+                            {element}
+                          </ProtectedLayoutRoute>
+                        }
+                      />
+                    ))}
+                    <Route path="/shared/:token" element={<SharedClinic />} />
+                    <Route path="/shared-clinic/:token" element={<SharedModality />} />
+                    <Route path="/confirm-order/:token" element={<ConfirmOrder />} />
+                    <Route path="/upload-logo" element={<UploadLogoToStorage />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </BrowserRouter>
+            </TooltipProvider>
+          </InlineEditProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

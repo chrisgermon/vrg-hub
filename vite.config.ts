@@ -10,6 +10,30 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-toast',
+          ],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-tanstack': ['@tanstack/react-query'],
+          'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          'vendor-icons': ['lucide-react'],
+          'vendor-utils': ['date-fns', 'date-fns-tz', 'dompurify'],
+        },
+      },
+    },
+    sourcemap: mode === 'development',
+    minify: mode === 'production' ? 'terser' : false,
+    target: 'es2020',
+  },
   plugins: [
     react(),
     mode === 'development' &&
