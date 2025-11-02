@@ -1541,6 +1541,7 @@ export type Database = {
           id: string
           status: string
           submitted_at: string | null
+          template_id: string | null
           topic: string | null
           updated_at: string
           word_count: number | null
@@ -1554,6 +1555,7 @@ export type Database = {
           id?: string
           status?: string
           submitted_at?: string | null
+          template_id?: string | null
           topic?: string | null
           updated_at?: string
           word_count?: number | null
@@ -1567,6 +1569,7 @@ export type Database = {
           id?: string
           status?: string
           submitted_at?: string | null
+          template_id?: string | null
           topic?: string | null
           updated_at?: string
           word_count?: number | null
@@ -1624,6 +1627,7 @@ export type Database = {
         Row: {
           assignment_id: string
           attachments: Json | null
+          clinic_updates: Json | null
           content: string
           contributor_id: string
           created_at: string
@@ -1631,6 +1635,7 @@ export type Database = {
           department: string
           id: string
           images: Json | null
+          no_update_this_month: boolean | null
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -1642,6 +1647,7 @@ export type Database = {
         Insert: {
           assignment_id: string
           attachments?: Json | null
+          clinic_updates?: Json | null
           content: string
           contributor_id: string
           created_at?: string
@@ -1649,6 +1655,7 @@ export type Database = {
           department: string
           id?: string
           images?: Json | null
+          no_update_this_month?: boolean | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -1660,6 +1667,7 @@ export type Database = {
         Update: {
           assignment_id?: string
           attachments?: Json | null
+          clinic_updates?: Json | null
           content?: string
           contributor_id?: string
           created_at?: string
@@ -1667,6 +1675,7 @@ export type Database = {
           department?: string
           id?: string
           images?: Json | null
+          no_update_this_month?: boolean | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
