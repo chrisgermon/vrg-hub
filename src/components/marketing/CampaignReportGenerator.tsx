@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { FileText, Mail, Loader2, Clock, CalendarIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { fromZonedTime } from "date-fns-tz";
 import { cn } from "@/lib/utils";
 
 interface CampaignReportGeneratorProps {
@@ -92,23 +93,23 @@ export const CampaignReportGenerator = ({ open, onOpenChange }: CampaignReportGe
       const body: any = { recipientEmail, timeframe };
       
       if (timeframe === "custom") {
-        // Set start date to beginning of day
-        const startOfDay = new Date(customStartDate!);
-        startOfDay.setHours(0, 0, 0, 0);
-        
-        // Set end date to end of day
-        const endOfDay = new Date(customEndDate!);
-        endOfDay.setHours(23, 59, 59, 999);
-        
-        body.startDate = startOfDay.toISOString();
-        body.endDate = endOfDay.toISOString();
+        const tz = 'Australia/Melbourne';
+        const startIso = fromZonedTime(`${format(customStartDate!, 'yyyy-MM-dd')} 00:00:00.000`, tz).toISOString();
+        const endIso = fromZonedTime(`${format(customEndDate!, 'yyyy-MM-dd')} 23:59:59.999`, tz).toISOString();
+        body.startDate = startIso;
+        body.endDate = endIso;
       }
 
       const { data, error } = await supabase.functions.invoke('generate-campaign-report', {
         body,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Surface server validation errors (e.g., missing custom dates)
+        // @ts-ignore - supabase error typing can vary
+        toast.error(error?.message || 'Failed to generate report');
+        throw error;
+      }
 
       if (data?.success) {
         await saveRecentEmail(recipientEmail);

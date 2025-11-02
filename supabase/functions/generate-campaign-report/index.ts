@@ -157,6 +157,7 @@ serve(async (req: Request) => {
 
     const { recipientEmail, timeframe, startDate: customStartDate, endDate: customEndDate }: ReportRequest = await req.json();
     console.log('[generate-campaign-report] Generating report for:', recipientEmail, 'Timeframe:', timeframe);
+    console.log('[generate-campaign-report] Received custom dates:', customStartDate, customEndDate);
 
     if (!recipientEmail) {
       return new Response(
@@ -167,11 +168,15 @@ serve(async (req: Request) => {
 
     let dateRange: { startDate: string; endDate: string };
     
-    if (timeframe === 'custom' && customStartDate && customEndDate) {
-      dateRange = {
-        startDate: customStartDate,
-        endDate: customEndDate
-      };
+    if (timeframe === 'custom') {
+      if (!customStartDate || !customEndDate) {
+        console.warn('[generate-campaign-report] Custom timeframe selected but dates missing.');
+        return new Response(
+          JSON.stringify({ success: false, message: 'Start and end dates are required for a custom timeframe.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      dateRange = { startDate: customStartDate, endDate: customEndDate };
     } else {
       dateRange = getDateRange(timeframe);
     }
