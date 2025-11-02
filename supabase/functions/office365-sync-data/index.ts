@@ -105,25 +105,32 @@ serve(async (req) => {
     );
 
     // Get connection (try company_id, then user-level, then any active connection)
+    console.log('Sync request received. Body company_id:', company_id, 'user_id:', user.id);
     let { data: connection, error: connError } = company_id ? await supabase
       .from('office365_connections')
       .select('*')
       .eq('company_id', company_id)
       .order('updated_at', { ascending: false })
+      .limit(1)
       .maybeSingle() : { data: null, error: null };
+    console.log('Company connection found:', !!connection, 'error:', connError?.message);
 
     if (!connection) {
+      console.log('Trying user-level connection...');
       const res = await supabase
         .from('office365_connections')
         .select('*')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       connection = res.data as any;
       connError = res.error as any;
+      console.log('User connection found:', !!connection, 'error:', connError?.message);
     }
 
     if (!connection) {
+      console.log('Trying any recent connection as fallback...');
       const res = await supabase
         .from('office365_connections')
         .select('*')
@@ -132,6 +139,7 @@ serve(async (req) => {
         .maybeSingle();
       connection = res.data as any;
       connError = res.error as any;
+      console.log('Fallback connection found:', !!connection, 'error:', connError?.message);
     }
 
     if (connError || !connection) {

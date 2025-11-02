@@ -57,6 +57,7 @@ serve(async (req) => {
         .select('id, access_token, refresh_token, expires_at, company_id, user_id')
         .eq('company_id', company_id)
         .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       if (companyConn?.access_token) connection = companyConn;
     }
@@ -67,6 +68,7 @@ serve(async (req) => {
         .select('id, access_token, refresh_token, expires_at, company_id, user_id')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       if (userConn?.access_token) connection = userConn;
     }
