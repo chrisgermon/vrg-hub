@@ -1,12 +1,18 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Users, Calendar } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { FileText, Users, Calendar, Eye } from 'lucide-react';
 import { CycleManagement } from './CycleManagement';
+import { SubmissionPreview } from './SubmissionPreview';
 
 export function EditorDashboard() {
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+
   const { data: stats, isLoading } = useQuery({
     queryKey: ['newsletter-stats'],
     queryFn: async () => {
@@ -24,8 +30,43 @@ export function EditorDashboard() {
     },
   });
 
+  const { data: recentSubmissions = [] } = useQuery({
+    queryKey: ['newsletter-submissions-recent'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('newsletter_submissions')
+        .select('id, title, department, status, submitted_at, contributor_id')
+        .order('submitted_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+
+      // Fetch contributor names separately
+      const contributorIds = [...new Set(data?.map(s => s.contributor_id).filter(Boolean))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', contributorIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+
+      return data?.map(s => ({
+        ...s,
+        contributor_name: profileMap.get(s.contributor_id) || 'Unknown',
+      })) || [];
+    },
+  });
+
   if (isLoading) {
     return <div>Loading...</div>;
+  }
+
+  if (selectedSubmissionId) {
+    return (
+      <SubmissionPreview 
+        submissionId={selectedSubmissionId} 
+        onClose={() => setSelectedSubmissionId(null)} 
+      />
+    );
   }
 
   return (
@@ -83,7 +124,60 @@ export function EditorDashboard() {
               <CardTitle>Recent Submissions</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Submission review coming soon</p>
+              {recentSubmissions.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">
+                  No submissions yet
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Contributor</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Submitted</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentSubmissions.map((submission: any) => (
+                      <TableRow key={submission.id}>
+                        <TableCell className="font-medium">{submission.title}</TableCell>
+                        <TableCell>{submission.contributor_name}</TableCell>
+                        <TableCell>{submission.department}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              submission.status === 'approved'
+                                ? 'default'
+                                : submission.status === 'submitted'
+                                ? 'secondary'
+                                : 'outline'
+                            }
+                          >
+                            {submission.status.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {submission.submitted_at
+                            ? new Date(submission.submitted_at).toLocaleDateString()
+                            : '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedSubmissionId(submission.id)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
