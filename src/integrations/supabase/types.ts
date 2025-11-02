@@ -328,6 +328,36 @@ export type Database = {
           },
         ]
       }
+      department_section_templates: {
+        Row: {
+          created_at: string
+          department_name: string
+          id: string
+          is_active: boolean
+          sections: Json
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department_name: string
+          id?: string
+          is_active?: boolean
+          sections?: Json
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department_name?: string
+          id?: string
+          is_active?: boolean
+          sections?: Json
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       departments: {
         Row: {
           created_at: string | null

@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { toast } from 'sonner';
 import { CheckCircle, Send } from 'lucide-react';
-import { getDepartmentSections, type DepartmentSection } from '@/lib/newsletterDepartments';
+import { useDepartmentTemplate } from '@/lib/newsletterDepartments';
 
 interface SectionData {
   section: string;
@@ -38,17 +38,21 @@ export function NewsletterSubmissionForm({
   const [noUpdateThisMonth, setNoUpdateThisMonth] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-  const departmentSections = getDepartmentSections(department);
+  // Fetch department template sections from database
+  const { data: departmentTemplate, isLoading: templateLoading } = useDepartmentTemplate(department);
 
-  // Initialize sections data
+  // Initialize sections data from template
   useEffect(() => {
-    const initialSections = departmentSections.map(section => ({
-      section: section.key,
-      content: '',
-      isRequired: section.isRequired,
-    }));
-    setSectionsData(initialSections);
-  }, [department]);
+    if (departmentTemplate?.sections) {
+      const sections = departmentTemplate.sections as any[];
+      const initialSections = sections.map(section => ({
+        section: section.key,
+        content: '',
+        isRequired: section.isRequired,
+      }));
+      setSectionsData(initialSections);
+    }
+  }, [departmentTemplate]);
 
   const { data: assignment } = useQuery({
     queryKey: ['newsletter-assignment', assignmentId],
@@ -179,9 +183,15 @@ export function NewsletterSubmissionForm({
     }
   };
 
-  if (isLoading) {
+  if (isLoading || templateLoading) {
     return <div className="text-center py-8">Loading...</div>;
   }
+
+  if (!departmentTemplate) {
+    return <div className="text-center py-8">Department template not found</div>;
+  }
+
+  const departmentSections = (departmentTemplate.sections as any[]) || [];
 
   if (existingSubmission?.status === 'submitted') {
     return (
@@ -258,7 +268,7 @@ export function NewsletterSubmissionForm({
 
           {!noUpdateThisMonth && (
             <div className="space-y-6">
-              {departmentSections.map((section) => {
+              {departmentSections.map((section: any) => {
                 const sectionData = sectionsData.find(s => s.section === section.key);
                 return (
                   <div key={section.key} className="space-y-2">

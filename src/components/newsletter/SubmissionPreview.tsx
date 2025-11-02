@@ -90,7 +90,22 @@ export function SubmissionPreview({
   if (!submission) return <div>Submission not found</div>;
 
   const sectionsData = (submission.sections_data || []) as unknown as SectionData[];
-  const departmentSections = getDepartmentSections(submission.department);
+  
+  // Fetch department template to get section names
+  const { data: departmentTemplate } = useQuery({
+    queryKey: ['department-template', submission.department],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('department_section_templates')
+        .select('*')
+        .eq('department_name', submission.department)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const departmentSections = (departmentTemplate?.sections as any[]) || [];
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
@@ -124,7 +139,7 @@ export function SubmissionPreview({
         ) : (
           <div className="space-y-6">
             {sectionsData.map((sectionData) => {
-              const section = departmentSections.find(s => s.key === sectionData.section);
+              const section = departmentSections.find((s: any) => s.key === sectionData.section);
               if (!section || !sectionData.content) return null;
 
               return (

@@ -1,3 +1,6 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+
 export interface DepartmentSection {
   name: string;
   key: string;
@@ -93,11 +96,50 @@ export const NEWSLETTER_DEPARTMENTS: Department[] = [
   },
 ];
 
+// Update lib to fetch from database
+export const useDepartmentTemplate = (departmentName: string) => {
+  return useQuery({
+    queryKey: ['department-template', departmentName],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('department_section_templates')
+        .select('*')
+        .eq('department_name', departmentName)
+        .eq('is_active', true)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+};
+
+export const useDepartmentTemplates = () => {
+  return useQuery({
+    queryKey: ['department-section-templates'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('department_section_templates')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+};
+
+// Keep the old functions for backward compatibility but mark as deprecated
+/**
+ * @deprecated Use useDepartmentTemplate hook instead
+ */
 export const getDepartmentSections = (departmentName: string): DepartmentSection[] => {
   const dept = NEWSLETTER_DEPARTMENTS.find(d => d.name === departmentName);
   return dept?.sections || [];
 };
 
+/**
+ * @deprecated Use useDepartmentTemplates hook instead
+ */
 export const getDepartmentNames = (): string[] => {
   return NEWSLETTER_DEPARTMENTS.map(d => d.name);
 };

@@ -9,14 +9,15 @@ import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 
-import { getDepartmentNames } from '@/lib/newsletterDepartments';
-
-const DEPARTMENTS = getDepartmentNames();
+import { useDepartmentTemplates } from '@/lib/newsletterDepartments';
 
 export function AssignmentManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const queryClient = useQueryClient();
+
+  const { data: templates = [] } = useDepartmentTemplates();
+  const DEPARTMENTS = templates.map(t => t.department_name);
 
   const { data: profiles = [] } = useQuery({
     queryKey: ['profiles-active'],
