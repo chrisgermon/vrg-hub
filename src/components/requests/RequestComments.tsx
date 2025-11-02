@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Loader2, Send, MessageSquare, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { sanitizeHtml } from '@/lib/sanitizer';
 
 interface RequestCommentsProps {
   requestId: string;
@@ -153,9 +154,9 @@ export function RequestComments({ requestId, requestType }: RequestCommentsProps
                         {format(new Date(comment.created_at), 'MMM d, HH:mm')}
                       </span>
                     </div>
-                    <div 
+                    <div
                       className="text-sm text-muted-foreground line-clamp-2"
-                      dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(comment.content_html || comment.content) }}
                     />
                     {comment.attachments && comment.attachments.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">

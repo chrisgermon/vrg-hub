@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { sanitizeHtml } from '@/lib/sanitizer';
 
 interface RequestActivityFeedProps {
   requestId: string;
@@ -156,9 +157,9 @@ export function RequestActivityFeed({ requestId }: RequestActivityFeedProps) {
                           {format(new Date(comment.created_at), 'MMM d, HH:mm')}
                         </span>
                       </div>
-                      <div 
+                      <div
                         className="text-sm text-muted-foreground line-clamp-2"
-                        dangerouslySetInnerHTML={{ __html: comment.content_html || comment.content }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(comment.content_html || comment.content) }}
                       />
                       {comment.attachments && comment.attachments.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1">
@@ -214,9 +215,9 @@ export function RequestActivityFeed({ requestId }: RequestActivityFeedProps) {
 
               <Separator />
 
-              <div 
+              <div
                 className="prose prose-sm max-w-none dark:prose-invert"
-                dangerouslySetInnerHTML={{ __html: selectedComment.content_html || selectedComment.content }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedComment.content_html || selectedComment.content) }}
               />
 
               {selectedComment.attachments && selectedComment.attachments.length > 0 && (
