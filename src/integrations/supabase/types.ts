@@ -1742,6 +1742,63 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_company_wide: boolean | null
+          is_read: boolean | null
+          link: string | null
+          message: string
+          metadata: Json | null
+          notification_type: string | null
+          read_at: string | null
+          reference_id: string | null
+          reference_url: string | null
+          title: string
+          type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_company_wide?: boolean | null
+          is_read?: boolean | null
+          link?: string | null
+          message: string
+          metadata?: Json | null
+          notification_type?: string | null
+          read_at?: string | null
+          reference_id?: string | null
+          reference_url?: string | null
+          title: string
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_company_wide?: boolean | null
+          is_read?: boolean | null
+          link?: string | null
+          message?: string
+          metadata?: Json | null
+          notification_type?: string | null
+          read_at?: string | null
+          reference_id?: string | null
+          reference_url?: string | null
+          title?: string
+          type?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       newsletter_assignments: {
         Row: {
           assigned_at: string
