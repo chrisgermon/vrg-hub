@@ -41,8 +41,8 @@ Deno.serve(async (req) => {
       'User.Read.All',
       'Group.Read.All',
       'Mail.Read',
-      'Files.Read.All',
-      'Sites.Read.All',
+      'Files.ReadWrite.All',
+      'Sites.ReadWrite.All',
       'Directory.Read.All'
     ].join(' ');
 

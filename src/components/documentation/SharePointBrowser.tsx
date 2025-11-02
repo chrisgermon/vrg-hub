@@ -77,21 +77,22 @@ export function SharePointBrowser() {
         return;
       }
 
-      // Upload each file to storage
+      // Upload each file to SharePoint
       for (const file of Array.from(files)) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${crypto.randomUUID()}.${fileExt}`;
-        const filePath = `sharepoint-uploads/${fileName}`;
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder_path', currentPath);
 
-        const { error: uploadError } = await supabase.storage
-          .from('company-assets')
-          .upload(filePath, file);
+        const { data, error } = await supabase.functions.invoke('sharepoint-upload-file', {
+          body: formData,
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
 
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
+        if (error) {
+          console.error('Upload error:', error);
           toast.error(`Failed to upload ${file.name}`);
         } else {
-          toast.success(`Uploaded ${file.name}`);
+          toast.success(`Uploaded ${file.name} to SharePoint`);
         }
       }
 

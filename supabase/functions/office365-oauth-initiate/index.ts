@@ -44,7 +44,7 @@ serve(async (req) => {
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('redirect_uri', redirectUri);
     authUrl.searchParams.set('response_mode', 'query');
-    authUrl.searchParams.set('scope', 'offline_access openid profile User.Read.All Group.Read.All Directory.Read.All Sites.Read.All Files.Read.All');
+    authUrl.searchParams.set('scope', 'offline_access openid profile User.Read.All Group.Read.All Directory.Read.All Sites.ReadWrite.All Files.ReadWrite.All');
     authUrl.searchParams.set('prompt', 'consent');
     authUrl.searchParams.set('state', JSON.stringify({ company_id, user_id: user.id }));
 

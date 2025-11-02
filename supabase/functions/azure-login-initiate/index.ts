@@ -31,8 +31,8 @@ serve(async (req) => {
       'profile',
       'email',
       'User.Read',
-      'Files.Read.All',
-      'Sites.Read.All',
+      'Files.ReadWrite.All',
+      'Sites.ReadWrite.All',
       'User.ReadBasic.All'
     ].join(' ');
     
