@@ -116,7 +116,22 @@ export function SharePointBrowser() {
         return;
       }
 
+      // Ensure we know which company/site to sync
+      const res = await checkConfigured();
+      if (!res.configured || !res.companyId) {
+        setConfigured(false);
+        toast.error('SharePoint not configured. Please set it up in Integrations.');
+        return;
+      }
+
+      const payload: Record<string, any> = {
+        company_id: res.companyId,
+      };
+      if (spConfig?.site_id) payload.site_id = spConfig.site_id;
+      if (spConfig?.folder_path) payload.folder_path = spConfig.folder_path;
+
       const { data, error } = await supabase.functions.invoke('sync-sharepoint-files', {
+        body: payload,
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
@@ -164,8 +179,7 @@ export function SharePointBrowser() {
         return;
       }
       await loadItems(currentPath);
-      // Auto-sync on mount
-      await syncSharePointFiles();
+      // Don't auto-sync on mount to prevent repeated success toasts
     };
     init();
   }, [currentPath]);
