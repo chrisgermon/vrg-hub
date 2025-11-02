@@ -90,7 +90,14 @@ serve(async (req) => {
       );
     }
 
-    const { company_id } = await req.json();
+    // Parse request body (handle empty body gracefully)
+    let company_id = null;
+    try {
+      const body = await req.json();
+      company_id = body?.company_id || null;
+    } catch {
+      // No body provided, continue without company_id
+    }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
