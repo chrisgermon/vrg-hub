@@ -47,6 +47,42 @@ export function FileBrowser({
 }: FileBrowserProps) {
   const { toast } = useToast();
 
+  const handleFileClick = async (file: FileDocument) => {
+    try {
+      // Check if file type is viewable in browser
+      const viewableTypes = [
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/svg+xml',
+        'text/plain',
+      ];
+
+      if (viewableTypes.includes(file.mime_type)) {
+        // Create signed URL for secure access (valid for 1 hour)
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(file.storage_path, 3600);
+
+        if (error) throw error;
+
+        // Open in new tab for viewable types
+        window.open(data.signedUrl, '_blank');
+      } else {
+        // Download for other types
+        handleDownload(file);
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error opening file',
+        description: error.message,
+      });
+    }
+  };
+
   const handleDownload = async (file: FileDocument) => {
     try {
       const { data, error } = await supabase.storage
@@ -177,7 +213,11 @@ export function FileBrowser({
         ))}
 
         {files.map((file) => (
-          <Card key={file.id} className="p-4 hover:bg-accent transition-colors group">
+          <Card 
+            key={file.id} 
+            className="p-4 cursor-pointer hover:bg-accent transition-colors group"
+            onClick={() => handleFileClick(file)}
+          >
             <div className="flex items-start justify-between mb-2">
               <div className="text-4xl">{getFileIcon(file.mime_type)}</div>
               <DropdownMenu>
@@ -187,11 +227,17 @@ export function FileBrowser({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleDownload(file)}>
+                  <DropdownMenuItem onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownload(file);
+                  }}>
                     <Download className="size-4 mr-2" />
                     Download
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleDelete('file', file.id, file.name)}>
+                  <DropdownMenuItem onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete('file', file.id, file.name);
+                  }}>
                     <Trash2 className="size-4 mr-2" />
                     Delete
                   </DropdownMenuItem>
@@ -244,7 +290,11 @@ export function FileBrowser({
       ))}
 
       {files.map((file) => (
-        <Card key={file.id} className="p-3 hover:bg-accent transition-colors group flex items-center justify-between">
+        <Card 
+          key={file.id} 
+          className="p-3 cursor-pointer hover:bg-accent transition-colors group flex items-center justify-between"
+          onClick={() => handleFileClick(file)}
+        >
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="text-2xl flex-shrink-0">{getFileIcon(file.mime_type)}</div>
             <div className="flex-1 min-w-0">
@@ -261,11 +311,17 @@ export function FileBrowser({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleDownload(file)}>
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                handleDownload(file);
+              }}>
                 <Download className="size-4 mr-2" />
                 Download
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleDelete('file', file.id, file.name)}>
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                handleDelete('file', file.id, file.name);
+              }}>
                 <Trash2 className="size-4 mr-2" />
                 Delete
               </DropdownMenuItem>
