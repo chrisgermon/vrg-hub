@@ -57,6 +57,7 @@
     "dompurify": "^3.3.0",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
+    "lovable-tagger": "^1.1.11",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
     "notifyre-nodejs-sdk": "^1.8.0",
