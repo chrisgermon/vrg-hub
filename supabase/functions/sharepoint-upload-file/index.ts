@@ -221,14 +221,49 @@ serve(async (req) => {
       );
     }
 
+    console.log('File uploaded successfully to SharePoint');
+
     const uploadData = await uploadResponse.json();
 
-    // Clear cache for this path so users see the new file
-    await supabaseAdmin
-      .from('sharepoint_cache')
-      .delete()
-      .eq('company_id', userConnection.company_id)
-      .eq('parent_path', folderPath);
+    // Save to cache table
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('brand_id')
+        .eq('id', user.id)
+        .single();
+
+      const companyId = profile?.brand_id || user.id;
+
+      await supabaseAdmin
+        .from('sharepoint_cache')
+        .upsert({
+          company_id: companyId,
+          item_type: 'file',
+          item_id: uploadData.id,
+          parent_path: config.folder_path || '',
+          name: uploadData.name,
+          web_url: uploadData.webUrl,
+          size: uploadData.size || 0,
+          child_count: 0,
+          created_datetime: uploadData.createdDateTime,
+          last_modified_datetime: uploadData.lastModifiedDateTime,
+          created_by: uploadData.createdBy?.user?.displayName || '',
+          last_modified_by: uploadData.lastModifiedBy?.user?.displayName || '',
+          file_type: file.type || 'application/octet-stream',
+          download_url: uploadData['@microsoft.graph.downloadUrl'] || '',
+          permissions: [],
+          metadata: uploadData,
+          cached_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
+        }, {
+          onConflict: 'company_id,item_id',
+          ignoreDuplicates: false,
+        });
+      console.log('Saved file to cache');
+    } catch (cacheError) {
+      console.error('Failed to save to cache:', cacheError);
+    }
 
     console.log(`File uploaded successfully: ${file.name}`);
 

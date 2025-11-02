@@ -60,9 +60,40 @@ export function SharePointBrowser() {
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<SharePointFile | SharePointFolder | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const syncSharePointFiles = async () => {
+    setSyncing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please log in to sync files');
+        return;
+      }
+
+      const { error } = await supabase.functions.invoke('sync-sharepoint-files', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error) {
+        console.error('Sync error:', error);
+        toast.error('Failed to sync SharePoint files');
+      } else {
+        toast.success('SharePoint files synced successfully');
+        await loadItems(currentPath, true);
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast.error('Failed to sync SharePoint files');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => {
     loadItems(currentPath);
+    // Auto-sync on mount
+    syncSharePointFiles();
   }, [currentPath]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,6 +150,8 @@ export function SharePointBrowser() {
         }
       }
 
+      // Sync files after upload
+      await syncSharePointFiles();
       // Refresh the current view
       await loadItems(currentPath, true);
     } catch (error) {
@@ -142,77 +175,78 @@ export function SharePointBrowser() {
         setConfigured(false);
         return;
       }
-      
-      console.log('Invoking sharepoint-browse-folders-cached with session:', !!session);
-      
-      const { data, error } = await supabase.functions.invoke('sharepoint-browse-folders-cached', {
-        body: { folder_path: path, force_refresh: forceRefresh },
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+
+      // Get user's company/brand ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Not authenticated');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('brand_id')
+        .eq('id', user.id)
+        .single();
+
+      const companyId = profile?.brand_id || user.id;
+
+      // If force refresh, sync from SharePoint first
+      if (forceRefresh) {
+        await syncSharePointFiles();
+      }
+
+      // Load from local cache
+      const { data: cacheData, error } = await supabase
+        .from('sharepoint_cache')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('parent_path', path)
+        .order('item_type', { ascending: false }) // folders first
+        .order('name');
 
       if (error) {
-        console.error('SharePoint function error:', error);
-        // Try to parse the function response body for a better message/status
-        let status = (error as any)?.status;
-        let fnMessage: string | undefined;
-        try {
-          const res = (error as any)?.context?.response as Response | undefined;
-          if (res) {
-            status = res.status || status;
-            const bodyAny = await res.clone().json().catch(async () => await res.text());
-            if (typeof bodyAny === 'string') fnMessage = bodyAny;
-            else fnMessage = bodyAny?.error;
-          }
-        } catch {}
-        // Bubble up a normalized error for unified catch handling
-        throw new Error(fnMessage || (error as any)?.message || 'SharePoint request failed');
+        console.error('Error loading from cache:', error);
+        throw error;
       }
 
-      setFolders(data.folders || []);
-      setFiles(data.files || []);
-      setConfigured(!!data.configured);
-      setNeedsO365(!!data.needsO365);
-      setFromCache(!!data.fromCache);
-      setCachedAt(data.cachedAt || null);
-      
-      if (data.fromCache) {
-        toast.success('Loaded from cache (faster!)', { duration: 2000 });
-      }
+      // Convert cache data to folders and files
+      const cacheFolders: SharePointFolder[] = (cacheData || [])
+        .filter((item: any) => item.item_type === 'folder')
+        .map((item: any) => ({
+          id: item.item_id,
+          name: item.name,
+          webUrl: item.web_url,
+          childCount: item.child_count || 0,
+          lastModifiedDateTime: item.last_modified_datetime,
+          permissions: item.permissions || [],
+        }));
+
+      const cacheFiles: SharePointFile[] = (cacheData || [])
+        .filter((item: any) => item.item_type === 'file')
+        .map((item: any) => ({
+          id: item.item_id,
+          name: item.name,
+          webUrl: item.web_url,
+          size: item.size || 0,
+          createdDateTime: item.created_datetime,
+          lastModifiedDateTime: item.last_modified_datetime,
+          createdBy: item.created_by,
+          lastModifiedBy: item.last_modified_by,
+          fileType: item.file_type || 'unknown',
+          downloadUrl: item.download_url,
+          permissions: item.permissions || [],
+        }));
+
+      setFolders(cacheFolders);
+      setFiles(cacheFiles);
+      setConfigured(true);
+      setFromCache(true);
+      setCachedAt(cacheData && cacheData.length > 0 ? cacheData[0].cached_at : null);
+
     } catch (error: any) {
       console.error('Error loading SharePoint items:', error);
-      // Fallback: detect whether SharePoint is actually configured for this company
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const userId = session?.user?.id;
-        let isConfigured = false;
-        if (userId) {
-          const { data: o365 } = await supabase
-            .from('office365_connections')
-            .select('company_id')
-            .eq('user_id', userId)
-            .order('updated_at', { ascending: false })
-            .limit(1);
-          const companyId = o365?.[0]?.company_id;
-          if (companyId) {
-            const { data: configs } = await supabase
-              .from('sharepoint_configurations')
-              .select('id')
-              .eq('company_id', companyId)
-              .eq('is_active', true)
-              .limit(1);
-            isConfigured = Array.isArray(configs) && configs.length > 0;
-          }
-        }
-        setConfigured(isConfigured);
-        if (isConfigured) {
-          toast.error('Unable to fetch SharePoint items. Please check SharePoint permissions or try again.');
-        } else {
-          toast.error('SharePoint is not configured. A Super Admin must configure it in Integrations.');
-        }
-      } catch {
-        setConfigured(false);
-        toast.error(error?.message || 'Failed to load SharePoint content. Please refresh the page.');
-      }
+      toast.error('Failed to load SharePoint content. Please try syncing again.');
     } finally {
       setLoading(false);
     }
@@ -352,13 +386,37 @@ export function SharePointBrowser() {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => loadItems(currentPath, true)}
-            title="Force refresh from SharePoint"
+            onClick={syncSharePointFiles}
+            disabled={syncing}
+            title="Sync from SharePoint"
+          >
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sync'}
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => loadItems(currentPath)}
+            title="Refresh from cache"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Refresh'}
           </Button>
+          <label>
+            <input
+              type="file"
+              multiple
+              onChange={handleFileUpload}
+              className="hidden"
+              disabled={uploading}
+            />
+            <Button variant="default" size="sm" disabled={uploading} asChild>
+              <span>
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Upload Files
+              </span>
+            </Button>
+          </label>
           {fromCache && cachedAt && (
-            <span className="text-xs text-muted-foreground flex items-center">
+            <span className="text-xs text-muted-foreground flex items-center ml-2">
               Cached {new Date(cachedAt).toLocaleTimeString()}
             </span>
           )}
