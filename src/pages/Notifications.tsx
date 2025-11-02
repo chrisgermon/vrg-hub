@@ -103,7 +103,7 @@ export default function Notifications() {
 
       const { error } = await supabase
         .from('notifications')
-        .update({ is_read: true, read_at: new Date().toISOString() })
+        .update({ is_read: true })
         .eq('id', notificationId)
         .eq('user_id', user.id);
 
@@ -127,7 +127,7 @@ export default function Notifications() {
 
       const { error } = await supabase
         .from('notifications')
-        .update({ is_read: false, read_at: null })
+        .update({ is_read: false })
         .eq('id', notificationId)
         .eq('user_id', user.id);
 
@@ -151,7 +151,7 @@ export default function Notifications() {
 
       const { error } = await supabase
         .from('notifications')
-        .update({ is_read: true, read_at: new Date().toISOString() })
+        .update({ is_read: true })
         .eq('user_id', user.id)
         .eq('is_read', false);
 
@@ -228,7 +228,7 @@ export default function Notifications() {
           ) : (
             <div className="space-y-4">
               {notifications.map((notification) => {
-                const type = notification.type || notification.notification_type;
+                const type = notification.type;
                 const createdAt = notification.created_at
                   ? formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })
                   : null;

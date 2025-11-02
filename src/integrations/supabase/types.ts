@@ -1742,63 +1742,6 @@ export type Database = {
         }
         Relationships: []
       }
-      notifications: {
-        Row: {
-          company_id: string | null
-          created_at: string
-          created_by: string | null
-          id: string
-          is_company_wide: boolean | null
-          is_read: boolean | null
-          link: string | null
-          message: string
-          metadata: Json | null
-          notification_type: string | null
-          read_at: string | null
-          reference_id: string | null
-          reference_url: string | null
-          title: string
-          type: string | null
-          user_id: string | null
-        }
-        Insert: {
-          company_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_company_wide?: boolean | null
-          is_read?: boolean | null
-          link?: string | null
-          message: string
-          metadata?: Json | null
-          notification_type?: string | null
-          read_at?: string | null
-          reference_id?: string | null
-          reference_url?: string | null
-          title: string
-          type?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          company_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_company_wide?: boolean | null
-          is_read?: boolean | null
-          link?: string | null
-          message?: string
-          metadata?: Json | null
-          notification_type?: string | null
-          read_at?: string | null
-          reference_id?: string | null
-          reference_url?: string | null
-          title?: string
-          type?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       newsletter_assignments: {
         Row: {
           assigned_at: string
@@ -2049,6 +1992,45 @@ export type Database = {
           in_app_enabled?: boolean | null
           sms_enabled?: boolean | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string | null
+          reference_url: string | null
+          title: string
+          type: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          reference_url?: string | null
+          title: string
+          type?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          reference_url?: string | null
+          title?: string
+          type?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
