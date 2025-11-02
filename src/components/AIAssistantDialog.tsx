@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Send, Sparkles } from "lucide-react";
+import { Loader2, Send, Sparkles, ExternalLink } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 interface AIAssistantDialogProps {
   open: boolean;
@@ -16,14 +17,17 @@ export function AIAssistantDialog({ open, onOpenChange }: AIAssistantDialogProps
   const [prompt, setPrompt] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState("");
+  const [requestUrl, setRequestUrl] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async () => {
     if (!prompt.trim() || !user) return;
 
     setIsLoading(true);
     setResponse("");
+    setRequestUrl(null);
 
     try {
       const { data, error } = await supabase.functions.invoke("ai-assistant", {
@@ -43,10 +47,14 @@ export function AIAssistantDialog({ open, onOpenChange }: AIAssistantDialogProps
 
       setResponse(data.response);
       
-      if (data.action) {
+      if (data.requestUrl) {
+        setRequestUrl(data.requestUrl);
+      }
+      
+      if (data.action === "create_request") {
         toast({
-          title: "Action Completed",
-          description: data.message || "The requested action has been completed.",
+          title: "✅ Request Created",
+          description: "Your IT request has been submitted successfully.",
         });
       }
     } catch (error: any) {
@@ -91,8 +99,23 @@ export function AIAssistantDialog({ open, onOpenChange }: AIAssistantDialogProps
           </div>
 
           {response && (
-            <div className="p-4 rounded-lg bg-muted">
-              <p className="text-sm whitespace-pre-wrap">{response}</p>
+            <div className="space-y-3">
+              <div className="p-4 rounded-lg bg-muted">
+                <p className="text-sm whitespace-pre-wrap">{response}</p>
+              </div>
+              {requestUrl && (
+                <Button
+                  variant="default"
+                  className="w-full"
+                  onClick={() => {
+                    navigate(requestUrl);
+                    onOpenChange(false);
+                  }}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  View Request
+                </Button>
+              )}
             </div>
           )}
 

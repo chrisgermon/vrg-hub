@@ -47,17 +47,26 @@ serve(async (req) => {
         type: "function",
         function: {
           name: "create_it_request",
-          description: "Create a new IT support request",
+          description: "Create a new IT support request. Automatically infer all details from the user's description.",
           parameters: {
             type: "object",
             properties: {
-              title: { type: "string", description: "Brief description of the issue" },
-              description: { type: "string", description: "Detailed description of the issue" },
-              location: { type: "string", description: "Location where the issue is occurring" },
+              title: { 
+                type: "string", 
+                description: "Brief, clear title summarizing the issue (max 100 chars)"
+              },
+              description: { 
+                type: "string", 
+                description: "Detailed description including what's broken, when it started, and any error messages"
+              },
+              location: { 
+                type: "string", 
+                description: "Physical location or department where the issue is occurring"
+              },
               priority: {
                 type: "string",
                 enum: ["low", "medium", "high", "urgent"],
-                description: "Priority level of the request",
+                description: "Priority: urgent=system down, high=major impact, medium=normal, low=minor"
               },
             },
             required: ["title", "description"],
@@ -78,7 +87,27 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an AI assistant for an IT management system. You can help users perform actions based on their permissions. Current user role: ${userRole}. When users ask to create requests or perform actions, use the available functions. Be helpful and concise.`,
+            content: `You are a proactive AI assistant for an IT management system. Your role: ${userRole}.
+
+IMPORTANT INSTRUCTIONS:
+- When users mention any IT issue or request, AUTOMATICALLY create the request using the create_it_request function
+- DO NOT ask for additional details like title, priority, or location - infer them intelligently from the user's description
+- Infer priority based on urgency: "not working/down/broken" = high, "slow/issue" = medium, "would like" = low
+- Extract location from context if mentioned, otherwise use "Not specified"
+- Create a clear, professional title that summarizes the issue in 5-8 words
+- In the description, include all details the user provided plus any clarifying context
+
+Examples:
+User: "The printer in Rochedale is jammed"
+→ Call create_it_request with: title="Printer Jam at Rochedale Office", priority="medium", location="Rochedale"
+
+User: "My computer won't turn on and I need it urgently"
+→ Call create_it_request with: title="Computer Not Turning On - Urgent", priority="urgent", location="Not specified"
+
+User: "Can someone help fix the broken mouse?"
+→ Call create_it_request with: title="Broken Mouse Replacement Needed", priority="low", location="Not specified"
+
+Be helpful, concise, and take action immediately rather than asking for more information.`,
           },
           { role: "user", content: prompt },
         ],
@@ -140,9 +169,10 @@ serve(async (req) => {
 
         return new Response(
           JSON.stringify({
-            response: `I've successfully created IT request #${request.id} for "${functionArgs.title}". The request has been submitted and will be reviewed by the IT team.`,
+            response: `✅ I've created IT request #${request.id} for you!\n\n**${functionArgs.title}**\nPriority: ${functionArgs.priority || 'medium'}\nLocation: ${functionArgs.location || 'Not specified'}\n\nThe IT team has been notified and will review your request shortly.`,
             action: "create_request",
             requestId: request.id,
+            requestUrl: `/requests/${request.id}`,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
