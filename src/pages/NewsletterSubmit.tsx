@@ -1,10 +1,8 @@
 import { useAuth } from "@/hooks/useAuth";
-import { NewsletterSubmissionForm } from "@/components/newsletter/NewsletterSubmissionForm";
-import { useNavigate } from "react-router-dom";
+import { ContributorDashboard } from "@/components/newsletter/ContributorDashboard";
 
 export default function NewsletterSubmit() {
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   if (!user) {
     return (
@@ -28,12 +26,7 @@ export default function NewsletterSubmit() {
         </p>
       </div>
 
-      <NewsletterSubmissionForm
-        cycleId=""
-        department=""
-        onSuccess={() => navigate("/newsletter")}
-        onCancel={() => navigate("/newsletter")}
-      />
+      <ContributorDashboard />
     </div>
   );
 }

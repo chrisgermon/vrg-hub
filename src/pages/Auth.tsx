@@ -6,8 +6,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Building2 } from 'lucide-react';
-import crowdHubLogo from '@/assets/crowdhub-logo.png';
 import heroBackground from '@/assets/hero-background.svg';
+const visionRadiologyLogo = '/vision-radiology-logo.png';
 import { useAuth } from '@/hooks/useAuth';
 import { extractSubdomain, getCompanyBySubdomain, buildSubdomainUrl } from '@/lib/subdomain';
 import { supabase } from '@/integrations/supabase/client';
@@ -167,8 +167,8 @@ export default function Auth() {
     );
   }
 
-  const logo = companyData?.logo_url || crowdHubLogo;
-  const companyName = companyData?.name || 'CrowdHub';
+  const logo = companyData?.logo_url || visionRadiologyLogo;
+  const companyName = companyData?.name || 'Vision Radiology';
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-3 md:p-6 overflow-hidden">
