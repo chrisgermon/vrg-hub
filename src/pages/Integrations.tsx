@@ -11,6 +11,7 @@ import { Loader2, CheckCircle2, XCircle, RefreshCw, MessageSquare } from "lucide
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SharePointConfiguration } from "@/components/settings/SharePointConfiguration";
 import { Office365UserSync } from "@/components/settings/Office365UserSync";
+import { N8nIntegration } from "@/components/settings/N8nIntegration";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Integrations() {
@@ -334,6 +335,10 @@ export default function Integrations() {
 
       {/* Office 365 User Sync - Super Admin Only */}
       {isSuperAdmin && <Office365UserSync />}
+
+      {/* n8n Integration */}
+      <N8nIntegration />
+
       <Card className="border-dashed">
         <CardHeader>
           <CardTitle className="text-muted-foreground">Additional Integrations</CardTitle>
