@@ -182,9 +182,22 @@ Deno.serve(async (req) => {
 
       console.log(`Received ${faxes.length} faxes in this batch`);
       
-      // Log first fax to see available fields (for debugging document URLs)
+      // Log first fax to see available fields (for debugging reference fields)
       if (faxes.length > 0 && allFaxes.length === 0) {
-        console.log('Sample fax data (first fax):', JSON.stringify(faxes[0], null, 2));
+        console.log('Sample fax data (first fax) - ALL FIELDS:', JSON.stringify(faxes[0], null, 2));
+        console.log('Reference fields found:', {
+          clientReference: faxes[0]?.clientReference,
+          client_reference: faxes[0]?.client_reference,
+          ClientReference: faxes[0]?.ClientReference,
+          messageReference: faxes[0]?.messageReference,
+          message_reference: faxes[0]?.message_reference,
+          reference: faxes[0]?.reference,
+          Reference: faxes[0]?.Reference,
+          ref: faxes[0]?.ref,
+          Ref: faxes[0]?.Ref,
+          yourReference: faxes[0]?.yourReference,
+          your_reference: faxes[0]?.your_reference,
+        });
       }
 
       allFaxes.push(...faxes);
@@ -221,13 +234,20 @@ Deno.serve(async (req) => {
       };
 
       // Extract client reference and message reference from the first fax in the campaign
+      // Try many variations of reference field names
       const clientReference = campaignFaxes[0]?.clientReference || 
                               campaignFaxes[0]?.client_reference || 
+                              campaignFaxes[0]?.ClientReference ||
                               null;
       
       const messageReference = campaignFaxes[0]?.messageReference || 
                                campaignFaxes[0]?.message_reference || 
                                campaignFaxes[0]?.reference || 
+                               campaignFaxes[0]?.Reference ||
+                               campaignFaxes[0]?.ref ||
+                               campaignFaxes[0]?.Ref ||
+                               campaignFaxes[0]?.yourReference ||
+                               campaignFaxes[0]?.your_reference ||
                                null;
       
       // Extract contact group information
@@ -254,15 +274,23 @@ Deno.serve(async (req) => {
       
       // Build campaign name with priority: clientReference > messageReference > contactGroupName + date > campaign key + date
       let campaignName: string;
-      if (clientReference) {
-        campaignName = clientReference;
-      } else if (messageReference) {
-        campaignName = messageReference;
+      const reference = clientReference || messageReference;
+      
+      if (reference) {
+        campaignName = reference;
       } else if (contactGroupName) {
         campaignName = `${contactGroupName} - ${dateStr}`;
       } else {
         campaignName = `Fax Campaign ${campaignKey} - ${dateStr}`;
       }
+      
+      // Store reference in metadata for future use
+      const metadata = {
+        clientReference,
+        messageReference,
+        reference,
+        originalCampaignKey: campaignKey,
+      };
 
       // Insert or update campaign
       const { data: campaign, error: campaignError } = await supabaseClient
@@ -277,6 +305,7 @@ Deno.serve(async (req) => {
           failed_count: stats.failed,
           pending_count: stats.pending,
           sent_at: campaignFaxes[0]?.sentAt || campaignFaxes[0]?.createdAt || (campaignFaxes[0]?.createdDateUtc ? new Date(campaignFaxes[0].createdDateUtc * 1000).toISOString() : new Date().toISOString()),
+          metadata,
         }, {
           onConflict: 'campaign_id'
         })
