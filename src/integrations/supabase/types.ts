@@ -802,6 +802,187 @@ export type Database = {
         }
         Relationships: []
       }
+      file_activity: {
+        Row: {
+          action: string
+          created_at: string
+          file_id: string | null
+          folder_id: string | null
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          file_id?: string | null
+          folder_id?: string | null
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          file_id?: string | null
+          folder_id?: string | null
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_activity_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "file_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_activity_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "file_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      file_documents: {
+        Row: {
+          created_at: string
+          folder_id: string | null
+          id: string
+          is_active: boolean
+          mime_type: string
+          name: string
+          size: number
+          storage_path: string
+          tags: string[] | null
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          is_active?: boolean
+          mime_type: string
+          name: string
+          size: number
+          storage_path: string
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          is_active?: boolean
+          mime_type?: string
+          name?: string
+          size?: number
+          storage_path?: string
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_documents_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "file_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      file_folders: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          name: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          name: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "file_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      file_shares: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          file_id: string | null
+          folder_id: string | null
+          id: string
+          permission: string
+          shared_by: string
+          shared_with: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          file_id?: string | null
+          folder_id?: string | null
+          id?: string
+          permission: string
+          shared_by: string
+          shared_with: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          file_id?: string | null
+          folder_id?: string | null
+          id?: string
+          permission?: string
+          shared_by?: string
+          shared_with?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_shares_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "file_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_shares_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "file_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_templates: {
         Row: {
           created_at: string
