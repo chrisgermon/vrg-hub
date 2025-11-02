@@ -39,7 +39,6 @@ const UserRoles = lazy(() => import("./pages/UserRoles"));
 const ContactSupport = lazy(() => import("./pages/ContactSupport"));
 const FileManager = lazy(() => import("./pages/FileManager"));
 const PrintOrderingForms = lazy(() => import("./pages/PrintOrderingForms"));
-const Documentation = lazy(() => import("./pages/Documentation"));
 const NewsManagement = lazy(() => import("./pages/NewsManagement"));
 const NewsViewAll = lazy(() => import("./pages/NewsViewAll"));
 const ArticleEditor = lazy(() => import("./components/news/ArticleEditor"));
@@ -91,7 +90,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/requests/new/:slug/:categorySlug", element: <NewDynamicRequest /> },
   { path: "/requests/tickets/new", element: <NewTicket /> },
   { path: "/catalog", element: <Catalog /> },
-  { path: "/documentation", element: <Documentation /> },
+  { path: "/documentation", element: <FileManager /> },
   { path: "/news/view-all", element: <NewsViewAll /> },
   { path: "/news", element: <NewsManagement /> },
   { path: "/news/new", element: <ArticleEditor /> },

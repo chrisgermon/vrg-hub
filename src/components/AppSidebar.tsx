@@ -364,7 +364,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           return isFeatureEnabled('modality_management') && hasPermission('view_modality_details');
         }
         if (item.url?.includes('/documentation')) {
-          return hasPermission('view_sharepoint_documents');
+          return true; // All authenticated users can access file manager
         }
         if (item.url?.includes('/print-orders')) {
           return isFeatureEnabled('print_ordering');
@@ -396,9 +396,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               paths: ["/marketing"]
             },
           ].filter(cat => cat.items.length > 0), // Remove empty categories
-          companyDocuments: hasPermission('view_sharepoint_documents') 
-            ? { title: "Company Documents", url: "/documentation", icon: FolderOpen }
-            : null,
+          companyDocuments: { title: "Company Documents", url: "/documentation", icon: FolderOpen },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
             : null,
@@ -434,9 +432,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               paths: ["/marketing"]
             },
           ].filter(cat => cat.items.length > 0),
-          companyDocuments: hasPermission('view_sharepoint_documents') 
-            ? { title: "Company Documents", url: "/documentation", icon: FolderOpen }
-            : null,
+          companyDocuments: { title: "Company Documents", url: "/documentation", icon: FolderOpen },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
             : null,
@@ -471,9 +467,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               paths: ["/requests", "/toner", "/catalog"]
             },
           ].filter(cat => cat.items.length > 0),
-          companyDocuments: hasPermission('view_sharepoint_documents') 
-            ? { title: "Company Documents", url: "/documentation", icon: FolderOpen }
-            : null,
+          companyDocuments: { title: "Company Documents", url: "/documentation", icon: FolderOpen },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
             : null,
@@ -509,9 +503,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               paths: ["/approvals", "/requests", "/toner", "/catalog"]
             },
           ].filter(cat => cat.items.length > 0),
-          companyDocuments: hasPermission('view_sharepoint_documents') 
-            ? { title: "Company Documents", url: "/documentation", icon: FolderOpen }
-            : null,
+          companyDocuments: { title: "Company Documents", url: "/documentation", icon: FolderOpen },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
             : null,
