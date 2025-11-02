@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ChevronLeft, ChevronRight, Mail, FileText, RefreshCw } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO, addMonths, subMonths } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 
 interface NotifyreCampaign {
@@ -141,8 +142,9 @@ export function MarketingCalendarView() {
   const isLoading = loadingNotifyre || loadingMailchimp;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <TooltipProvider>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
             <ChevronLeft className="h-4 w-4" />
@@ -205,24 +207,47 @@ export function MarketingCalendarView() {
                       {format(date, 'd')}
                     </div>
                     <div className="space-y-1">
-                      {campaigns.slice(0, 3).map(campaign => (
-                        <div
-                          key={campaign.id}
-                          className="text-xs p-1 rounded truncate flex items-center gap-1"
-                          style={{ backgroundColor: campaign.type === 'fax' ? 'hsl(var(--primary) / 0.1)' : 'hsl(var(--secondary) / 0.5)' }}
-                        >
-                          {campaign.type === 'fax' ? (
-                            <FileText className="h-3 w-3 flex-shrink-0" />
-                          ) : (
-                            <Mail className="h-3 w-3 flex-shrink-0" />
-                          )}
-                          <span className="truncate">
-                            {campaign.type === 'fax'
-                              ? (campaign as NotifyreCampaign).campaign_name
-                              : (campaign as MailchimpCampaign).settings.title}
-                          </span>
-                        </div>
-                      ))}
+                      {campaigns.slice(0, 3).map(campaign => {
+                        const campaignTime = campaign.type === 'fax' 
+                          ? (campaign as NotifyreCampaign).sent_at
+                          : (campaign as MailchimpCampaign).send_time;
+                        
+                        const timeDisplay = campaignTime 
+                          ? format(parseISO(campaignTime), 'h:mm a')
+                          : 'Time not available';
+
+                        return (
+                          <Tooltip key={campaign.id}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className="text-xs p-1 rounded truncate flex items-center gap-1"
+                                style={{ backgroundColor: campaign.type === 'fax' ? 'hsl(var(--primary) / 0.1)' : 'hsl(var(--secondary) / 0.5)' }}
+                              >
+                                {campaign.type === 'fax' ? (
+                                  <FileText className="h-3 w-3 flex-shrink-0" />
+                                ) : (
+                                  <Mail className="h-3 w-3 flex-shrink-0" />
+                                )}
+                                <span className="truncate">
+                                  {campaign.type === 'fax'
+                                    ? (campaign as NotifyreCampaign).campaign_name
+                                    : (campaign as MailchimpCampaign).settings.title}
+                                </span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="font-medium">
+                                {campaign.type === 'fax'
+                                  ? (campaign as NotifyreCampaign).campaign_name
+                                  : (campaign as MailchimpCampaign).settings.title}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {campaign.type === 'fax' ? 'Sent' : 'Scheduled'}: {timeDisplay}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      })}
                       {campaigns.length > 3 && (
                         <div className="text-xs text-muted-foreground">
                           +{campaigns.length - 3} more
@@ -339,6 +364,7 @@ export function MarketingCalendarView() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
