@@ -130,7 +130,6 @@ serve(async (req) => {
       .from('office365_connections')
       .select('*')
       .eq('company_id', company_id)
-      .eq('is_active', true)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();

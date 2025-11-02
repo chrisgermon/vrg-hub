@@ -30,10 +30,12 @@ serve(async (req) => {
       throw new Error('Not authenticated');
     }
 
-    const { company_id } = await req.json();
-
-    if (!company_id) {
-      throw new Error('Company ID is required');
+    let company_id: string | null = null;
+    try {
+      const body = await req.json();
+      company_id = body?.company_id ?? null;
+    } catch {
+      // No body provided; will attempt to infer company_id from profile
     }
 
     // Get Office 365 connection (prefer company-level via admin, fallback to user-level)
@@ -51,6 +53,19 @@ serve(async (req) => {
       user_id: string | null;
     } | null = null;
 
+    // If company_id wasn't provided, try to infer it from the user's profile
+    if (!company_id) {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      company_id = profile?.company_id ?? null;
+    }
+
+    if (!company_id) {
+      throw new Error('Company ID is required');
+    }
     if (company_id) {
       const { data: companyConn } = await supabaseAdmin
         .from('office365_connections')
