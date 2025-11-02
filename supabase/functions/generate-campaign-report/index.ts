@@ -410,57 +410,6 @@ serve(async (req: Request) => {
       `;
     }
 
-    // Build bounced emails table
-    let bouncedEmailsHtml = '';
-    if (bouncedEmails.length > 0) {
-      bouncedEmailsHtml = `
-        <h2 style="color: #1f2937; font-size: 20px; font-weight: 600; margin: 24px 0 16px 0;">Bounced Emails</h2>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; background: white; border-radius: 8px; overflow: hidden;">
-          <thead>
-            <tr style="background: #fef2f2;">
-              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #fecaca; font-weight: 600; color: #991b1b;">Campaign</th>
-              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #fecaca; font-weight: 600; color: #991b1b;">Email Address</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${bouncedEmails.map(bounce => `
-              <tr style="border-bottom: 1px solid #fef2f2;">
-                <td style="padding: 12px; color: #7f1d1d;">${bounce.campaign}</td>
-                <td style="padding: 12px; color: #991b1b; font-family: monospace;">${bounce.email_address}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
-    }
-
-    // Build failed faxes table
-    let failedFaxesHtml = '';
-    if (failedFaxes.length > 0) {
-      failedFaxesHtml = `
-        <h2 style="color: #1f2937; font-size: 20px; font-weight: 600; margin: 24px 0 16px 0;">Failed Fax Numbers</h2>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; background: white; border-radius: 8px; overflow: hidden;">
-          <thead>
-            <tr style="background: #fef2f2;">
-              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #fecaca; font-weight: 600; color: #991b1b;">Campaign</th>
-              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #fecaca; font-weight: 600; color: #991b1b;">Recipient</th>
-              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #fecaca; font-weight: 600; color: #991b1b;">Fax Number</th>
-              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #fecaca; font-weight: 600; color: #991b1b;">Reason</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${failedFaxes.map(fax => `
-              <tr style="border-bottom: 1px solid #fef2f2;">
-                <td style="padding: 12px; color: #7f1d1d;">${fax.campaign}</td>
-                <td style="padding: 12px; color: #991b1b;">${fax.name || 'Unknown'}</td>
-                <td style="padding: 12px; color: #991b1b; font-family: monospace;">${fax.to_number}</td>
-                <td style="padding: 12px; color: #7f1d1d; font-size: 12px;">${fax.error_message || 'No reason provided'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
-    }
 
     // Build summary HTML with CID logo reference
     const emailHtml = `
@@ -516,8 +465,6 @@ serve(async (req: Request) => {
 
               ${emailCampaignsHtml}
               ${faxCampaignsHtml}
-              ${bouncedEmailsHtml}
-              ${failedFaxesHtml}
 
               ${emailData.length === 0 && faxData.length === 0 ? `
                 <div style="text-align: center; padding: 48px 16px; color: #6b7280;">
