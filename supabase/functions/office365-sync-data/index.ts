@@ -124,21 +124,50 @@ serve(async (req) => {
       );
     }
 
-    // Get connection for this company (connections are company-level, not user-level)
+    // Try multiple strategies to find a connection
     console.log('Sync request received. Company_id:', company_id, 'user_id:', user.id);
-    const { data: connection, error: connError } = await supabase
-      .from('office365_connections')
-      .select('*')
-      .eq('company_id', company_id)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
 
-    console.log('Company connection found:', !!connection, 'error:', connError?.message);
+    let connection: any = null;
+    let connError: any = null;
 
-    if (connError || !connection) {
+    // 1) If company_id provided, try tenant/company-level match
+    if (company_id) {
+      const { data: companyConn, error } = await supabase
+        .from('office365_connections')
+        .select('*')
+        .eq('company_id', company_id)
+        .order('updated_at', { ascending: false })
+        .maybeSingle();
+      if (companyConn) connection = companyConn; else connError = error || connError;
+    }
+
+    // 2) Fallback to user-level connection
+    if (!connection) {
+      const { data: userConn, error } = await supabase
+        .from('office365_connections')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .maybeSingle();
+      if (userConn) connection = userConn; else connError = error || connError;
+    }
+
+    // 3) Final fallback: most recent tenant/company-level connection (user_id IS NULL)
+    if (!connection) {
+      const { data: tenantConn, error } = await supabase
+        .from('office365_connections')
+        .select('*')
+        .is('user_id', null)
+        .order('updated_at', { ascending: false })
+        .maybeSingle();
+      if (tenantConn) connection = tenantConn; else connError = error || connError;
+    }
+
+    console.log('Connection found:', !!connection, 'error:', connError?.message);
+
+    if (!connection) {
       return new Response(
-        JSON.stringify({ error: 'No active Office 365 connection found' }),
+        JSON.stringify({ error: 'No Office 365 connection found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

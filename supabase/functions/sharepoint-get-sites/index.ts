@@ -88,6 +88,18 @@ serve(async (req) => {
       if (userConn?.access_token) connection = userConn;
     }
 
+    // Final fallback: use the most recent tenant/company-level connection
+    if (!connection) {
+      const { data: tenantConn } = await supabaseAdmin
+        .from('office365_connections')
+        .select('id, access_token, refresh_token, expires_at, company_id, user_id')
+        .is('user_id', null)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (tenantConn?.access_token) connection = tenantConn;
+    }
+
     if (!connection) {
       throw new Error('No Office 365 connection found. Please connect it in Settings > Integrations.');
     }
