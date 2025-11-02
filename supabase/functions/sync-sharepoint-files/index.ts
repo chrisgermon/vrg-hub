@@ -48,6 +48,10 @@ Deno.serve(async (req) => {
       companyId = profile?.brand_id || user.id;
     }
 
+    // Get the request body to check for custom folder path
+    const body = await req.json().catch(() => ({}));
+    const requestedFolderPath = body.folder_path;
+
     // Get SharePoint configuration for the resolved company
     const { data: spConfig } = await supabaseClient
       .from('sharepoint_configurations')
@@ -113,8 +117,11 @@ Deno.serve(async (req) => {
     }
 
     // Fetch files from SharePoint
-    const folderPath = spConfig.folder_path || '';
+    // Use requested folder path if provided, otherwise use config default
+    const folderPath = requestedFolderPath !== undefined ? requestedFolderPath : (spConfig.folder_path || '/');
     const siteId = spConfig.site_id;
+    
+    console.log(`Syncing SharePoint folder: "${folderPath}" for company: ${companyId}`);
     
     // Construct proper Graph API URL
     let graphUrl: string;

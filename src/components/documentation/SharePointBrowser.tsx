@@ -107,7 +107,7 @@ export function SharePointBrowser() {
     }
   };
 
-  const syncSharePointFiles = async () => {
+  const syncSharePointFiles = async (customFolderPath?: string) => {
     setSyncing(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -128,7 +128,10 @@ export function SharePointBrowser() {
         company_id: res.companyId,
       };
       if (spConfig?.site_id) payload.site_id = spConfig.site_id;
-      if (spConfig?.folder_path) payload.folder_path = spConfig.folder_path;
+      
+      // Use custom folder path if provided, otherwise use configured folder path
+      const targetFolderPath = customFolderPath !== undefined ? customFolderPath : (spConfig?.folder_path || '/');
+      payload.folder_path = targetFolderPath;
 
       const { data, error } = await supabase.functions.invoke('sync-sharepoint-files', {
         body: payload,
@@ -160,8 +163,11 @@ export function SharePointBrowser() {
           toast.error('Failed to sync SharePoint files');
         }
       } else {
-        toast.success('SharePoint files synced successfully');
-        await loadItems(currentPath);
+        // Only show success toast for manual syncs (when no custom folder path)
+        if (customFolderPath === undefined) {
+          toast.success('SharePoint files synced successfully');
+        }
+        await loadItems(customFolderPath !== undefined ? customFolderPath : currentPath);
       }
     } catch (error) {
       console.error('Sync error:', error);
@@ -272,11 +278,6 @@ export function SharePointBrowser() {
 
       const companyId = res.companyId;
 
-      // If force refresh, sync from SharePoint first
-      if (forceRefresh) {
-        await syncSharePointFiles();
-      }
-
       // Load from local cache
       const { data: cacheData, error } = await supabase
         .from('sharepoint_cache')
@@ -289,6 +290,55 @@ export function SharePointBrowser() {
       if (error) {
         console.error('Error loading from cache:', error);
         throw error;
+      }
+
+      // If no cache data found for this path and not root, sync this folder
+      if ((!cacheData || cacheData.length === 0) && path !== '/') {
+        console.log(`No cache for path "${path}", syncing...`);
+        await syncSharePointFiles(path);
+        // After sync, reload from cache
+        const { data: refreshedData } = await supabase
+          .from('sharepoint_cache')
+          .select('*')
+          .eq('company_id', companyId)
+          .eq('parent_path', path)
+          .order('item_type', { ascending: false })
+          .order('name');
+        
+        const cacheFolders: SharePointFolder[] = (refreshedData || [])
+          .filter((item: any) => item.item_type === 'folder')
+          .map((item: any) => ({
+            id: item.item_id,
+            name: item.name,
+            webUrl: item.web_url,
+            childCount: item.child_count || 0,
+            lastModifiedDateTime: item.last_modified_datetime,
+            permissions: item.permissions || [],
+          }));
+
+        const cacheFiles: SharePointFile[] = (refreshedData || [])
+          .filter((item: any) => item.item_type === 'file')
+          .map((item: any) => ({
+            id: item.item_id,
+            name: item.name,
+            webUrl: item.web_url,
+            size: item.size || 0,
+            createdDateTime: item.created_datetime,
+            lastModifiedDateTime: item.last_modified_datetime,
+            createdBy: item.created_by,
+            lastModifiedBy: item.last_modified_by,
+            fileType: item.file_type || 'unknown',
+            downloadUrl: item.download_url,
+            permissions: item.permissions || [],
+          }));
+
+        setFolders(cacheFolders);
+        setFiles(cacheFiles);
+        setConfigured(true);
+        setFromCache(true);
+        setCachedAt(refreshedData && refreshedData.length > 0 ? refreshedData[0].cached_at : null);
+        setLoading(false);
+        return;
       }
 
       // Convert cache data to folders and files
@@ -474,7 +524,7 @@ export function SharePointBrowser() {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={syncSharePointFiles}
+            onClick={() => syncSharePointFiles()}
             disabled={syncing}
             title="Sync from SharePoint"
           >
