@@ -166,6 +166,7 @@ serve(async (req) => {
         .select('*')
         .eq('company_id', company_id)
         .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       if (companyConn) connection = companyConn; else connError = error || connError;
     }
@@ -177,6 +178,7 @@ serve(async (req) => {
         .select('*')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       if (userConn) connection = userConn; else connError = error || connError;
     }
@@ -188,15 +190,27 @@ serve(async (req) => {
         .select('*')
         .is('user_id', null)
         .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       if (tenantConn) connection = tenantConn; else connError = error || connError;
+    }
+
+    // 4) Last resort: any most recent connection regardless of user/company
+    if (!connection) {
+      const { data: anyConn, error } = await supabase
+        .from('office365_connections')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (anyConn) connection = anyConn; else connError = error || connError;
     }
 
     console.log('Connection found:', !!connection, 'error:', connError?.message);
 
     if (!connection) {
       return new Response(
-        JSON.stringify({ error: 'No Office 365 connection found' }),
+        JSON.stringify({ error: 'No active Office 365 connection found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
