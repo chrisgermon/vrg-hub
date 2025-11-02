@@ -46,7 +46,7 @@ serve(async (req) => {
       id: string;
       access_token: string;
       refresh_token: string | null;
-      token_expires_at: string;
+      expires_at: string;
       company_id: string | null;
       user_id: string | null;
     } | null = null;
@@ -54,7 +54,7 @@ serve(async (req) => {
     if (company_id) {
       const { data: companyConn } = await supabaseAdmin
         .from('office365_connections')
-        .select('id, access_token, refresh_token, token_expires_at, company_id, user_id')
+        .select('id, access_token, refresh_token, expires_at, company_id, user_id')
         .eq('company_id', company_id)
         .order('updated_at', { ascending: false })
         .maybeSingle();
@@ -64,7 +64,7 @@ serve(async (req) => {
     if (!connection) {
       const { data: userConn } = await supabaseAdmin
         .from('office365_connections')
-        .select('id, access_token, refresh_token, token_expires_at, company_id, user_id')
+        .select('id, access_token, refresh_token, expires_at, company_id, user_id')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
         .maybeSingle();
@@ -72,11 +72,11 @@ serve(async (req) => {
     }
 
     if (!connection || !connection.access_token) {
-      throw new Error('Office 365 not connected');
+      throw new Error('Office 365 not connected. Please reconnect in Settings > Integrations.');
     }
 
     // Check if token needs refresh (expires within 5 minutes)
-    const tokenExpiresAt = new Date(connection.token_expires_at);
+    const tokenExpiresAt = new Date(connection.expires_at);
     const now = new Date();
     const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
 
@@ -118,7 +118,7 @@ serve(async (req) => {
       // Update the connection in the database
       const updateData: any = {
         access_token: tokens.access_token,
-        token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+        expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
         updated_at: new Date().toISOString(),
       };
       
