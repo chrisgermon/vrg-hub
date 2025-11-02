@@ -107,7 +107,7 @@ export function SharePointBrowser() {
     }
   };
 
-  const syncSharePointFiles = async (customFolderPath?: string) => {
+  const syncSharePointFiles = async (customFolderPath?: string, options?: { skipRefresh?: boolean }) => {
     setSyncing(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -167,7 +167,9 @@ export function SharePointBrowser() {
         if (customFolderPath === undefined) {
           toast.success('SharePoint files synced successfully');
         }
-        await loadItems(customFolderPath !== undefined ? customFolderPath : currentPath);
+        if (!options?.skipRefresh) {
+          await loadItems(customFolderPath !== undefined ? customFolderPath : currentPath);
+        }
       }
     } catch (error) {
       console.error('Sync error:', error);
@@ -295,7 +297,7 @@ export function SharePointBrowser() {
       // If no cache data found for this path and not root, sync this folder
       if ((!cacheData || cacheData.length === 0) && path !== '/') {
         console.log(`No cache for path "${path}", syncing...`);
-        await syncSharePointFiles(path);
+        await syncSharePointFiles(path, { skipRefresh: true });
         // After sync, reload from cache
         const { data: refreshedData } = await supabase
           .from('sharepoint_cache')
