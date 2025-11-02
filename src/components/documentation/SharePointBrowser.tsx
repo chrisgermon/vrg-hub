@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -161,7 +161,7 @@ export function SharePointBrowser() {
         }
       } else {
         toast.success('SharePoint files synced successfully');
-        await loadItems(currentPath, true);
+        await loadItems(currentPath);
       }
     } catch (error) {
       console.error('Sync error:', error);
@@ -238,10 +238,8 @@ export function SharePointBrowser() {
         }
       }
 
-      // Sync files after upload
+      // Sync files after upload and refresh from cache
       await syncSharePointFiles();
-      // Refresh the current view
-      await loadItems(currentPath, true);
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload files');
@@ -454,14 +452,14 @@ export function SharePointBrowser() {
               </BreadcrumbLink>
             </BreadcrumbItem>
             {breadcrumbs.map((part, index) => (
-              <>
-                <BreadcrumbSeparator key={`sep-${index}`}>
+              <Fragment key={`bc-${index}`}>
+                <BreadcrumbSeparator>
                   <ChevronRight className="h-4 w-4" />
                 </BreadcrumbSeparator>
-                <BreadcrumbItem key={part}>
+                <BreadcrumbItem>
                   <BreadcrumbLink>{part}</BreadcrumbLink>
                 </BreadcrumbItem>
-              </>
+              </Fragment>
             ))}
           </BreadcrumbList>
         </Breadcrumb>
