@@ -104,20 +104,35 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get connection (prefer company_id if provided, else user-level)
-    let { data: connection, error: connError } = await supabase
+    // Get connection (try company_id, then user-level, then any active connection)
+    let { data: connection, error: connError } = company_id ? await supabase
       .from('office365_connections')
       .select('*')
       .eq('company_id', company_id)
+      .eq('is_active', true)
       .order('updated_at', { ascending: false })
-      .maybeSingle();
+      .maybeSingle() : { data: null, error: null };
 
-    if ((!connection || connError) && !company_id) {
+    if (!connection) {
       const res = await supabase
         .from('office365_connections')
         .select('*')
         .eq('user_id', user.id)
+        .eq('is_active', true)
         .order('updated_at', { ascending: false })
+        .maybeSingle();
+      connection = res.data as any;
+      connError = res.error as any;
+    }
+
+    // Fallback: get any active connection
+    if (!connection) {
+      const res = await supabase
+        .from('office365_connections')
+        .select('*')
+        .eq('is_active', true)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       connection = res.data as any;
       connError = res.error as any;
@@ -133,7 +148,8 @@ serve(async (req) => {
     let accessToken = connection.access_token;
     
     // Check if token needs refresh
-    if (new Date(connection.expires_at) <= new Date()) {
+    const tokenExpiresAt = connection.token_expires_at || connection.expires_at;
+    if (tokenExpiresAt && new Date(tokenExpiresAt) <= new Date()) {
       const clientId = Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID');
       const clientSecret = Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET');
       
@@ -146,7 +162,7 @@ serve(async (req) => {
         .update({
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token || connection.refresh_token,
-          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+          token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
         })
         .eq('id', connection.id);
     }

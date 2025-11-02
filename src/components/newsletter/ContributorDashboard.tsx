@@ -31,7 +31,13 @@ export function ContributorDashboard() {
   });
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <Card>
+        <CardContent className="py-8">
+          <p className="text-center text-muted-foreground">Loading your assignments...</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (selectedAssignment) {
@@ -57,9 +63,14 @@ export function ContributorDashboard() {
         </CardHeader>
         <CardContent>
           {assignments.length === 0 ? (
-            <p className="text-center py-8 text-muted-foreground">
-              No assignments yet
-            </p>
+            <div className="text-center py-8 space-y-2">
+              <p className="text-muted-foreground">
+                No active assignments yet
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Assignments will appear here when an editor creates them for a newsletter cycle
+              </p>
+            </div>
           ) : (
             <div className="space-y-4">
               {assignments.map((assignment: any) => (
