@@ -76,8 +76,8 @@ Deno.serve(async (req) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-          client_id: Deno.env.get('AZURE_CLIENT_ID') || '',
-          client_secret: Deno.env.get('AZURE_CLIENT_SECRET') || '',
+          client_id: Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID') || '',
+          client_secret: Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET') || '',
           refresh_token: o365Connection.refresh_token || '',
           grant_type: 'refresh_token',
         }),
