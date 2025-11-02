@@ -145,35 +145,35 @@ serve(async (req) => {
     }
 
     let accessToken = connection.access_token;
-    
+
     // Check if token needs refresh (expires within 5 minutes)
-    const tokenExpiresAt = new Date(connection.expires_at);
+    const tokenExpiresAt = new Date(connection.token_expires_at);
     const now = new Date();
     const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
-    
+
     if (tokenExpiresAt <= fiveMinutesFromNow) {
       console.log('Access token expired or expiring soon, refreshing...');
-      
+
       if (!connection.refresh_token) {
         throw new Error('Office 365 connection expired and cannot be refreshed. Please reconnect in Settings > Integrations.');
       }
-      
+
       const clientId = Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID');
       const clientSecret = Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET');
-      
+
       const tokens = await refreshAccessToken(connection.refresh_token, clientId!, clientSecret!);
       accessToken = tokens.access_token;
-      
+
       // Update tokens in database
       await supabase
         .from('office365_connections')
         .update({
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token || connection.refresh_token,
-          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+          token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
         })
         .eq('id', connection.id);
-      
+
       console.log('Token refreshed successfully');
     }
 

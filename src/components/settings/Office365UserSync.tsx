@@ -309,23 +309,27 @@ export function Office365UserSync() {
 
     setSyncing(true);
     try {
-      // Try to read the current user's connection for company_id (may be blocked by RLS)
-      let companyId: string | null = null;
-
-      const { data: conn } = await (supabase as any)
-        .from('office365_connections')
+      // Get company_id from user's profile (not from connections table)
+      const { data: profile } = await (supabase as any)
+        .from('profiles')
         .select('company_id')
         .eq('user_id', user?.id || '')
         .maybeSingle();
 
-      companyId = conn?.company_id || (await getTenantCompanyId());
+      let companyId = profile?.company_id;
+
+      // Fallback to checking synced users table
+      if (!companyId) {
+        companyId = await getTenantCompanyId();
+      }
 
       if (!companyId) {
-        toast.error('No Office 365 connection found for this tenant. A Super Admin must connect it in Integrations.');
+        toast.error('Could not determine your company. Please contact support.');
+        setSyncing(false);
         return;
       }
 
-      // Call the sync function
+      // Call the sync function with the user's company_id
       const { data, error } = await supabase.functions.invoke('office365-sync-data', {
         body: { company_id: companyId }
       });
