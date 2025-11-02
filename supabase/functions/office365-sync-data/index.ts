@@ -109,7 +109,6 @@ serve(async (req) => {
       .from('office365_connections')
       .select('*')
       .eq('company_id', company_id)
-      .eq('is_active', true)
       .order('updated_at', { ascending: false })
       .maybeSingle() : { data: null, error: null };
 
@@ -118,19 +117,16 @@ serve(async (req) => {
         .from('office365_connections')
         .select('*')
         .eq('user_id', user.id)
-        .eq('is_active', true)
         .order('updated_at', { ascending: false })
         .maybeSingle();
       connection = res.data as any;
       connError = res.error as any;
     }
 
-    // Fallback: get any active connection
     if (!connection) {
       const res = await supabase
         .from('office365_connections')
         .select('*')
-        .eq('is_active', true)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -163,6 +159,7 @@ serve(async (req) => {
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token || connection.refresh_token,
           token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
         })
         .eq('id', connection.id);
     }
