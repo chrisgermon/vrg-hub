@@ -112,19 +112,8 @@ serve(async (req) => {
       configured = (anyConfigs?.length ?? 0) > 0;
     }
 
-    if (!companyId) {
-      return new Response(
-        JSON.stringify({
-          ...baseResponse,
-          configured,
-          needsO365: true,
-          message: configured
-            ? 'Connect your Office 365 account to view SharePoint sites.'
-            : 'SharePoint is not configured yet.',
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // No companyId inferred; proceed to try user-level or tenant-level Office 365 connections
+    // We'll still determine 'configured' (already done above) to inform the UI, but we won't block here.
 
     // Prefer company-level connection, then user-level, finally tenant-level
     const { data: companyConnection } = await supabaseAdmin
@@ -136,7 +125,7 @@ serve(async (req) => {
 
     let connection = companyConnection?.[0] ?? null;
 
-    if (!connection && userConnection?.access_token && userConnection.company_id === companyId) {
+    if (!connection && userConnection?.access_token) {
       connection = userConnection;
     }
 
@@ -150,21 +139,46 @@ serve(async (req) => {
       connection = tenantConnection?.[0] ?? null;
     }
 
+    // Ensure we have a usable access token; if missing, try to refresh via refresh_token
     if (!connection?.access_token) {
-      return new Response(
-        JSON.stringify({
-          ...baseResponse,
-          configured,
-          needsO365: true,
-          message: 'Office 365 not connected. Please connect it in Settings > Integrations.',
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (connection?.refresh_token) {
+        try {
+          const clientId = Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID');
+          const clientSecret = Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET');
+          const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: clientId!,
+              client_secret: clientSecret!,
+              refresh_token: connection.refresh_token,
+              grant_type: 'refresh_token',
+            }),
+          });
+          if (tokenResponse.ok) {
+            const tokens = await tokenResponse.json();
+            await supabaseAdmin
+              .from('office365_connections')
+              .update({
+                access_token: tokens.access_token,
+                refresh_token: tokens.refresh_token || connection.refresh_token,
+                expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', connection.id);
+            connection = { ...connection, ...tokens, access_token: tokens.access_token };
+          } else {
+            console.error('Token refresh failed (missing token path):', await tokenResponse.text());
+          }
+        } catch (e) {
+          console.error('Unexpected error refreshing token (missing token path):', e);
+        }
+      }
     }
 
     // Refresh the token if it is missing or expiring soon
-    let accessToken = connection.access_token;
-    const expiresAtRaw = connection.expires_at ? new Date(connection.expires_at) : null;
+    let accessToken = connection?.access_token;
+    const expiresAtRaw = connection?.expires_at ? new Date(connection.expires_at) : null;
     const refreshThreshold = new Date(Date.now() + 5 * 60 * 1000);
     const needsRefresh = !expiresAtRaw || expiresAtRaw <= refreshThreshold;
 
