@@ -92,10 +92,71 @@ export function SharePointBrowser() {
 
   const cache = useSharePointCache();
 
+  const autoConfigureSharePoint = async (companyId: string, userId: string) => {
+    try {
+      console.log('SharePoint: Auto-configuring for company', companyId);
+      
+      // Fetch sites to find vrgdocuments
+      const { data, error } = await supabase.functions.invoke('sharepoint-get-sites', {
+        body: { company_id: companyId }
+      });
+
+      if (error) {
+        console.error('SharePoint: Error fetching sites:', error);
+        return;
+      }
+
+      const TARGET_SITE_NAME = 'vrgdocuments';
+      const vrgSite = data?.sites?.find((s: any) => 
+        s.name.toLowerCase() === TARGET_SITE_NAME.toLowerCase()
+      );
+
+      if (!vrgSite) {
+        console.log('SharePoint: vrgdocuments site not found');
+        return;
+      }
+
+      console.log('SharePoint: Found vrgdocuments site, configuring...');
+
+      // Clear old cache
+      await supabase
+        .from('sharepoint_cache')
+        .delete()
+        .eq('company_id', companyId);
+
+      // Save configuration
+      const { error: configError } = await supabase
+        .from('sharepoint_configurations')
+        .insert({
+          company_id: companyId,
+          site_id: vrgSite.id,
+          site_name: vrgSite.name,
+          site_url: vrgSite.webUrl,
+          folder_path: '/',
+          configured_by: userId,
+          is_active: true,
+        });
+
+      if (configError) {
+        console.error('SharePoint: Error saving configuration:', configError);
+        return;
+      }
+
+      console.log('SharePoint: Configuration saved, re-checking...');
+      toast.success('SharePoint configured successfully!');
+      
+      // Re-check configuration
+      await checkConfigured();
+    } catch (error) {
+      console.error('SharePoint: Auto-configuration error:', error);
+    }
+  };
+
   const checkConfigured = useCallback(async (): Promise<{ configured: boolean; companyId?: string }> => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        console.log('SharePoint: No session found');
         setConfigured(false);
         setNeedsO365(false);
         setSpConfig(null);
@@ -105,6 +166,7 @@ export function SharePointBrowser() {
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        console.log('SharePoint: No user found');
         setConfigured(false);
         setNeedsO365(false);
         setSpConfig(null);
@@ -112,14 +174,17 @@ export function SharePointBrowser() {
         return { configured: false };
       }
 
-      const { data: connection } = await (supabase as any)
+      console.log('SharePoint: Checking O365 connection for user', user.id);
+      const { data: connection, error: connectionError } = await supabase
         .from('office365_connections')
         .select('company_id')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
         .maybeSingle();
 
-      let resolvedCompanyId: string | undefined = (connection?.company_id as string | undefined);
+      console.log('SharePoint: O365 connection result:', { connection, connectionError });
+
+      let resolvedCompanyId: string | undefined = connection?.company_id;
 
       if (!resolvedCompanyId) {
         const { data: profile } = await supabase
@@ -127,25 +192,33 @@ export function SharePointBrowser() {
           .select('brand_id')
           .eq('id', user.id)
           .maybeSingle();
-        resolvedCompanyId = (profile?.brand_id as any) || user.id;
+        resolvedCompanyId = profile?.brand_id || user.id;
+        console.log('SharePoint: Using fallback company_id:', resolvedCompanyId);
       }
 
-      const { data: spConfigData, error: spError } = await (supabase as any)
+      console.log('SharePoint: Checking configuration for company', resolvedCompanyId);
+      const { data: spConfigData, error: spError } = await supabase
         .from('sharepoint_configurations')
         .select('*')
         .eq('company_id', resolvedCompanyId)
         .eq('is_active', true)
         .maybeSingle();
 
+      console.log('SharePoint: Configuration result:', { spConfigData, spError });
+
       const isConfigured = !!spConfigData && !spError;
+      console.log('SharePoint: Final configuration status:', isConfigured);
+      
       setConfigured(isConfigured);
       setSpConfig(spConfigData);
       setCompanyId(resolvedCompanyId || null);
       if (isConfigured) {
         setNeedsO365(false);
+        setSharePointSiteUrl(spConfigData?.site_url || null);
       }
       return { configured: isConfigured, companyId: resolvedCompanyId };
-    } catch {
+    } catch (error) {
+      console.error('SharePoint: Error in checkConfigured:', error);
       setConfigured(false);
       setNeedsO365(false);
       setSpConfig(null);
@@ -238,6 +311,21 @@ export function SharePointBrowser() {
       const result = await checkConfigured();
       if (!result.configured) {
         setLoading(false);
+        // Check if user has O365 connection but no SharePoint config
+        // If so, try to auto-configure
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: connection } = await supabase
+            .from('office365_connections')
+            .select('company_id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (connection?.company_id) {
+            console.log('SharePoint: O365 connected but not configured, attempting auto-config');
+            await autoConfigureSharePoint(connection.company_id, user.id);
+          }
+        }
       }
     };
     init();
