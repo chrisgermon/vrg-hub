@@ -55,17 +55,9 @@ interface MenuConfig {
   custom_heading_label?: string;
 }
 
-interface MenuHeading {
-  id: string;
-  heading_key: string;
-  label: string;
-  sort_order: number;
-  is_active: boolean;
-}
-
 interface SortableItemProps {
   id: string;
-  config: MenuConfig | MenuHeading;
+  config: MenuConfig;
   isHeading: boolean;
   isVisible: boolean;
   label: string;
@@ -91,7 +83,9 @@ function SortableItem({ id, config, isHeading, isVisible, label, onToggle, onRem
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center justify-between p-3 border rounded-lg bg-card"
+      className={`flex items-center justify-between p-3 border rounded-lg ${
+        isHeading ? 'bg-primary/5 border-primary/20' : 'bg-card'
+      }`}
     >
       <div className="flex items-center gap-3 flex-1">
         <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
@@ -102,11 +96,11 @@ function SortableItem({ id, config, isHeading, isVisible, label, onToggle, onRem
           onCheckedChange={onToggle}
         />
         <div className="flex flex-col">
-          <span className={!isVisible ? 'text-muted-foreground' : ''}>
+          <span className={`${!isVisible ? 'text-muted-foreground' : ''} ${isHeading ? 'font-semibold' : ''}`}>
             {label}
           </span>
           <span className="text-xs text-muted-foreground">
-            {isHeading ? 'Global Sub-Heading' : (config as MenuConfig).item_type}
+            {isHeading ? 'Section Heading' : config.item_type}
           </span>
         </div>
       </div>
@@ -146,7 +140,6 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
 export function MenuEditor() {
   const [selectedRole, setSelectedRole] = useState<UserRole>('requester');
   const [menuConfigs, setMenuConfigs] = useState<MenuConfig[]>([]);
-  const [globalHeadings, setGlobalHeadings] = useState<MenuHeading[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newHeadingLabel, setNewHeadingLabel] = useState('');
@@ -162,22 +155,7 @@ export function MenuEditor() {
 
   useEffect(() => {
     loadMenuConfigs();
-    loadGlobalHeadings();
   }, [selectedRole]);
-
-  const loadGlobalHeadings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('menu_headings')
-        .select('*')
-        .order('sort_order');
-
-      if (error) throw error;
-      setGlobalHeadings(data || []);
-    } catch (error) {
-      console.error('Error loading headings:', error);
-    }
-  };
 
   const loadMenuConfigs = async () => {
     setLoading(true);
@@ -232,82 +210,34 @@ export function MenuEditor() {
     return DEFAULT_MENU_ITEMS.find(item => item.key === config.item_key)?.label || config.item_key;
   };
 
-  const addHeading = async () => {
+  const addHeading = () => {
     if (!newHeadingLabel.trim()) return;
 
-    try {
-      const { error } = await supabase
-        .from('menu_headings')
-        .insert({
-          heading_key: `heading-${Date.now()}`,
-          label: newHeadingLabel.trim(),
-          sort_order: globalHeadings.length,
-          is_active: true,
-        });
+    const newHeading: MenuConfig = {
+      role: selectedRole,
+      item_key: `heading-${Date.now()}`,
+      item_type: 'heading',
+      is_visible: true,
+      sort_order: menuConfigs.length,
+      custom_heading_label: newHeadingLabel.trim(),
+    };
 
-      if (error) throw error;
-
-      await loadGlobalHeadings();
-      setNewHeadingLabel('');
-      setAddHeadingOpen(false);
-      
-      toast({
-        title: 'Success',
-        description: 'Heading added successfully',
-      });
-    } catch (error) {
-      console.error('Error adding heading:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add heading',
-        variant: 'destructive',
-      });
-    }
+    setMenuConfigs(prev => [...prev, newHeading]);
+    setNewHeadingLabel('');
+    setAddHeadingOpen(false);
+    
+    toast({
+      title: 'Success',
+      description: 'Heading added. Click Save to persist changes.',
+    });
   };
 
-  const removeHeading = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('menu_headings')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      await loadGlobalHeadings();
-      
-      toast({
-        title: 'Success',
-        description: 'Heading removed successfully',
-      });
-    } catch (error) {
-      console.error('Error removing heading:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to remove heading',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const toggleHeadingVisibility = async (id: string) => {
-    const heading = globalHeadings.find(h => h.id === id);
-    if (!heading) return;
-
-    try {
-      const { error } = await supabase
-        .from('menu_headings')
-        .update({ is_active: !heading.is_active })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      setGlobalHeadings(prev =>
-        prev.map(h => h.id === id ? { ...h, is_active: !h.is_active } : h)
-      );
-    } catch (error) {
-      console.error('Error toggling heading:', error);
-    }
+  const removeHeading = (itemKey: string) => {
+    setMenuConfigs(prev => prev.filter(c => c.item_key !== itemKey));
+    toast({
+      title: 'Success',
+      description: 'Heading removed. Click Save to persist changes.',
+    });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -318,39 +248,22 @@ export function MenuEditor() {
     const activeId = active.id.toString();
     const overId = over.id.toString();
 
-    // Check if dragging menu items or headings
-    const isActiveHeading = activeId.startsWith('heading-') || globalHeadings.some(h => h.id === activeId);
-    const isOverHeading = overId.startsWith('heading-') || globalHeadings.some(h => h.id === overId);
-
-    if (isActiveHeading && isOverHeading) {
-      // Reorder headings
-      const oldIndex = globalHeadings.findIndex(h => h.id === activeId);
-      const newIndex = globalHeadings.findIndex(h => h.id === overId);
-      
-      const reordered = arrayMove(globalHeadings, oldIndex, newIndex).map((h, i) => ({
-        ...h,
-        sort_order: i,
-      }));
-      
-      setGlobalHeadings(reordered);
-    } else if (!isActiveHeading && !isOverHeading) {
-      // Reorder menu items
-      const oldIndex = menuConfigs.findIndex(c => c.item_key === activeId);
-      const newIndex = menuConfigs.findIndex(c => c.item_key === overId);
-      
-      const reordered = arrayMove(menuConfigs, oldIndex, newIndex).map((c, i) => ({
-        ...c,
-        sort_order: i,
-      }));
-      
-      setMenuConfigs(reordered);
-    }
+    const oldIndex = menuConfigs.findIndex(c => c.item_key === activeId);
+    const newIndex = menuConfigs.findIndex(c => c.item_key === overId);
+    
+    if (oldIndex === -1 || newIndex === -1) return;
+    
+    const reordered = arrayMove(menuConfigs, oldIndex, newIndex).map((c, i) => ({
+      ...c,
+      sort_order: i,
+    }));
+    
+    setMenuConfigs(reordered);
   };
 
   const saveAllConfigs = async () => {
     setSaving(true);
     try {
-      // Save menu configs
       await supabase
         .from('menu_configurations')
         .delete()
@@ -359,16 +272,6 @@ export function MenuEditor() {
       await supabase
         .from('menu_configurations')
         .insert(menuConfigs);
-
-      // Save global headings
-      const headingUpdates = globalHeadings.map(h =>
-        supabase
-          .from('menu_headings')
-          .update({ sort_order: h.sort_order, is_active: h.is_active })
-          .eq('id', h.id)
-      );
-
-      await Promise.all(headingUpdates);
 
       toast({
         title: 'Success',
@@ -391,7 +294,7 @@ export function MenuEditor() {
       <CardHeader>
         <CardTitle>Menu Editor</CardTitle>
         <CardDescription>
-          Customize menu visibility and order for each role. Drag to reorder items.
+          Customize menu visibility and order for each role. Add section headings to group items, then drag everything to organize your menu structure.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -410,19 +313,19 @@ export function MenuEditor() {
           </Select>
         </div>
 
-        <div className="flex justify-between items-center">
+        <div className="space-y-2">
           <Dialog open={addHeadingOpen} onOpenChange={setAddHeadingOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
                 <Plus className="h-4 w-4 mr-2" />
-                Add Global Sub-Heading
+                Add Section Heading
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add Global Sub-Heading</DialogTitle>
+                <DialogTitle>Add Section Heading</DialogTitle>
                 <DialogDescription>
-                  Create a text label that appears for all user roles
+                  Create a heading to organize menu items into groups. Drag it to position it where you want.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -430,7 +333,7 @@ export function MenuEditor() {
                   <Label htmlFor="heading-label">Heading Label</Label>
                   <Input
                     id="heading-label"
-                    placeholder="e.g., Marketing"
+                    placeholder="e.g., Marketing Tools"
                     value={newHeadingLabel}
                     onChange={(e) => setNewHeadingLabel(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && addHeading()}
@@ -444,6 +347,9 @@ export function MenuEditor() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          <p className="text-xs text-muted-foreground">
+            Add headings to group related menu items. Drag them to reorder.
+          </p>
         </div>
 
         {loading ? (
@@ -451,71 +357,35 @@ export function MenuEditor() {
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Global Headings Section */}
-            {globalHeadings.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm text-muted-foreground uppercase">
-                  Global Sub-Headings (Drag to reorder)
-                </h4>
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext
-                    items={globalHeadings.map(h => h.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className="space-y-2">
-                      {globalHeadings.map((heading) => (
-                        <SortableItem
-                          key={heading.id}
-                          id={heading.id}
-                          config={heading}
-                          isHeading={true}
-                          isVisible={heading.is_active}
-                          label={heading.label}
-                          onToggle={() => toggleHeadingVisibility(heading.id)}
-                          onRemove={() => removeHeading(heading.id)}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-              </div>
-            )}
-
-            {/* Role-Specific Menu Items Section */}
-            <div className="space-y-2">
-              <h4 className="font-medium text-sm text-muted-foreground uppercase">
-                Menu Items for {selectedRole} (Drag to reorder)
-              </h4>
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm text-muted-foreground uppercase">
+              Menu Items for {selectedRole}
+            </h4>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={menuConfigs.map(c => c.item_key)}
+                strategy={verticalListSortingStrategy}
               >
-                <SortableContext
-                  items={menuConfigs.map(c => c.item_key)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-2">
-                    {menuConfigs.map((config) => (
-                      <SortableItem
-                        key={config.item_key}
-                        id={config.item_key}
-                        config={config}
-                        isHeading={false}
-                        isVisible={config.is_visible}
-                        label={getItemLabel(config)}
-                        onToggle={() => toggleVisibility(config.item_key)}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            </div>
+                <div className="space-y-2">
+                  {menuConfigs.map((config) => (
+                    <SortableItem
+                      key={config.item_key}
+                      id={config.item_key}
+                      config={config}
+                      isHeading={config.item_type === 'heading'}
+                      isVisible={config.is_visible}
+                      label={getItemLabel(config)}
+                      onToggle={() => toggleVisibility(config.item_key)}
+                      onRemove={config.item_type === 'heading' ? () => removeHeading(config.item_key) : undefined}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           </div>
         )}
 
