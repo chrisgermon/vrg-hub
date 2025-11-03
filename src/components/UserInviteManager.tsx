@@ -20,7 +20,7 @@ import { USER_ROLE_KEYS, formatRoleLabel } from "@/lib/access-control";
 
 const inviteFormSchema = z.object({
   email: z.string().email("Invalid email address"),
-  company_id: z.string().uuid("Please select a company"),
+  brand_id: z.string().uuid("Please select a brand"),
   role: z.enum(USER_ROLE_KEYS),
   days_valid: z.coerce.number().min(1).max(90).default(30),
 });
@@ -30,18 +30,18 @@ type InviteFormValues = z.infer<typeof inviteFormSchema>;
 interface UserInvite {
   id: string;
   email: string;
-  company_id: string;
+  brand_id: string;
   role: string;
   status: string;
   created_at: string;
   expires_at: string;
   accepted_at: string | null;
-  companies: {
+  brands: {
     name: string;
   };
 }
 
-interface Company {
+interface Brand {
   id: string;
   name: string;
 }
@@ -58,7 +58,7 @@ export function UserInviteManager() {
     defaultTenantRole,
   } = useAccessControl();
   const [invites, setInvites] = useState<UserInvite[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -67,7 +67,7 @@ export function UserInviteManager() {
     defaultValues: {
       role: defaultTenantRole,
       days_valid: 30,
-      company_id: tenantCompanyId ?? "",
+      brand_id: tenantCompanyId ?? "",
     },
   });
 
@@ -80,7 +80,7 @@ export function UserInviteManager() {
 
   useEffect(() => {
     if (isTenantAdmin && tenantCompanyId) {
-      form.setValue("company_id", tenantCompanyId);
+      form.setValue("brand_id", tenantCompanyId);
     }
   }, [form, isTenantAdmin, tenantCompanyId]);
 
@@ -88,11 +88,34 @@ export function UserInviteManager() {
     setLoading(true);
     try {
       // Fetch invites
-      // User invites disabled for single-tenant mode
-      setInvites([]);
+      const { data: invitesData, error: invitesError } = await supabase
+        .from('user_invites')
+        .select(`
+          *,
+          brands (
+            name
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-      // Use static company list for single-tenant
-      setCompanies([{ id: '1', name: 'Vision Radiology' }]);
+      if (invitesError) {
+        throw invitesError;
+      }
+      
+      setInvites(invitesData || []);
+
+      // Fetch brands
+      const { data: brandsData, error: brandsError } = await supabase
+        .from('brands')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+
+      if (brandsError) {
+        throw brandsError;
+      }
+
+      setBrands(brandsData || []);
     } catch (error: any) {
       console.error("Error fetching data:", error);
       toast.error("Failed to load invites");
@@ -109,8 +132,8 @@ export function UserInviteManager() {
       return;
     }
 
-    if (!canAccessCompany(values.company_id)) {
-      toast.error("You can only invite users to your own company");
+    if (!canAccessCompany(values.brand_id)) {
+      toast.error("You can only invite users to your own brand");
       return;
     }
 
@@ -118,8 +141,37 @@ export function UserInviteManager() {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + values.days_valid);
 
-      // User invite functionality disabled for single-tenant
-      toast.success('User invite functionality not available in single-tenant mode');
+      // Create the invite in the database
+      const { data: newInvite, error: insertError } = await supabase
+        .from('user_invites')
+        .insert({
+          email: values.email,
+          brand_id: values.brand_id,
+          invited_by: user.id,
+          role: values.role,
+          status: 'pending',
+          expires_at: expiresAt.toISOString(),
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      // Send the invite email
+      const emailResult = await supabase.functions.invoke('send-user-invite-email', {
+        body: {
+          inviteId: newInvite.id
+        }
+      });
+
+      if (emailResult.error) {
+        console.error('Failed to send invite email:', emailResult.error);
+        toast.error('Invite created but failed to send email');
+      } else {
+        toast.success('Invite sent successfully!');
+      }
 
       form.reset();
       setDialogOpen(false);
@@ -132,8 +184,17 @@ export function UserInviteManager() {
 
   const revokeInvite = async (inviteId: string) => {
     try {
-      // Revoke functionality disabled for single-tenant
-      toast.success("Invite functionality not available");
+      const { error } = await supabase
+        .from('user_invites')
+        .update({ status: 'revoked' })
+        .eq('id', inviteId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success("Invite revoked successfully");
+      fetchData();
     } catch (error: any) {
       console.error("Error revoking invite:", error);
       toast.error("Failed to revoke invite");
@@ -229,20 +290,20 @@ export function UserInviteManager() {
                   />
                   <FormField
                     control={form.control}
-                    name="company_id"
+                    name="brand_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Company</FormLabel>
+                        <FormLabel>Brand</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a company" />
+                              <SelectValue placeholder="Select a brand" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {companies.map((company) => (
-                              <SelectItem key={company.id} value={company.id}>
-                                {company.name}
+                            {brands.map((brand) => (
+                              <SelectItem key={brand.id} value={brand.id}>
+                                {brand.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -318,7 +379,7 @@ export function UserInviteManager() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Email</TableHead>
-                  <TableHead>Company</TableHead>
+                  <TableHead>Brand</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
@@ -330,7 +391,7 @@ export function UserInviteManager() {
                 {invites.map((invite) => (
                   <TableRow key={invite.id}>
                     <TableCell className="font-medium">{invite.email}</TableCell>
-                    <TableCell>{invite.companies?.name || "Unknown"}</TableCell>
+                    <TableCell>{invite.brands?.name || "Unknown"}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-medium">
                         {formatRoleLabel(invite.role)}

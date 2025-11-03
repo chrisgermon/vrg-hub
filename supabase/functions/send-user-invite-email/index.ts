@@ -28,7 +28,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from('user_invites')
       .select(`
         *,
-        companies (
+        brands (
           name
         )
       `)
@@ -42,11 +42,11 @@ const handler = async (req: Request): Promise<Response> => {
     // Get inviter profile separately
     const { data: inviterProfile } = await supabase
       .from('profiles')
-      .select('name, email')
-      .eq('user_id', inviteData.invited_by)
+      .select('full_name, email')
+      .eq('id', inviteData.invited_by)
       .single();
 
-    const inviterData = inviterProfile || { name: 'Admin', email: null };
+    const inviterData = inviterProfile || { full_name: 'Admin', email: null };
 
     const mailgunApiKey = Deno.env.get("MAILGUN_API_KEY");
     const mailgunDomain = Deno.env.get("MAILGUN_DOMAIN") || "mg.crowdhub.app";
@@ -58,7 +58,7 @@ const handler = async (req: Request): Promise<Response> => {
     const appUrl = 'https://hub.visionradiology.com.au';
     const signupUrl = `${appUrl}/auth`;
     
-    const subject = `You're invited to join ${inviteData.companies.name} on Vision Radiology Hub`;
+    const subject = `You're invited to join ${inviteData.brands.name} on Vision Radiology Hub`;
     
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -67,7 +67,7 @@ const handler = async (req: Request): Promise<Response> => {
         </div>
         <h2 style="color: #2563eb;">You're Invited! 🎉</h2>
         <p>Hello,</p>
-        <p>${inviterData.name || 'Someone'} has invited you to join <strong>${inviteData.companies.name}</strong> on Vision Radiology Hub.</p>
+        <p>${inviterData.full_name || 'Someone'} has invited you to join <strong>${inviteData.brands.name}</strong> on Vision Radiology Hub.</p>
         
         <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
           <p><strong>Your Role:</strong> ${inviteData.role.replace(/_/g, ' ')}</p>
@@ -93,17 +93,17 @@ const handler = async (req: Request): Promise<Response> => {
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
         
         <p style="font-size: 12px; color: #94a3b8; text-align: center;">
-          This invitation was sent by ${inviterData.name || 'a team member'} from ${inviteData.companies.name}
+          This invitation was sent by ${inviterData.full_name || 'a team member'} from ${inviteData.brands.name}
         </p>
       </div>
     `;
 
     const text = `
-You're Invited to Join ${inviteData.companies.name} on Vision Radiology Hub
+You're Invited to Join ${inviteData.brands.name} on Vision Radiology Hub
 
 Hello,
 
-${inviterData.name || 'Someone'} has invited you to join ${inviteData.companies.name} on Vision Radiology Hub.
+${inviterData.full_name || 'Someone'} has invited you to join ${inviteData.brands.name} on Vision Radiology Hub.
 
 Your Role: ${inviteData.role.replace(/_/g, ' ')}
 Invite Expires: ${new Date(inviteData.expires_at).toLocaleDateString('en-AU')}
@@ -186,9 +186,9 @@ If you didn't expect this invitation, you can safely ignore this email.
         status: 'sent',
         metadata: {
           invite_id: inviteData.id,
-          company_name: inviteData.companies.name,
+          brand_name: inviteData.brands.name,
           role: inviteData.role,
-          inviter_name: inviteData.inviter?.name,
+          inviter_name: inviterData.full_name,
         }
       });
 
