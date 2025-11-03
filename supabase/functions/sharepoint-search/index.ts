@@ -12,7 +12,15 @@ serve(async (req) => {
   }
 
   try {
-    const { search_query } = await req.json();
+    // Parse body safely
+    let payload: any = {};
+    try {
+      payload = await req.json();
+    } catch {
+      payload = {};
+    }
+
+    const search_query = (payload?.search_query ?? '').toString();
 
     if (!search_query || search_query.trim().length === 0) {
       return new Response(
@@ -44,22 +52,22 @@ serve(async (req) => {
       );
     }
 
-    // Get company_id from Office 365 connection or profile
+    // Determine company context
     const { data: connection } = await supabase
       .from('office365_connections')
-      .select('company_id, access_token, refresh_token, token_expires_at')
+      .select('company_id, access_token, refresh_token, token_expires_at, updated_at')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
       .maybeSingle();
 
-    let companyId = connection?.company_id;
+    let companyId = connection?.company_id as string | undefined;
     if (!companyId) {
       const { data: profile } = await supabase
         .from('profiles')
         .select('brand_id')
         .eq('id', user.id)
         .maybeSingle();
-      companyId = profile?.brand_id || user.id;
+      companyId = (profile?.brand_id as string | undefined) || user.id;
     }
 
     // Get SharePoint configuration
@@ -81,7 +89,7 @@ serve(async (req) => {
       );
     }
 
-    // Check if we need O365 connection
+    // Require O365 connection
     if (!connection?.access_token) {
       return new Response(
         JSON.stringify({ 
@@ -95,7 +103,8 @@ serve(async (req) => {
 
     // Use Microsoft Graph search API
     const searchUrl = `https://graph.microsoft.com/v1.0/sites/${spConfig.site_id}/drive/root/search(q='${encodeURIComponent(search_query)}')`;
-    
+    console.log(`SharePoint search for user ${user.id}, company ${companyId}: "${search_query}"`);
+
     const graphResponse = await fetch(searchUrl, {
       headers: {
         'Authorization': `Bearer ${connection.access_token}`,
@@ -104,6 +113,9 @@ serve(async (req) => {
     });
 
     if (!graphResponse.ok) {
+      const bodyText = await graphResponse.text().catch(() => '');
+      console.error(`Graph search error ${graphResponse.status}: ${bodyText}`);
+
       if (graphResponse.status === 401) {
         return new Response(
           JSON.stringify({ 
@@ -114,14 +126,33 @@ serve(async (req) => {
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      throw new Error(`Graph API error: ${graphResponse.status}`);
+
+      if (graphResponse.status === 403) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Insufficient permissions for Microsoft Graph search',
+            details: bodyText,
+            configured: true,
+            needsO365: true
+          }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          error: `Graph API error: ${graphResponse.status}`,
+          details: bodyText
+        }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const data = await graphResponse.json();
-    
+
     // Process results
-    const folders = [];
-    const files = [];
+    const folders: Array<Record<string, any>> = [];
+    const files: Array<Record<string, any>> = [];
 
     for (const item of data.value || []) {
       if (item.folder) {
@@ -144,7 +175,7 @@ serve(async (req) => {
           lastModifiedDateTime: item.lastModifiedDateTime,
           createdBy: item.createdBy?.user?.displayName,
           lastModifiedBy: item.lastModifiedBy?.user?.displayName,
-          fileType: item.name.split('.').pop()?.toUpperCase() || 'FILE',
+          fileType: (item.name || '').split('.').pop()?.toUpperCase() || 'FILE',
           downloadUrl: item['@microsoft.graph.downloadUrl'],
         });
       }

@@ -453,12 +453,37 @@ export function SharePointBrowser() {
       });
 
       if (error) {
-        console.error('Search error:', error);
-        toast.error('Search failed. Please try again.');
+        let status: number | undefined = (error as any)?.status;
+        let errorBody: any = null;
+        try {
+          const res = (error as any)?.context?.response as Response | undefined;
+          if (res) {
+            status = res.status || status;
+            errorBody = await res.clone().json().catch(async () => await res.text());
+          }
+        } catch {}
+
+        const lower = (typeof errorBody === 'string' ? errorBody : JSON.stringify(errorBody || '')).toLowerCase();
+        const needs = typeof errorBody === 'object' && errorBody !== null ? (errorBody.needsO365 === true) : lower.includes('needso365');
+
+        if (status === 404 || lower.includes('not configured')) {
+          setConfigured(false);
+          setSearchResults(null);
+          toast.error('SharePoint not configured. Please set it up in Integrations.');
+        } else if (status === 401 || needs) {
+          setNeedsO365(true);
+          setSearchResults(null);
+          toast.error('Connect your Office 365 account to continue.');
+        } else if (status === 403 || lower.includes('insufficient')) {
+          toast.error('You do not have permission to perform search. Ask an admin to enable it.');
+        } else {
+          console.error('Search error:', error);
+          toast.error('Search failed. Please try again.');
+        }
         return;
       }
 
-      setSearchResults(data);
+      setSearchResults(data as any);
     } catch (error) {
       console.error('Search error:', error);
       toast.error('Search failed. Please try again.');
