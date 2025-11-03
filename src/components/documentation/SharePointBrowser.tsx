@@ -1082,9 +1082,14 @@ export function SharePointBrowser() {
                 : 'There are no files or folders in this location.'}
             </p>
             {!searchQuery && (
-              <Button onClick={() => document.getElementById('sharepoint-upload')?.click()}>
-                Upload Files
-              </Button>
+              <div className="flex gap-3 justify-center">
+                <Button variant="outline" onClick={() => setShowCreateFolderDialog(true)}>
+                  New Folder
+                </Button>
+                <Button onClick={() => document.getElementById('sharepoint-upload')?.click()}>
+                  Upload Files
+                </Button>
+              </div>
             )}
             <input
               id="sharepoint-upload"
