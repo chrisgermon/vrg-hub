@@ -139,13 +139,85 @@ export function RBACUserManagement() {
   }, [searchTerm]);
 
   const sendInvite = async (values: InviteFormValues) => {
+    console.log('Send invite triggered with values:', values);
+    
     try {
-      toast.success(`Invite email sent to ${values.email}`);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.error('No authenticated user');
+        toast.error("You must be logged in to send invites");
+        return;
+      }
+
+      console.log('Current user:', user.id);
+
+      // Get first active brand as default
+      const { data: brands } = await supabase
+        .from('brands')
+        .select('id')
+        .eq('is_active', true)
+        .limit(1);
+
+      if (!brands || brands.length === 0) {
+        console.error('No active brands found');
+        toast.error("No active brands found");
+        return;
+      }
+
+      const brandId = brands[0].id;
+      console.log('Using brand:', brandId);
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30); // 30 days validity
+
+      console.log('Creating invite in database...');
+
+      // Create the invite in the database
+      const { data: newInvite, error: insertError } = await supabase
+        .from('user_invites')
+        .insert({
+          email: values.email,
+          brand_id: brandId,
+          invited_by: user.id,
+          role: 'requester', // Default role
+          status: 'pending',
+          expires_at: expiresAt.toISOString(),
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw insertError;
+      }
+
+      console.log('Invite created successfully:', newInvite);
+      console.log('Calling send-user-invite-email function...');
+
+      // Send the invite email
+      const emailResult = await supabase.functions.invoke('send-user-invite-email', {
+        body: {
+          inviteId: newInvite.id
+        }
+      });
+
+      console.log('Email function result:', emailResult);
+
+      if (emailResult.error) {
+        console.error('Failed to send invite email:', emailResult.error);
+        toast.error('Invite created but failed to send email: ' + emailResult.error.message);
+      } else {
+        console.log('Email sent successfully');
+        toast.success(`Invite sent successfully to ${values.email}!`);
+      }
+
       inviteForm.reset();
       setInviteDialogOpen(false);
+      fetchUsers(); // Refresh user list
     } catch (error: any) {
       console.error("Error sending invite:", error);
-      toast.error("Failed to send invite");
+      toast.error(error.message || "Failed to send invite");
     }
   };
 
