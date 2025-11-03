@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Plus, X, GripVertical } from 'lucide-react';
+import { Loader2, Plus, X, GripVertical, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -52,7 +52,14 @@ interface MenuConfig {
   parent_key?: string;
   is_visible: boolean;
   sort_order: number;
-  custom_heading_label?: string;
+  heading_id?: string;
+}
+
+interface GlobalHeading {
+  id: string;
+  label: string;
+  heading_key: string;
+  sort_order: number;
 }
 
 interface SortableItemProps {
@@ -62,10 +69,10 @@ interface SortableItemProps {
   isVisible: boolean;
   label: string;
   onToggle: () => void;
-  onRemove?: () => void;
+  onEdit?: () => void;
 }
 
-function SortableItem({ id, config, isHeading, isVisible, label, onToggle, onRemove }: SortableItemProps) {
+function SortableItem({ id, config, isHeading, isVisible, label, onToggle, onEdit }: SortableItemProps) {
   const {
     attributes,
     listeners,
@@ -104,13 +111,13 @@ function SortableItem({ id, config, isHeading, isVisible, label, onToggle, onRem
           </span>
         </div>
       </div>
-      {onRemove && (
+      {onEdit && isHeading && (
         <Button
           variant="ghost"
           size="sm"
-          onClick={onRemove}
+          onClick={onEdit}
         >
-          <X className="h-4 w-4" />
+          <Pencil className="h-4 w-4" />
         </Button>
       )}
     </div>
@@ -140,10 +147,14 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
 export function MenuEditor() {
   const [selectedRole, setSelectedRole] = useState<UserRole>('requester');
   const [menuConfigs, setMenuConfigs] = useState<MenuConfig[]>([]);
+  const [globalHeadings, setGlobalHeadings] = useState<GlobalHeading[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newHeadingLabel, setNewHeadingLabel] = useState('');
   const [addHeadingOpen, setAddHeadingOpen] = useState(false);
+  const [manageHeadingsOpen, setManageHeadingsOpen] = useState(false);
+  const [editingHeading, setEditingHeading] = useState<GlobalHeading | null>(null);
+  const [editHeadingLabel, setEditHeadingLabel] = useState('');
   const { toast } = useToast();
 
   const sensors = useSensors(
@@ -154,8 +165,31 @@ export function MenuEditor() {
   );
 
   useEffect(() => {
+    loadGlobalHeadings();
+  }, []);
+
+  useEffect(() => {
     loadMenuConfigs();
   }, [selectedRole]);
+
+  const loadGlobalHeadings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('menu_headings')
+        .select('*')
+        .order('sort_order');
+
+      if (error) throw error;
+      setGlobalHeadings(data || []);
+    } catch (error) {
+      console.error('Error loading global headings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load global headings',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const loadMenuConfigs = async () => {
     setLoading(true);
@@ -204,40 +238,124 @@ export function MenuEditor() {
   };
 
   const getItemLabel = (config: MenuConfig) => {
-    if (config.item_type === 'heading' && config.custom_heading_label) {
-      return config.custom_heading_label;
+    if (config.item_type === 'heading' && config.heading_id) {
+      const heading = globalHeadings.find(h => h.id === config.heading_id);
+      return heading?.label || 'Unknown Heading';
     }
     return DEFAULT_MENU_ITEMS.find(item => item.key === config.item_key)?.label || config.item_key;
   };
 
-  const addHeading = () => {
+  const createGlobalHeading = async () => {
     if (!newHeadingLabel.trim()) return;
 
-    const newHeading: MenuConfig = {
+    try {
+      const { data, error } = await supabase
+        .from('menu_headings')
+        .insert({
+          label: newHeadingLabel.trim(),
+          heading_key: `heading-${Date.now()}`,
+          sort_order: globalHeadings.length,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setGlobalHeadings(prev => [...prev, data]);
+      setNewHeadingLabel('');
+      setAddHeadingOpen(false);
+
+      toast({
+        title: 'Success',
+        description: 'Global heading created successfully',
+      });
+    } catch (error) {
+      console.error('Error creating heading:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create heading',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const addHeadingToMenu = (headingId: string) => {
+    const newConfig: MenuConfig = {
       role: selectedRole,
-      item_key: `heading-${Date.now()}`,
+      item_key: `heading-ref-${headingId}-${Date.now()}`,
       item_type: 'heading',
       is_visible: true,
       sort_order: menuConfigs.length,
-      custom_heading_label: newHeadingLabel.trim(),
+      heading_id: headingId,
     };
 
-    setMenuConfigs(prev => [...prev, newHeading]);
-    setNewHeadingLabel('');
-    setAddHeadingOpen(false);
-    
+    setMenuConfigs(prev => [...prev, newConfig]);
     toast({
       title: 'Success',
-      description: 'Heading added. Click Save to persist changes.',
+      description: 'Heading added to menu. Click Save to persist changes.',
     });
   };
 
-  const removeHeading = (itemKey: string) => {
+  const removeHeadingFromMenu = (itemKey: string) => {
     setMenuConfigs(prev => prev.filter(c => c.item_key !== itemKey));
-    toast({
-      title: 'Success',
-      description: 'Heading removed. Click Save to persist changes.',
-    });
+  };
+
+  const updateGlobalHeading = async () => {
+    if (!editingHeading || !editHeadingLabel.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('menu_headings')
+        .update({ label: editHeadingLabel.trim() })
+        .eq('id', editingHeading.id);
+
+      if (error) throw error;
+
+      setGlobalHeadings(prev =>
+        prev.map(h => (h.id === editingHeading.id ? { ...h, label: editHeadingLabel.trim() } : h))
+      );
+      setEditingHeading(null);
+      setEditHeadingLabel('');
+
+      toast({
+        title: 'Success',
+        description: 'Heading updated successfully',
+      });
+    } catch (error) {
+      console.error('Error updating heading:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update heading',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const deleteGlobalHeading = async (headingId: string) => {
+    try {
+      const { error } = await supabase
+        .from('menu_headings')
+        .delete()
+        .eq('id', headingId);
+
+      if (error) throw error;
+
+      setGlobalHeadings(prev => prev.filter(h => h.id !== headingId));
+      // Remove this heading from all role menus
+      setMenuConfigs(prev => prev.filter(c => c.heading_id !== headingId));
+
+      toast({
+        title: 'Success',
+        description: 'Heading deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting heading:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete heading',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -313,43 +431,117 @@ export function MenuEditor() {
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Dialog open={addHeadingOpen} onOpenChange={setAddHeadingOpen}>
+        <div className="flex gap-2">
+          <Dialog open={manageHeadingsOpen} onOpenChange={setManageHeadingsOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Section Heading
+                <Pencil className="h-4 w-4 mr-2" />
+                Manage Global Headings
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Add Section Heading</DialogTitle>
+                <DialogTitle>Manage Global Headings</DialogTitle>
                 <DialogDescription>
-                  Create a heading to organize menu items into groups. Drag it to position it where you want.
+                  Create and edit section headings that can be used across all roles.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="heading-label">Heading Label</Label>
+                <div className="flex gap-2">
                   <Input
-                    id="heading-label"
-                    placeholder="e.g., Marketing Tools"
+                    placeholder="New heading label..."
                     value={newHeadingLabel}
                     onChange={(e) => setNewHeadingLabel(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addHeading()}
+                    onKeyDown={(e) => e.key === 'Enter' && createGlobalHeading()}
                   />
+                  <Button onClick={createGlobalHeading} disabled={!newHeadingLabel.trim()}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create
+                  </Button>
+                </div>
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {globalHeadings.map((heading) => (
+                    <div key={heading.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      {editingHeading?.id === heading.id ? (
+                        <>
+                          <Input
+                            value={editHeadingLabel}
+                            onChange={(e) => setEditHeadingLabel(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && updateGlobalHeading()}
+                            className="flex-1 mr-2"
+                          />
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={updateGlobalHeading}>
+                              Save
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditingHeading(null);
+                                setEditHeadingLabel('');
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-medium">{heading.label}</span>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditingHeading(heading);
+                                setEditHeadingLabel(heading.label);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => deleteGlobalHeading(heading.id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  {globalHeadings.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      No headings created yet. Create one above to get started.
+                    </p>
+                  )}
                 </div>
               </div>
-              <DialogFooter>
-                <Button onClick={addHeading} disabled={!newHeadingLabel.trim()}>
-                  Add Heading
-                </Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
-          <p className="text-xs text-muted-foreground">
-            Add headings to group related menu items. Drag them to reorder.
-          </p>
+
+          <Select
+            onValueChange={(value) => addHeadingToMenu(value)}
+            value=""
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Add heading to menu..." />
+            </SelectTrigger>
+            <SelectContent>
+              {globalHeadings.map((heading) => (
+                <SelectItem key={heading.id} value={heading.id}>
+                  {heading.label}
+                </SelectItem>
+              ))}
+              {globalHeadings.length === 0 && (
+                <SelectItem value="none" disabled>
+                  No headings available
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (
@@ -380,7 +572,18 @@ export function MenuEditor() {
                       isVisible={config.is_visible}
                       label={getItemLabel(config)}
                       onToggle={() => toggleVisibility(config.item_key)}
-                      onRemove={config.item_type === 'heading' ? () => removeHeading(config.item_key) : undefined}
+                      onEdit={
+                        config.item_type === 'heading'
+                          ? () => {
+                              const heading = globalHeadings.find(h => h.id === config.heading_id);
+                              if (heading) {
+                                setEditingHeading(heading);
+                                setEditHeadingLabel(heading.label);
+                                setManageHeadingsOpen(true);
+                              }
+                            }
+                          : undefined
+                      }
                     />
                   ))}
                 </div>

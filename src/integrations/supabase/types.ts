@@ -1588,6 +1588,7 @@ export type Database = {
           custom_heading_label: string | null
           custom_icon: string | null
           custom_label: string | null
+          heading_id: string | null
           id: string
           is_visible: boolean | null
           item_key: string
@@ -1601,6 +1602,7 @@ export type Database = {
           custom_heading_label?: string | null
           custom_icon?: string | null
           custom_label?: string | null
+          heading_id?: string | null
           id?: string
           is_visible?: boolean | null
           item_key: string
@@ -1614,6 +1616,7 @@ export type Database = {
           custom_heading_label?: string | null
           custom_icon?: string | null
           custom_label?: string | null
+          heading_id?: string | null
           id?: string
           is_visible?: boolean | null
           item_key?: string
@@ -1622,7 +1625,15 @@ export type Database = {
           sort_order?: number | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "menu_configurations_heading_id_fkey"
+            columns: ["heading_id"]
+            isOneToOne: false
+            referencedRelation: "menu_headings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       menu_headings: {
         Row: {
