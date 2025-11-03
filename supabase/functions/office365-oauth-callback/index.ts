@@ -91,75 +91,23 @@ serve(async (req) => {
     const host = subdomain ? `${subdomain}.${baseDomain}` : baseDomain;
     const redirectUrl = `${protocol}://${host}/settings?tab=integrations&success=true`;
 
-    // Return HTML page instead of redirect to show success message
+    // Return minimal HTML that closes the popup immediately
     const html = `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Office 365 Connected</title>
-          <style>
-            body {
-              font-family: system-ui, -apple-system, sans-serif;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              min-height: 100vh;
-              margin: 0;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            }
-            .container {
-              background: white;
-              padding: 2rem;
-              border-radius: 1rem;
-              box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-              text-align: center;
-              max-width: 400px;
-            }
-            h1 {
-              color: #1a202c;
-              margin: 0 0 1rem 0;
-              font-size: 1.5rem;
-            }
-            p {
-              color: #4a5568;
-              margin: 0 0 1.5rem 0;
-            }
-            .success-icon {
-              width: 64px;
-              height: 64px;
-              background: #10b981;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              margin: 0 auto 1rem auto;
-            }
-            .checkmark {
-              width: 32px;
-              height: 32px;
-              border: 3px solid white;
-              border-top: none;
-              border-right: none;
-              transform: rotate(-45deg);
-              margin-top: -8px;
-            }
-          </style>
+          <title>Connected</title>
         </head>
         <body>
-          <div class="container">
-            <div class="success-icon">
-              <div class="checkmark"></div>
-            </div>
-            <h1>Successfully Connected!</h1>
-            <p>Your Office 365 account has been connected. This window will close automatically.</p>
-          </div>
           <script>
-            setTimeout(() => {
-              window.location.href = '${redirectUrl}';
-            }, 2000);
+            try {
+              window.opener && window.opener.postMessage({ type: 'office365-connected' }, '*');
+            } catch (e) {}
+            window.close();
+            setTimeout(() => { window.close(); }, 50);
           </script>
+          <noscript>Connected. You can close this window.</noscript>
         </body>
       </html>
     `;
