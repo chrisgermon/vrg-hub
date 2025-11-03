@@ -55,7 +55,7 @@ serve(async (req) => {
           <p><strong>Requested by:</strong></p>
           <p>Name: Sarah Johnson</p>
           <p>Email: sarah.johnson@example.com</p>
-          <p>Company: Pinnacle Medical Imaging</p>
+          <p>Company: Example Company</p>
         </div>
 
         <p style="font-size: 12px; color: #64748b; margin-top: 30px;">
@@ -154,7 +154,7 @@ serve(async (req) => {
     }
 
     // 3. NEW ACCOUNT INVITE SAMPLE EMAIL
-    const inviteSubject = 'SAMPLE: You\'re invited to join Pinnacle Medical Imaging on Vision Radiology Hub';
+    const inviteSubject = 'SAMPLE: You\'re invited to join Vision Radiology Hub';
     const inviteHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
@@ -163,7 +163,7 @@ serve(async (req) => {
 
         <h2 style="color: #2563eb;">You're Invited! 🎉</h2>
         <p>Hello,</p>
-        <p>Michael Chen has invited you to join <strong>Pinnacle Medical Imaging</strong> on Vision Radiology Hub.</p>
+        <p>Michael Chen has invited you to join <strong>Vision Radiology Hub</strong>.</p>
         
         <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
           <p><strong>Your Role:</strong> Manager</p>
@@ -207,7 +207,7 @@ serve(async (req) => {
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
         
         <p style="font-size: 12px; color: #94a3b8; text-align: center;">
-          This invitation was sent by Michael Chen from Pinnacle Medical Imaging
+          This invitation was sent by Michael Chen
         </p>
       </div>
     `;
