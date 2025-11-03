@@ -390,6 +390,14 @@ serve(async (req) => {
         permissions: [], // Permissions not available without separate API call
       }));
 
+    // Extract SharePoint site URL from site_id
+    // Format: hostname,siteId,webId -> extract hostname
+    let siteUrl = '';
+    if (config.site_id && config.site_id.includes(',')) {
+      const hostname = config.site_id.split(',')[0];
+      siteUrl = `https://${hostname}${browsePath === '/' ? '' : browsePath}`;
+    }
+
     // Return response (compression handled by CDN/Cloudflare)
     return new Response(
       JSON.stringify({
@@ -398,6 +406,7 @@ serve(async (req) => {
         folders,
         files,
         fromCache: false,
+        siteUrl: siteUrl || undefined,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

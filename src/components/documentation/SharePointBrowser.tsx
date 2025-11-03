@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, AlertCircle, Home, ChevronRight, Search, Folder } from "lucide-react";
+import { Loader2, AlertCircle, Home, ChevronRight, Search, Folder, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
@@ -88,6 +88,7 @@ export function SharePointBrowser() {
   }>>([]);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
+  const [sharePointSiteUrl, setSharePointSiteUrl] = useState<string | null>(null);
 
   const cache = useSharePointCache();
 
@@ -554,7 +555,13 @@ export function SharePointBrowser() {
         fromCache?: boolean;
         cachedAt?: string | null;
         warning?: string;
+        siteUrl?: string;
       };
+      
+      // Store SharePoint site URL if available
+      if (response.siteUrl) {
+        setSharePointSiteUrl(response.siteUrl);
+      }
 
       if (updateUI) {
         setConfigured(response.configured);
@@ -892,6 +899,18 @@ export function SharePointBrowser() {
           >
             New Folder
           </Button>
+          {sharePointSiteUrl && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => window.open(sharePointSiteUrl, '_blank')}
+              title="Open SharePoint site"
+              className="gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open SharePoint Site
+            </Button>
+          )}
           <Button 
             variant="outline" 
             size="sm" 
