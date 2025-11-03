@@ -427,7 +427,8 @@ export function SharePointBrowser() {
           console.error('Create folder error:', error);
           toast.error(errorMsg);
         }
-        throw error;
+        // Prevent error boundary from triggering
+        return;
       }
 
       toast.success(`Folder "${folderName}" created successfully`);
