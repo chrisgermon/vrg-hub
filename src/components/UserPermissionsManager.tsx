@@ -57,16 +57,6 @@ const PERMISSION_CATEGORIES = {
       { key: 'export_newsletter', label: 'Export Newsletter', description: 'Can export newsletters for distribution' },
     ]
   },
-  catalog: {
-    title: 'Hardware Catalog',
-    permissions: [
-      { key: 'manage_catalog', label: 'Manage Catalog (Generic)', description: 'Generic permission for catalog management' },
-      { key: 'view_hardware_catalog', label: 'View Hardware Catalog', description: 'Can view the hardware catalog' },
-      { key: 'create_catalog_item', label: 'Create Catalog Item', description: 'Can add new items to catalog' },
-      { key: 'edit_catalog_item', label: 'Edit Catalog Item', description: 'Can edit existing catalog items' },
-      { key: 'delete_catalog_item', label: 'Delete Catalog Item', description: 'Can remove items from catalog' },
-    ]
-  },
   users: {
     title: 'User Management',
     permissions: [

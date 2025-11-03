@@ -133,7 +133,6 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     scope: "tenant",
     permissions: [
       "manage_company_users",
-      "manage_hardware_catalog",
       "manage_newsletter_cycle",
       "view_all_company_requests",
       "view_request_metrics",

@@ -34,7 +34,6 @@ const SharedClinic = lazy(() => import("./pages/SharedClinic"));
 const ConfirmOrder = lazy(() => import("./pages/ConfirmOrder"));
 const AuditLog = lazy(() => import("./pages/AuditLog"));
 const Help = lazy(() => import("./pages/Help"));
-const Catalog = lazy(() => import("./pages/Catalog"));
 const UserRoles = lazy(() => import("./pages/UserRoles"));
 const ContactSupport = lazy(() => import("./pages/ContactSupport"));
 const FileManager = lazy(() => import("./pages/FileManager"));
@@ -90,7 +89,6 @@ const protectedLayoutRoutes: Array<{
   { path: "/requests/new/:slug", element: <NewRequestCategory /> },
   { path: "/requests/new/:slug/:categorySlug", element: <NewDynamicRequest /> },
   { path: "/requests/tickets/new", element: <NewTicket /> },
-  { path: "/catalog", element: <Catalog /> },
   { path: "/documents", element: <Documentation /> },
   { path: "/news/view-all", element: <NewsViewAll /> },
   { path: "/news", element: <NewsManagement /> },

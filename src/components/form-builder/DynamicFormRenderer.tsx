@@ -24,7 +24,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { LocationSelect } from '@/components/ui/location-select';
-import { CatalogQuickSelect } from '@/components/requests/CatalogQuickSelect';
 
 function buildZodSchema(fields: FormFieldType[]) {
   const shape: Record<string, any> = {};
@@ -187,12 +186,6 @@ export function DynamicFormRenderer({ template, onSubmit, isSubmitting }: Dynami
                         placeholder="Enter location"
                         value={formField.value}
                         onChange={(e) => formField.onChange(e.target.value)}
-                      />
-                    );
-                  case 'catalog_item':
-                    return (
-                      <CatalogQuickSelect
-                        onSelect={(item) => formField.onChange(item.id)}
                       />
                     );
                   default:

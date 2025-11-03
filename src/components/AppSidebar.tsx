@@ -401,9 +401,6 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
         if (item.url?.includes('/print-orders')) {
           return isFeatureEnabled('print_ordering');
         }
-        if (item.url?.includes('/catalog')) {
-          return isFeatureEnabled('hardware_requests');
-        }
         // Keep items without feature mapping
         return true;
       });
@@ -493,10 +490,8 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             {
               title: "Equipment",
               icon: Wrench,
-              items: filterByFeatures([
-                { title: "Hardware Catalog", url: "/catalog", icon: Package },
-              ]),
-              paths: ["/requests", "/toner", "/catalog"]
+              items: filterByFeatures([]),
+              paths: ["/requests", "/toner"]
             },
           ].filter(cat => cat.items.length > 0),
           companyDocuments: { title: "Company Documents", url: "/documents", icon: FolderOpen },
@@ -529,10 +524,8 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             {
               title: "Equipment",
               icon: Wrench,
-              items: filterByFeatures([
-                { title: "Hardware Catalog", url: "/catalog", icon: Package },
-              ]),
-              paths: ["/approvals", "/requests", "/toner", "/catalog"]
+              items: filterByFeatures([]),
+              paths: ["/approvals", "/requests", "/toner"]
             },
           ].filter(cat => cat.items.length > 0),
           companyDocuments: { title: "Company Documents", url: "/documents", icon: FolderOpen },

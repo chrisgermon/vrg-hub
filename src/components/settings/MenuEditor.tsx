@@ -133,7 +133,6 @@ const DEFAULT_MENU_ITEMS: MenuItem[] = [
   { key: 'equipment-requests', label: 'All Requests', type: 'item', parentKey: 'equipment' },
   { key: 'equipment-new-request', label: 'New Hardware Request', type: 'item', parentKey: 'equipment' },
   { key: 'equipment-new-toner', label: 'New Toner Request', type: 'item', parentKey: 'equipment' },
-  { key: 'equipment-catalog', label: 'Hardware Catalog', type: 'item', parentKey: 'equipment' },
   { key: 'marketing', label: 'Marketing', type: 'category' },
   { key: 'marketing-new-request', label: 'New Marketing Request', type: 'item', parentKey: 'marketing' },
   { key: 'documentation', label: 'Documentation', type: 'category' },

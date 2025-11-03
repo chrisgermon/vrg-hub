@@ -181,7 +181,6 @@ const Help = () => {
                           Request computers, monitors, peripherals, and other IT equipment for your team.
                         </p>
                         <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                          <li>Browse and select items from the hardware catalog</li>
                           <li>Create custom hardware requests with specifications</li>
                           <li>Add business justification and expected delivery dates</li>
                           <li>Track approval progress and order status</li>
@@ -948,52 +947,6 @@ const Help = () => {
             </section>
           )}
 
-          {/* Catalog Management */}
-          <section id="catalog">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="w-5 h-5 text-primary" />
-                  Catalog Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="hardware-catalog">
-                    <AccordionTrigger>Hardware Catalog (Admin)</AccordionTrigger>
-                    <AccordionContent className="space-y-3">
-                      <p className="text-muted-foreground">
-                        Manage the catalog of pre-configured hardware items.
-                      </p>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                        <li>Add new hardware items with specifications</li>
-                        <li>Set standard pricing and configurations</li>
-                        <li>Categorize items (computers, monitors, peripherals)</li>
-                        <li>Update or archive outdated items</li>
-                        <li>Import catalog items in bulk</li>
-                      </ul>
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="catalog-usage">
-                    <AccordionTrigger>Using the Catalog</AccordionTrigger>
-                    <AccordionContent className="space-y-3">
-                      <p className="text-muted-foreground">
-                        Quick-select hardware items when creating requests.
-                      </p>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                        <li>Browse catalog by category</li>
-                        <li>Search for specific items</li>
-                        <li>Add items to requests with one click</li>
-                        <li>Pre-filled specifications and pricing</li>
-                      </ul>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              </CardContent>
-            </Card>
-          </section>
-
           {/* Permissions */}
           <section id="permissions">
             <Card>
@@ -1354,14 +1307,6 @@ const Help = () => {
                     <AccordionContent>
                       Go to "My Requests", click on any request, and look for the "Email Notifications" or "Email Logs" 
                       section. This shows all emails sent for that request, including recipients, timestamps, and delivery status.
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="faq-6">
-                    <AccordionTrigger>How do I access the Hardware Catalog?</AccordionTrigger>
-                    <AccordionContent>
-                      The Hardware Catalog link is available in the sidebar. Browse or search for pre-configured items, 
-                      then click to add them to your hardware request. Admins can manage the catalog from the Catalog page.
                     </AccordionContent>
                   </AccordionItem>
 
