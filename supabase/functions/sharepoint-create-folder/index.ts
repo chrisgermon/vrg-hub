@@ -46,34 +46,54 @@ serve(async (req) => {
 
     console.log(`Creating folder "${folder_name}" at path "${folder_path}" for user ${user.id}`);
 
-    // Get company_id from Office 365 connection or profile
-    const { data: connection } = await supabase
+    // Determine company context
+    const { data: userConnectionHint } = await supabase
       .from('office365_connections')
-      .select('company_id, access_token, refresh_token, token_expires_at')
+      .select('company_id, access_token, refresh_token, token_expires_at, expires_at, updated_at, id')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
       .maybeSingle();
 
-    let companyId = connection?.company_id;
+    let companyId = userConnectionHint?.company_id as string | undefined;
     if (!companyId) {
       const { data: profile } = await supabase
         .from('profiles')
         .select('brand_id')
         .eq('id', user.id)
         .maybeSingle();
-      companyId = profile?.brand_id || user.id;
+      companyId = (profile?.brand_id as string | undefined) || user.id;
     }
 
     console.log(`Using company_id: ${companyId} for user ${user.id}`);
-    console.log(`Connection data:`, connection ? 'found' : 'not found');
 
-    // Get SharePoint configuration
-    const { data: spConfig, error: configError } = await supabase
+    // Get SharePoint configuration (fallback to any active config if company specific not found)
+    let { data: spConfig, error: configError } = await supabase
       .from('sharepoint_configurations')
       .select('*')
       .eq('company_id', companyId)
       .eq('is_active', true)
       .maybeSingle();
+
+    if (!spConfig && !configError) {
+      const { data: fallbackConfig, error: fallbackError } = await supabase
+        .from('sharepoint_configurations')
+        .select('*')
+        .eq('is_active', true)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (fallbackConfig) {
+        spConfig = fallbackConfig;
+        if (fallbackConfig.company_id) {
+          companyId = fallbackConfig.company_id;
+        }
+      }
+
+      if (fallbackError) {
+        configError = fallbackError;
+      }
+    }
 
     console.log(`SharePoint config lookup - Error: ${configError?.message || 'none'}, Found: ${!!spConfig}`);
     console.log(`Query params - company_id: ${companyId}, is_active: true`);
@@ -86,7 +106,7 @@ serve(async (req) => {
           configured: false,
           debug: {
             companyId,
-            hasConnection: !!connection,
+            hasConnection: !!(userConnectionHint?.access_token),
             configError: configError?.message
           }
         }),
@@ -94,16 +114,133 @@ serve(async (req) => {
       );
     }
 
-    // Check if we need O365 connection
+    // Resolve Office 365 connection (prefer company-level token)
+    let connection: Record<string, any> | null = null;
+
+    if (spConfig?.company_id) {
+      const { data: tenantConnection } = await supabase
+        .from('office365_connections')
+        .select('id, company_id, access_token, refresh_token, token_expires_at, expires_at, updated_at, user_id')
+        .eq('company_id', spConfig.company_id)
+        .is('user_id', null)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (tenantConnection?.access_token) {
+        connection = tenantConnection;
+        console.log('Using tenant-level Office 365 connection');
+      }
+
+      if (!connection?.access_token) {
+        const { data: companyConnection } = await supabase
+          .from('office365_connections')
+          .select('id, company_id, access_token, refresh_token, token_expires_at, expires_at, updated_at, user_id')
+          .eq('company_id', spConfig.company_id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (companyConnection?.access_token) {
+          connection = companyConnection;
+          console.log('Using company-level Office 365 connection');
+        }
+      }
+    }
+
+    if (!connection?.access_token && userConnectionHint?.access_token) {
+      connection = userConnectionHint;
+      console.log('Using user-level Office 365 connection');
+    }
+
+    console.log('Resolved Office 365 connection:', connection ? `id=${connection.id}` : 'none');
+
     if (!connection?.access_token) {
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: 'Office 365 connection required',
           configured: true,
           needsO365: true
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Refresh token if expired
+    const expiresAtString = connection.token_expires_at || connection.expires_at;
+    if (expiresAtString) {
+      const expiresAt = new Date(expiresAtString);
+      const now = new Date();
+
+      if (now >= expiresAt) {
+        console.log('Office 365 access token expired, refreshing...');
+
+        if (!connection.refresh_token) {
+          return new Response(
+            JSON.stringify({
+              error: 'Office 365 connection expired and cannot be refreshed. Please reconnect in Integrations.',
+              configured: true,
+              needsO365: true
+            }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const clientId = Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID');
+        const clientSecret = Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET');
+
+        const tokenResponse = await fetch(
+          'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: clientId!,
+              client_secret: clientSecret!,
+              refresh_token: connection.refresh_token,
+              grant_type: 'refresh_token',
+            }),
+          }
+        );
+
+        if (!tokenResponse.ok) {
+          const errorText = await tokenResponse.text();
+          console.error('Token refresh failed:', errorText);
+          return new Response(
+            JSON.stringify({
+              error: 'Failed to refresh Office 365 token. Please reconnect in Integrations.',
+              configured: true,
+              needsO365: true
+            }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const tokens = await tokenResponse.json();
+        const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+
+        const updateData: Record<string, any> = {
+          access_token: tokens.access_token,
+          token_expires_at: newExpiresAt.toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        if (tokens.refresh_token) {
+          updateData.refresh_token = tokens.refresh_token;
+        }
+
+        const { error: updateError } = await supabase
+          .from('office365_connections')
+          .update(updateData)
+          .eq('id', connection.id);
+
+        if (updateError) {
+          console.error('Failed to persist refreshed Office 365 token:', updateError);
+        } else {
+          console.log('Office 365 token refreshed successfully');
+          connection = { ...connection, ...updateData };
+        }
+      }
     }
 
     // Construct Microsoft Graph API URL to create folder
