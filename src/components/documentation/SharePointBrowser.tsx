@@ -426,14 +426,21 @@ export function SharePointBrowser() {
         }
         setNeedsO365(response.needsO365 ?? false);
         
-        // Show warning if folder not found
-        if (response.warning === 'Folder not found') {
-          toast.warning('This folder no longer exists or has been moved.');
-          // Navigate back if possible
-          if (pathHistory.length > 0) {
-            const previousPath = pathHistory[pathHistory.length - 1];
-            setPathHistory(pathHistory.slice(0, -1));
-            setCurrentPath(previousPath);
+        // Show warning if folder not found or access denied
+        if (response.warning) {
+          if (response.warning === 'Folder not found') {
+            toast.warning('This folder no longer exists or has been moved.');
+          } else if (response.warning === 'Access denied') {
+            toast.warning('You do not have permission to access this folder.');
+          }
+          
+          // Navigate back if possible and this was a direct navigation (not prefetch)
+          if (updateUI && pathHistory.length > 0) {
+            setTimeout(() => {
+              const previousPath = pathHistory[pathHistory.length - 1];
+              setPathHistory(pathHistory.slice(0, -1));
+              setCurrentPath(previousPath);
+            }, 1000); // Give user time to see the toast
           }
         }
         

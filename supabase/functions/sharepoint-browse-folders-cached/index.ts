@@ -250,7 +250,7 @@ serve(async (req) => {
       graphUrl = `https://graph.microsoft.com/v1.0/sites/${config.site_id}/drive/root:/${cleanPath}:/children`;
     }
 
-    console.log('Fetching from Graph API:', graphUrl);
+    console.log(`Fetching from Graph API for user ${user.id}: ${graphUrl}`);
 
     const graphResponse = await fetch(graphUrl, {
       headers: {
@@ -261,10 +261,13 @@ serve(async (req) => {
 
     if (!graphResponse.ok) {
       const errorText = await graphResponse.text();
-      console.error(`Graph API error ${graphResponse.status} for URL: ${graphUrl}`);
-      console.error('Error details:', errorText);
+      const errorStatus = graphResponse.status;
       
-      if (graphResponse.status === 401) {
+      console.error(`Graph API error ${errorStatus} for user ${user.id} at path: ${browsePath}`);
+      console.error('URL:', graphUrl);
+      console.error('Error response:', errorText);
+      
+      if (errorStatus === 401) {
         return new Response(
           JSON.stringify({ 
             error: 'Office 365 token expired. Please reconnect your Office 365 account.', 
@@ -277,10 +280,10 @@ serve(async (req) => {
         );
       }
       
-      if (graphResponse.status === 404) {
-        // Folder doesn't exist - return empty result instead of error
+      if (errorStatus === 404) {
+        // Folder doesn't exist - return SUCCESS with empty arrays
         // This is common during prefetching of renamed/deleted folders
-        console.log(`Folder not found (404), returning empty: ${browsePath}`);
+        console.log(`Folder not found (returning 200 with empty arrays): ${browsePath}`);
         return new Response(
           JSON.stringify({ 
             configured: true,
@@ -294,7 +297,24 @@ serve(async (req) => {
         );
       }
       
-      throw new Error(`Graph API error: ${graphResponse.status}`);
+      if (errorStatus === 403) {
+        console.log(`Access denied (returning 200 with empty arrays): ${browsePath}`);
+        return new Response(
+          JSON.stringify({ 
+            configured: true,
+            currentPath: browsePath,
+            folders: [],
+            files: [],
+            fromCache: false,
+            warning: 'Access denied'
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // For other errors, return 500
+      console.error(`Unhandled Graph API error ${errorStatus}`);
+      throw new Error(`Graph API error: ${errorStatus}`);
     }
 
     const graphData = await graphResponse.json();
