@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, Fragment, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,14 +62,27 @@ export function SharePointBrowser() {
   const [uploading, setUploading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [spConfig, setSpConfig] = useState<any>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
-  const checkConfigured = async (): Promise<{ configured: boolean; companyId?: string }> => {
+  const checkConfigured = useCallback(async (): Promise<{ configured: boolean; companyId?: string }> => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return { configured: false };
+      if (!session) {
+        setConfigured(false);
+        setNeedsO365(false);
+        setSpConfig(null);
+        setCompanyId(null);
+        return { configured: false };
+      }
 
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return { configured: false };
+      if (!user) {
+        setConfigured(false);
+        setNeedsO365(false);
+        setSpConfig(null);
+        setCompanyId(null);
+        return { configured: false };
+      }
 
       // Prefer company_id from Office 365 connection
       const { data: connection } = await (supabase as any)
@@ -79,33 +92,40 @@ export function SharePointBrowser() {
         .order('updated_at', { ascending: false })
         .maybeSingle();
 
-      let companyId: string | undefined = (connection?.company_id as string | undefined);
+      let resolvedCompanyId: string | undefined = (connection?.company_id as string | undefined);
 
-      if (!companyId) {
+      if (!resolvedCompanyId) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('brand_id')
           .eq('id', user.id)
           .maybeSingle();
-        companyId = (profile?.brand_id as any) || user.id;
+        resolvedCompanyId = (profile?.brand_id as any) || user.id;
       }
 
       const { data: spConfigData, error: spError } = await (supabase as any)
         .from('sharepoint_configurations')
         .select('*')
-        .eq('company_id', companyId)
+        .eq('company_id', resolvedCompanyId)
         .eq('is_active', true)
         .maybeSingle();
 
       const isConfigured = !!spConfigData && !spError;
       setConfigured(isConfigured);
       setSpConfig(spConfigData);
-      return { configured: isConfigured, companyId };
+      setCompanyId(resolvedCompanyId || null);
+      if (isConfigured) {
+        setNeedsO365(false);
+      }
+      return { configured: isConfigured, companyId: resolvedCompanyId };
     } catch {
       setConfigured(false);
+      setNeedsO365(false);
+      setSpConfig(null);
+      setCompanyId(null);
       return { configured: false };
     }
-  };
+  }, []);
 
   const syncSharePointFiles = async (customFolderPath?: string, options?: { skipRefresh?: boolean }) => {
     setSyncing(true);
@@ -117,20 +137,30 @@ export function SharePointBrowser() {
       }
 
       // Ensure we know which company/site to sync
-      const res = await checkConfigured();
-      if (!res.configured || !res.companyId) {
+      let resolvedCompanyId = companyId;
+      if (!resolvedCompanyId || !spConfig) {
+        const res = await checkConfigured();
+        if (!res.configured || !res.companyId) {
+          setConfigured(false);
+          toast.error('SharePoint not configured. Please set it up in Integrations.');
+          return;
+        }
+        resolvedCompanyId = res.companyId;
+      }
+
+      if (!resolvedCompanyId) {
         setConfigured(false);
         toast.error('SharePoint not configured. Please set it up in Integrations.');
         return;
       }
 
       const payload: Record<string, any> = {
-        company_id: res.companyId,
+        company_id: resolvedCompanyId,
       };
       if (spConfig?.site_id) payload.site_id = spConfig.site_id;
       
       // Use custom folder path if provided, otherwise use configured folder path
-      const targetFolderPath = customFolderPath !== undefined ? customFolderPath : (spConfig?.folder_path || '/');
+      const targetFolderPath = customFolderPath !== undefined ? customFolderPath : (spConfig?.folder_path || currentPath || '/');
       payload.folder_path = targetFolderPath;
 
       const { data, error } = await supabase.functions.invoke('sync-sharepoint-files', {
@@ -168,7 +198,7 @@ export function SharePointBrowser() {
           toast.success('SharePoint files synced successfully');
         }
         if (!options?.skipRefresh) {
-          await loadItems(customFolderPath !== undefined ? customFolderPath : currentPath);
+          await loadItems(customFolderPath !== undefined ? customFolderPath : currentPath, { forceRefresh: true });
         }
       }
     } catch (error) {
@@ -181,16 +211,21 @@ export function SharePointBrowser() {
 
   useEffect(() => {
     const init = async () => {
+      setLoading(true);
       const result = await checkConfigured();
       if (!result.configured) {
         setLoading(false);
-        return;
       }
-      await loadItems(currentPath);
-      // Don't auto-sync on mount to prevent repeated success toasts
     };
     init();
-  }, [currentPath]);
+  }, []);
+
+  useEffect(() => {
+    if (!configured) {
+      return;
+    }
+    loadItems(currentPath);
+  }, [configured, currentPath, loadItems]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -258,132 +293,100 @@ export function SharePointBrowser() {
     }
   };
 
-  const loadItems = async (path: string, forceRefresh = false) => {
+  const loadItems = useCallback(async (path: string, options?: { forceRefresh?: boolean }) => {
     try {
       setLoading(true);
-      
+
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
+
       if (sessionError || !session) {
         toast.error('Please log in again to access SharePoint documents');
         setConfigured(false);
+        setNeedsO365(false);
+        setCompanyId(null);
+        setSpConfig(null);
+        setFolders([]);
+        setFiles([]);
+        setFromCache(false);
+        setCachedAt(null);
         return;
       }
 
-      // Determine configuration and company
-      const res = await checkConfigured();
-      if (!res.configured || !res.companyId) {
-        setConfigured(false);
-        setLoading(false);
-        return;
-      }
-
-      const companyId = res.companyId;
-
-      // Load from local cache
-      const { data: cacheData, error } = await supabase
-        .from('sharepoint_cache')
-        .select('*')
-        .eq('company_id', companyId)
-        .eq('parent_path', path)
-        .order('item_type', { ascending: false }) // folders first
-        .order('name');
+      const { data, error } = await supabase.functions.invoke('sharepoint-browse-folders-cached', {
+        body: {
+          folder_path: path,
+          force_refresh: options?.forceRefresh ?? false,
+        },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
 
       if (error) {
-        console.error('Error loading from cache:', error);
-        throw error;
-      }
+        let status: number | undefined = (error as any)?.status;
+        let errorBody: any = null;
+        try {
+          const res = (error as any)?.context?.response as Response | undefined;
+          if (res) {
+            status = res.status || status;
+            errorBody = await res.clone().json().catch(async () => await res.text());
+          }
+        } catch {}
 
-      // If no cache data found for this path and not root, sync this folder
-      if ((!cacheData || cacheData.length === 0) && path !== '/') {
-        console.log(`No cache for path "${path}", syncing...`);
-        await syncSharePointFiles(path, { skipRefresh: true });
-        // After sync, reload from cache
-        const { data: refreshedData } = await supabase
-          .from('sharepoint_cache')
-          .select('*')
-          .eq('company_id', companyId)
-          .eq('parent_path', path)
-          .order('item_type', { ascending: false })
-          .order('name');
-        
-        const cacheFolders: SharePointFolder[] = (refreshedData || [])
-          .filter((item: any) => item.item_type === 'folder')
-          .map((item: any) => ({
-            id: item.item_id,
-            name: item.name,
-            webUrl: item.web_url,
-            childCount: item.child_count || 0,
-            lastModifiedDateTime: item.last_modified_datetime,
-            permissions: item.permissions || [],
-          }));
+        const needsO365 = typeof errorBody === 'object' && errorBody !== null ? errorBody.needsO365 : false;
+        const configuredValue = typeof errorBody === 'object' && errorBody !== null ? errorBody.configured : undefined;
 
-        const cacheFiles: SharePointFile[] = (refreshedData || [])
-          .filter((item: any) => item.item_type === 'file')
-          .map((item: any) => ({
-            id: item.item_id,
-            name: item.name,
-            webUrl: item.web_url,
-            size: item.size || 0,
-            createdDateTime: item.created_datetime,
-            lastModifiedDateTime: item.last_modified_datetime,
-            createdBy: item.created_by,
-            lastModifiedBy: item.last_modified_by,
-            fileType: item.file_type || 'unknown',
-            downloadUrl: item.download_url,
-            permissions: item.permissions || [],
-          }));
+        if (typeof configuredValue === 'boolean') {
+          setConfigured(configuredValue);
+          if (!configuredValue) {
+            setCompanyId(null);
+            setSpConfig(null);
+          }
+        }
 
-        setFolders(cacheFolders);
-        setFiles(cacheFiles);
-        setConfigured(true);
-        setFromCache(true);
-        setCachedAt(refreshedData && refreshedData.length > 0 ? refreshedData[0].cached_at : null);
-        setLoading(false);
+        if (needsO365 || status === 401) {
+          setNeedsO365(true);
+          toast.error('Connect your Office 365 account to continue.');
+        } else {
+          console.error('Error loading SharePoint items:', error);
+          toast.error('Failed to load SharePoint content. Please try syncing again.');
+        }
+
+        setFolders([]);
+        setFiles([]);
+        setFromCache(false);
+        setCachedAt(null);
         return;
       }
 
-      // Convert cache data to folders and files
-      const cacheFolders: SharePointFolder[] = (cacheData || [])
-        .filter((item: any) => item.item_type === 'folder')
-        .map((item: any) => ({
-          id: item.item_id,
-          name: item.name,
-          webUrl: item.web_url,
-          childCount: item.child_count || 0,
-          lastModifiedDateTime: item.last_modified_datetime,
-          permissions: item.permissions || [],
-        }));
+      const response = data as {
+        configured: boolean;
+        needsO365?: boolean;
+        folders?: SharePointFolder[];
+        files?: SharePointFile[];
+        fromCache?: boolean;
+        cachedAt?: string | null;
+      };
 
-      const cacheFiles: SharePointFile[] = (cacheData || [])
-        .filter((item: any) => item.item_type === 'file')
-        .map((item: any) => ({
-          id: item.item_id,
-          name: item.name,
-          webUrl: item.web_url,
-          size: item.size || 0,
-          createdDateTime: item.created_datetime,
-          lastModifiedDateTime: item.last_modified_datetime,
-          createdBy: item.created_by,
-          lastModifiedBy: item.last_modified_by,
-          fileType: item.file_type || 'unknown',
-          downloadUrl: item.download_url,
-          permissions: item.permissions || [],
-        }));
-
-      setFolders(cacheFolders);
-      setFiles(cacheFiles);
-      setConfigured(true);
-      setFromCache(true);
-      setCachedAt(cacheData && cacheData.length > 0 ? cacheData[0].cached_at : null);
-
+      setConfigured(response.configured);
+      if (!response.configured) {
+        setCompanyId(null);
+        setSpConfig(null);
+      }
+      setNeedsO365(response.needsO365 ?? false);
+      setFolders(response.folders ?? []);
+      setFiles(response.files ?? []);
+      setFromCache(response.fromCache ?? false);
+      setCachedAt(response.cachedAt ?? null);
     } catch (error: any) {
       console.error('Error loading SharePoint items:', error);
       toast.error('Failed to load SharePoint content. Please try syncing again.');
+      setFolders([]);
+      setFiles([]);
+      setFromCache(false);
+      setCachedAt(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const navigateToFolder = (folderName: string) => {
     if (loading) return; // Prevent navigation while loading
@@ -532,11 +535,11 @@ export function SharePointBrowser() {
           >
             {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sync'}
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => loadItems(currentPath)}
-            title="Refresh from cache"
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadItems(currentPath, { forceRefresh: true })}
+            title="Refresh from SharePoint"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Refresh'}
           </Button>
