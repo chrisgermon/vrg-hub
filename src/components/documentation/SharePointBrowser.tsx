@@ -14,7 +14,7 @@ import { VirtualizedTable } from "./VirtualizedTable";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FolderRow, FileRow } from "./SharePointTableRow";
 import { FileUploadProgress } from "./FileUploadProgress";
-import { CreateFolderDialog } from "./CreateFolderDialog";
+
 
 interface SharePointFolder {
   id: string;
@@ -87,7 +87,6 @@ export function SharePointBrowser() {
     error?: string;
   }>>([]);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
   const [sharePointSiteUrl, setSharePointSiteUrl] = useState<string | null>(null);
 
   const cache = useSharePointCache();
@@ -489,97 +488,6 @@ export function SharePointBrowser() {
     }
   };
 
-  const handleCreateFolder = async (folderName: string) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('Please log in to create folders');
-        return;
-      }
-
-      // Ensure SharePoint configured; attempt auto-config if needed
-      if (!configured || !spConfig) {
-        const res = await checkConfigured();
-        if (!res.configured) {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { data: connection } = await supabase
-              .from('office365_connections')
-              .select('company_id')
-              .eq('user_id', user.id)
-              .maybeSingle();
-            if (connection?.company_id) {
-              await autoConfigureSharePoint(connection.company_id, user.id);
-            }
-          }
-        }
-      }
-
-      const finalCheck = await checkConfigured();
-      if (!finalCheck.configured || !spConfig) {
-        toast.error('SharePoint not configured. Please set it up in Integrations.');
-        return;
-      }
-
-      const activeCompanyId = (spConfig as any).company_id as string;
-
-      const { data, error } = await supabase.functions.invoke('sharepoint-create-folder', {
-        body: { 
-          folder_name: folderName,
-          folder_path: currentPath,
-          company_id: activeCompanyId,
-          site_id: (spConfig as any).site_id,
-        },
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (error) {
-        let status: number | undefined = (error as any)?.status;
-        let errorBody: any = null;
-        try {
-          const res = (error as any)?.context?.response as Response | undefined;
-          if (res) {
-            status = res.status || status;
-            errorBody = await res.clone().json().catch(async () => await res.text());
-          }
-        } catch {}
-
-        const errorMsg = typeof errorBody === 'object' && errorBody !== null 
-          ? (errorBody.error || 'Failed to create folder')
-          : 'Failed to create folder';
-
-        if (status === 409) {
-          toast.error('A folder with this name already exists');
-        } else if (status === 401) {
-          setNeedsO365(true);
-          toast.error('Your Microsoft 365 session expired. Please reconnect.');
-        } else if (status === 404) {
-          const needsConnect = typeof errorBody === 'object' && errorBody !== null &&
-            (errorBody.configured === false) && (errorBody.debug?.hasConnection === false);
-          if (needsConnect) {
-            setNeedsO365(true);
-            toast.error('Connect your Office 365 account to continue.');
-          } else {
-            toast.error('SharePoint not configured. Please set it up in Integrations.');
-          }
-        } else if (status === 403) {
-          toast.error('Permission denied. You cannot create folders here.');
-        } else {
-          console.error('Create folder error:', error);
-          toast.error(errorMsg);
-        }
-        return;
-      }
-
-      toast.success(`Folder "${folderName}" created successfully`);
-      
-      // Refresh the current folder to show the new folder
-      await loadItems(currentPath, { forceRefresh: true });
-    } catch (error) {
-      console.error('Create folder error:', error);
-      throw error;
-    }
-  };
 
   const loadItems = useCallback(async (path: string, options?: { forceRefresh?: boolean }) => {
     try {
@@ -1032,14 +940,6 @@ export function SharePointBrowser() {
               Back
             </Button>
           )}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setShowCreateFolderDialog(true)}
-            title="Create new folder"
-          >
-            New Folder
-          </Button>
           {sharePointSiteUrl && (
             <Button 
               variant="outline" 
@@ -1224,9 +1124,6 @@ export function SharePointBrowser() {
             </p>
             {!searchQuery && (
               <div className="flex gap-3 justify-center">
-                <Button variant="outline" onClick={() => setShowCreateFolderDialog(true)}>
-                  New Folder
-                </Button>
                 <Button onClick={() => document.getElementById('sharepoint-upload')?.click()}>
                   Upload Files
                 </Button>
@@ -1267,13 +1164,6 @@ export function SharePointBrowser() {
       <FileUploadProgress 
         open={showUploadDialog} 
         files={uploadProgress}
-      />
-
-      {/* Create Folder Dialog */}
-      <CreateFolderDialog
-        open={showCreateFolderDialog}
-        onOpenChange={setShowCreateFolderDialog}
-        onCreateFolder={handleCreateFolder}
       />
     </div>
   );
