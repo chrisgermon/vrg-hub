@@ -33,6 +33,9 @@ verify_jwt = true
 [functions.sharepoint-search]
 verify_jwt = true
 
+[functions.sharepoint-create-folder]
+verify_jwt = true
+
 [functions.handle-incoming-email]
 verify_jwt = false
 
