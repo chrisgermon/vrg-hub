@@ -143,7 +143,27 @@ export const NotifyreFaxCampaigns = () => {
 
   const handleViewCampaign = (campaign: FaxCampaign) => {
     setSelectedCampaign(campaign);
-    loadCampaignLogs(campaign.id);
+    loadCampaignLogs(campaign.campaign_id);
+  };
+
+  const handleRefreshLogs = async () => {
+    if (!selectedCampaign) return;
+    
+    toast.info('Refreshing campaign data...');
+    await loadCampaigns();
+    await loadCampaignLogs(selectedCampaign.campaign_id);
+    
+    // Update the selected campaign with fresh data
+    const { data } = await supabase
+      .from('notifyre_fax_campaigns')
+      .select('*')
+      .eq('campaign_id', selectedCampaign.campaign_id)
+      .single();
+    
+    if (data) {
+      setSelectedCampaign(data);
+      toast.success('Campaign data refreshed');
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -171,6 +191,19 @@ export const NotifyreFaxCampaigns = () => {
                 {formatAUDateTimeFull(selectedCampaign.sent_at)}
               </p>
             </div>
+            <Button onClick={handleRefreshLogs} disabled={loadingLogs}>
+              {loadingLogs ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Refresh Data
+                </>
+              )}
+            </Button>
           </div>
 
           <div className="grid gap-4 md:grid-cols-4 mb-6">
