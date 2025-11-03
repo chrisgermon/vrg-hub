@@ -481,11 +481,38 @@ export function SharePointBrowser() {
         return;
       }
 
+      // Ensure SharePoint configured; attempt auto-config if needed
+      if (!configured || !spConfig) {
+        const res = await checkConfigured();
+        if (!res.configured) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: connection } = await supabase
+              .from('office365_connections')
+              .select('company_id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            if (connection?.company_id) {
+              await autoConfigureSharePoint(connection.company_id, user.id);
+            }
+          }
+        }
+      }
+
+      const finalCheck = await checkConfigured();
+      if (!finalCheck.configured || !spConfig) {
+        toast.error('SharePoint not configured. Please set it up in Integrations.');
+        return;
+      }
+
+      const activeCompanyId = (spConfig as any).company_id as string;
+
       const { data, error } = await supabase.functions.invoke('sharepoint-create-folder', {
         body: { 
           folder_name: folderName,
           folder_path: currentPath,
-          company_id: companyId ?? spConfig?.company_id ?? undefined,
+          company_id: activeCompanyId,
+          site_id: (spConfig as any).site_id,
         },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
