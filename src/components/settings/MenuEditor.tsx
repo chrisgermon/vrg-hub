@@ -5,15 +5,25 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ChevronUp, ChevronDown, Loader2, Plus, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 type UserRole = 'requester' | 'manager' | 'marketing_manager' | 'tenant_admin' | 'super_admin' | 'marketing';
 
 interface MenuItem {
   key: string;
   label: string;
-  type: 'common' | 'category' | 'item' | 'admin' | 'settings' | 'help';
+  type: 'common' | 'category' | 'item' | 'admin' | 'settings' | 'help' | 'heading';
   parentKey?: string;
 }
 
@@ -25,6 +35,7 @@ interface MenuConfig {
   parent_key?: string;
   is_visible: boolean;
   sort_order: number;
+  custom_heading_label?: string;
 }
 
 const DEFAULT_MENU_ITEMS: MenuItem[] = [
@@ -53,6 +64,8 @@ export function MenuEditor() {
   const [menuConfigs, setMenuConfigs] = useState<MenuConfig[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [newHeadingLabel, setNewHeadingLabel] = useState('');
+  const [addHeadingOpen, setAddHeadingOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -156,8 +169,35 @@ export function MenuEditor() {
     setMenuConfigs(newConfigs);
   };
 
-  const getItemLabel = (itemKey: string) => {
-    return DEFAULT_MENU_ITEMS.find(item => item.key === itemKey)?.label || itemKey;
+  const getItemLabel = (config: MenuConfig) => {
+    if (config.item_type === 'heading' && config.custom_heading_label) {
+      return config.custom_heading_label;
+    }
+    return DEFAULT_MENU_ITEMS.find(item => item.key === config.item_key)?.label || config.item_key;
+  };
+
+  const addHeading = () => {
+    if (!newHeadingLabel.trim()) return;
+
+    const newHeading: MenuConfig = {
+      role: selectedRole,
+      item_key: `heading-${Date.now()}`,
+      item_type: 'heading',
+      is_visible: true,
+      sort_order: menuConfigs.length,
+      custom_heading_label: newHeadingLabel.trim(),
+    };
+
+    setMenuConfigs([...menuConfigs, newHeading]);
+    setNewHeadingLabel('');
+    setAddHeadingOpen(false);
+  };
+
+  const removeItem = (itemKey: string) => {
+    const updatedConfigs = menuConfigs
+      .filter(c => c.item_key !== itemKey)
+      .map((config, index) => ({ ...config, sort_order: index }));
+    setMenuConfigs(updatedConfigs);
   };
 
   const groupedItems = menuConfigs.reduce((acc, config) => {
@@ -191,56 +231,96 @@ export function MenuEditor() {
           </Select>
         </div>
 
+        <div className="flex justify-between items-center">
+          <Dialog open={addHeadingOpen} onOpenChange={setAddHeadingOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Sub-Heading
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Sub-Heading</DialogTitle>
+                <DialogDescription>
+                  Create a text label to organize menu items
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="heading-label">Heading Label</Label>
+                  <Input
+                    id="heading-label"
+                    placeholder="e.g., Marketing"
+                    value={newHeadingLabel}
+                    onChange={(e) => setNewHeadingLabel(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addHeading()}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={addHeading} disabled={!newHeadingLabel.trim()}>
+                  Add Heading
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
         ) : (
-          <div className="space-y-6">
-            {Object.entries(groupedItems).map(([type, items]) => (
-              <div key={type} className="space-y-2">
-                <h4 className="font-medium text-sm text-muted-foreground uppercase">
-                  {type === 'common' ? 'Common Items' : 
-                   type === 'category' ? 'Categories' :
-                   type === 'item' ? 'Category Items' :
-                   type === 'admin' ? 'Admin Items' :
-                   type === 'settings' ? 'Settings' : 'Help'}
-                </h4>
-                <div className="space-y-2">
-                  {items.map((config, index) => (
-                    <div
-                      key={config.item_key}
-                      className="flex items-center justify-between p-3 border rounded-lg bg-card"
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm text-muted-foreground uppercase mb-4">
+              All Menu Items (Drag to reorder)
+            </h4>
+            {menuConfigs.map((config, index) => (
+              <div
+                key={config.item_key}
+                className="flex items-center justify-between p-3 border rounded-lg bg-card"
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <Switch
+                    checked={config.is_visible}
+                    onCheckedChange={() => toggleVisibility(config.item_key)}
+                  />
+                  <div className="flex flex-col">
+                    <span className={!config.is_visible ? 'text-muted-foreground' : ''}>
+                      {getItemLabel(config)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {config.item_type === 'heading' ? 'Sub-Heading' : config.item_type}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => moveItem(config.item_key, 'up')}
+                    disabled={index === 0}
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => moveItem(config.item_key, 'down')}
+                    disabled={index === menuConfigs.length - 1}
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                  {config.item_type === 'heading' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeItem(config.item_key)}
                     >
-                      <div className="flex items-center gap-3 flex-1">
-                        <Switch
-                          checked={config.is_visible}
-                          onCheckedChange={() => toggleVisibility(config.item_key)}
-                        />
-                        <span className={!config.is_visible ? 'text-muted-foreground' : ''}>
-                          {getItemLabel(config.item_key)}
-                        </span>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => moveItem(config.item_key, 'up')}
-                          disabled={index === 0}
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => moveItem(config.item_key, 'down')}
-                          disabled={index === items.length - 1}
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}

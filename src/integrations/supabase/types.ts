@@ -1585,6 +1585,7 @@ export type Database = {
       menu_configurations: {
         Row: {
           created_at: string | null
+          custom_heading_label: string | null
           custom_icon: string | null
           custom_label: string | null
           id: string
@@ -1597,6 +1598,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          custom_heading_label?: string | null
           custom_icon?: string | null
           custom_label?: string | null
           id?: string
@@ -1609,6 +1611,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          custom_heading_label?: string | null
           custom_icon?: string | null
           custom_label?: string | null
           id?: string

@@ -99,9 +99,9 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
   const [checkingAssignment, setCheckingAssignment] = useState(true);
   const [editingItem, setEditingItem] = useState<{ key: string; label: string; icon?: string } | null>(null);
   const [menuCustomizations, setMenuCustomizations] = useState<Record<string, { label?: string; icon?: string; visible?: boolean }>>({});
+  const [menuConfigs, setMenuConfigs] = useState<any[]>([]);
   const { toast } = useToast();
 
-  // Load menu customizations
   // Load menu customizations with real-time updates
   useEffect(() => {
     const loadMenuCustomizations = async () => {
@@ -110,10 +110,12 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
       try {
         const { data, error } = await (supabase as any)
           .from('menu_configurations')
-          .select('item_key, custom_label, custom_icon, is_visible')
-          .eq('role', userRole);
+          .select('item_key, custom_label, custom_icon, is_visible, item_type, sort_order, custom_heading_label')
+          .eq('role', userRole)
+          .order('sort_order');
 
         if (!error && data) {
+          setMenuConfigs(data || []);
           const customizations: Record<string, { label?: string; icon?: string; visible?: boolean }> = {};
           data.forEach((item) => {
             customizations[item.item_key] = {
@@ -605,6 +607,15 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                   </ContextMenu>
                 ) : menuItem;
               })}
+
+              {/* Render custom headings from menu_configurations */}
+              {menuConfigs
+                .filter(config => config.item_type === 'heading' && config.is_visible)
+                .map((heading) => (
+                  <SidebarGroupLabel key={heading.item_key} className="px-4 py-2 mt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    {!collapsed && heading.custom_heading_label}
+                  </SidebarGroupLabel>
+                ))}
 
               {/* Categorized Items - flatten single-item categories */}
               {menuConfig.categories.map((category) => {
