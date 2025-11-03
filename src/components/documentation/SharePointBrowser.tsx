@@ -211,12 +211,12 @@ export function SharePointBrowser() {
       
       setConfigured(isConfigured);
       setSpConfig(spConfigData);
-      setCompanyId(resolvedCompanyId || null);
+      setCompanyId(((spConfigData?.company_id as string | undefined) ?? resolvedCompanyId) || null);
       if (isConfigured) {
         setNeedsO365(false);
         setSharePointSiteUrl(spConfigData?.site_url || null);
       }
-      return { configured: isConfigured, companyId: resolvedCompanyId };
+      return { configured: isConfigured, companyId: (spConfigData?.company_id as string | undefined) ?? resolvedCompanyId };
     } catch (error) {
       console.error('SharePoint: Error in checkConfigured:', error);
       setConfigured(false);
@@ -484,7 +484,8 @@ export function SharePointBrowser() {
       const { data, error } = await supabase.functions.invoke('sharepoint-create-folder', {
         body: { 
           folder_name: folderName,
-          folder_path: currentPath 
+          folder_path: currentPath,
+          company_id: companyId ?? spConfig?.company_id ?? undefined,
         },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
