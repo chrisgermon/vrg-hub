@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Edit } from 'lucide-react';
 import { APP_VERSION, BUILD_DATE } from '@/lib/version';
+import { TestsTab } from '@/components/settings/TestsTab';
 
 
 export default function Settings() {
@@ -190,6 +191,12 @@ export default function Settings() {
           <ApprovalWorkflowManager />
         </Fragment>
       ),
+    },
+    {
+      value: 'tests',
+      label: 'Tests',
+      allowed: isAdmin,
+      content: <TestsTab />,
     },
   ].filter((section) => section.allowed);
 
