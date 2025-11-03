@@ -261,9 +261,9 @@ serve(async (req) => {
 
     if (!graphResponse.ok) {
       const errorText = await graphResponse.text();
-      console.error('Graph API error:', errorText);
+      console.error(`Graph API error ${graphResponse.status} for URL: ${graphUrl}`);
+      console.error('Error details:', errorText);
       
-      // Check if token expired
       if (graphResponse.status === 401) {
         return new Response(
           JSON.stringify({ 
@@ -274,6 +274,23 @@ serve(async (req) => {
             files: []
           }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (graphResponse.status === 404) {
+        // Folder doesn't exist - return empty result instead of error
+        // This is common during prefetching of renamed/deleted folders
+        console.log(`Folder not found (404), returning empty: ${browsePath}`);
+        return new Response(
+          JSON.stringify({ 
+            configured: true,
+            currentPath: browsePath,
+            folders: [],
+            files: [],
+            fromCache: false,
+            warning: 'Folder not found'
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       

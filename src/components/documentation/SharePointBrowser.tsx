@@ -390,6 +390,9 @@ export function SharePointBrowser() {
         if (needsO365 || status === 401) {
           setNeedsO365(true);
           toast.error('Connect your Office 365 account to continue.');
+        } else if (status === 404) {
+          setConfigured(false);
+          toast.error('SharePoint folder not found. Please check the site and folder path configuration in Integrations.');
         } else {
           console.error('Error loading SharePoint items:', error);
           toast.error('Failed to load SharePoint content. Please try syncing again.');
@@ -412,6 +415,7 @@ export function SharePointBrowser() {
         files?: SharePointFile[];
         fromCache?: boolean;
         cachedAt?: string | null;
+        warning?: string;
       };
 
       if (updateUI) {
@@ -421,6 +425,17 @@ export function SharePointBrowser() {
           setSpConfig(null);
         }
         setNeedsO365(response.needsO365 ?? false);
+        
+        // Show warning if folder not found
+        if (response.warning === 'Folder not found') {
+          toast.warning('This folder no longer exists or has been moved.');
+          // Navigate back if possible
+          if (pathHistory.length > 0) {
+            const previousPath = pathHistory[pathHistory.length - 1];
+            setPathHistory(pathHistory.slice(0, -1));
+            setCurrentPath(previousPath);
+          }
+        }
         
         // Show folders immediately (incremental loading)
         setFolders(response.folders ?? []);
@@ -436,8 +451,8 @@ export function SharePointBrowser() {
         setFromCache(response.fromCache ?? false);
         setCachedAt(response.cachedAt ?? null);
 
-        // Cache in IndexedDB for instant future loads
-        if (cache.ready) {
+        // Cache in IndexedDB for instant future loads (only if not a warning)
+        if (cache.ready && !response.warning) {
           cache.setCachedItems(path, response.folders ?? [], response.files ?? []);
         }
       }
@@ -446,16 +461,17 @@ export function SharePointBrowser() {
       if (response.folders && response.folders.length > 0 && !forceRefresh) {
         response.folders.forEach(folder => {
           const subPath = path === '/' ? `/${folder.name}` : `${path}/${folder.name}`;
-          // Fire and forget
+          // Fire and forget - completely silent, no errors logged
           supabase.functions.invoke('sharepoint-browse-folders-cached', {
             body: { folder_path: subPath, force_refresh: false },
             headers: { Authorization: `Bearer ${accessToken}` },
-          }).then(async ({ data: prefetchData }) => {
-            // Cache prefetched data
-            if (cache.ready && prefetchData?.folders && prefetchData?.files) {
+          }).then(async ({ data: prefetchData, error: prefetchError }) => {
+            // Only cache if successful
+            if (!prefetchError && cache.ready && prefetchData?.folders && prefetchData?.files) {
               await cache.setCachedItems(subPath, prefetchData.folders, prefetchData.files);
             }
-          }).catch(() => {}); // Silently fail
+            // Silently ignore all errors (404s, permission denied, etc.)
+          }).catch(() => {}); // Completely silent
         });
       }
     } catch (error) {
@@ -479,6 +495,9 @@ export function SharePointBrowser() {
         const newPath = folderPath === '/' ? `/${folderName}` : `${folderPath}/${folderName}`;
         setPathHistory([folderPath]);
         setCurrentPath(newPath);
+      }).catch((err) => {
+        console.error('Navigation error:', err);
+        toast.error('Failed to navigate to folder. It may have been moved or deleted.');
       });
     } else {
       // Normal navigation
