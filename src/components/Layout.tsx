@@ -2,7 +2,7 @@ import React, { ReactNode, Suspense, useEffect, useState } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sparkles, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import crowdITLogo from "@/assets/crowdit-logo.png";
 import { useAuth } from "@/hooks/useAuth";
 import { NewsletterBanner } from "./newsletter/NewsletterBanner";
@@ -25,8 +25,6 @@ import { SystemBanners } from "./banners/SystemBanners";
 import { ProfileDialog } from "./ProfileDialog";
 import { FirstTimeSetupDialog } from "./FirstTimeSetupDialog";
 import { useToast } from "@/hooks/use-toast";
-import { AIAssistantDialog } from "./AIAssistantDialog";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface LayoutProps {
   children: ReactNode;
@@ -37,7 +35,6 @@ export function Layout({ children }: LayoutProps) {
   const { effectiveRole, isImpersonating } = useRoleImpersonation();
   const [logoUrl, setLogoUrl] = useState<string>(crowdITLogo);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -111,22 +108,6 @@ export function Layout({ children }: LayoutProps) {
                 alt="Company Logo" 
                 className="h-10 md:h-12 object-contain" 
               />
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setAiAssistantOpen(true)}
-                    className="ml-2 flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 flex-shrink-0"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    <span className="font-semibold text-xs uppercase tracking-wide">AI</span>
-                    <span className="sr-only">Open AI Assistant</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Open AI Assistant</TooltipContent>
-              </Tooltip>
               
               <NavigationMenu className="hidden lg:flex">
                 <NavigationMenuList>
@@ -221,7 +202,6 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
         <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
-        <AIAssistantDialog open={aiAssistantOpen} onOpenChange={setAiAssistantOpen} />
       </SidebarProvider>
     </>
   );
