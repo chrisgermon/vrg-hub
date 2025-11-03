@@ -1,16 +1,18 @@
 import { useState, useEffect, Fragment, useCallback } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Download, ExternalLink, Loader2, AlertCircle, Folder, ChevronRight, Home, Users, Lock, Search } from "lucide-react";
+import { Loader2, AlertCircle, Home, ChevronRight, Search, Folder } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { formatAUDateTimeFull } from "@/lib/dateUtils";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { ConnectOffice365Button } from "./ConnectOffice365Button";
+import { useSharePointCache } from "./useSharePointCache";
+import { SharePointSkeleton } from "./SharePointSkeleton";
+import { VirtualizedTable } from "./VirtualizedTable";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PermissionsDialog } from "./PermissionsDialog";
+import { FolderRow, FileRow } from "./SharePointTableRow";
 
 interface SharePointFolder {
   id: string;
@@ -19,7 +21,7 @@ interface SharePointFolder {
   childCount: number;
   lastModifiedDateTime: string;
   permissions?: Permission[];
-  path?: string; // Path from root, used in search results
+  path?: string;
 }
 
 interface SharePointFile {
@@ -34,7 +36,7 @@ interface SharePointFile {
   fileType: string;
   downloadUrl?: string;
   permissions?: Permission[];
-  path?: string; // Path from root, used in search results
+  path?: string;
 }
 
 interface Permission {
@@ -51,10 +53,14 @@ interface Permission {
   };
 }
 
+const ITEMS_PER_PAGE = 50;
+const LARGE_LIST_THRESHOLD = 100; // Use virtual scrolling if more than 100 items
+
 export function SharePointBrowser() {
   const [folders, setFolders] = useState<SharePointFolder[]>([]);
   const [files, setFiles] = useState<SharePointFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingFiles, setLoadingFiles] = useState(false);
   const [configured, setConfigured] = useState(false);
   const [needsO365, setNeedsO365] = useState(false);
   const [currentPath, setCurrentPath] = useState("/");
@@ -67,11 +73,13 @@ export function SharePointBrowser() {
     folders: SharePointFolder[];
     files: SharePointFile[];
   } | null>(null);
-  const [selectedItem, setSelectedItem] = useState<SharePointFile | SharePointFolder | null>(null);
   const [uploading, setUploading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [spConfig, setSpConfig] = useState<any>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [displayPage, setDisplayPage] = useState(1);
+
+  const cache = useSharePointCache();
 
   const checkConfigured = useCallback(async (): Promise<{ configured: boolean; companyId?: string }> => {
     try {
@@ -93,7 +101,6 @@ export function SharePointBrowser() {
         return { configured: false };
       }
 
-      // Prefer company_id from Office 365 connection
       const { data: connection } = await (supabase as any)
         .from('office365_connections')
         .select('company_id')
@@ -145,7 +152,6 @@ export function SharePointBrowser() {
         return;
       }
 
-      // Ensure we know which company/site to sync
       let resolvedCompanyId = companyId;
       if (!resolvedCompanyId || !spConfig) {
         const res = await checkConfigured();
@@ -168,7 +174,6 @@ export function SharePointBrowser() {
       };
       if (spConfig?.site_id) payload.site_id = spConfig.site_id;
       
-      // Use custom folder path if provided; otherwise prefer currentPath, then configured default
       const targetFolderPath = customFolderPath !== undefined ? customFolderPath : (currentPath || spConfig?.folder_path || '/');
       payload.folder_path = targetFolderPath;
 
@@ -178,7 +183,6 @@ export function SharePointBrowser() {
       });
 
       if (error) {
-        // Try extracting more details
         let status: number | undefined = (error as any)?.status;
         let bodyText = '';
         try {
@@ -202,7 +206,6 @@ export function SharePointBrowser() {
           toast.error('Failed to sync SharePoint files');
         }
       } else {
-        // Only show success toast for manual syncs (when no custom folder path)
         if (customFolderPath === undefined) {
           toast.success('SharePoint files synced successfully');
         }
@@ -248,7 +251,6 @@ export function SharePointBrowser() {
         return;
       }
 
-      // Upload each file to SharePoint
       for (const file of Array.from(files)) {
         const formData = new FormData();
         formData.append('file', file);
@@ -261,7 +263,6 @@ export function SharePointBrowser() {
 
         if (error) {
           console.error('Upload error:', error);
-          // Try to extract status and error body for better UX
           let status: number | undefined = (error as any)?.status;
           let bodyText = '';
           try {
@@ -290,21 +291,21 @@ export function SharePointBrowser() {
         }
       }
 
-      // Sync files after upload and refresh from cache
       await syncSharePointFiles();
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload files');
     } finally {
       setUploading(false);
-      // Reset file input
       e.target.value = '';
     }
   };
 
   const loadItems = useCallback(async (path: string, options?: { forceRefresh?: boolean }) => {
     try {
+      // Show skeleton while loading folders
       setLoading(true);
+      setDisplayPage(1); // Reset pagination
 
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
@@ -321,12 +322,47 @@ export function SharePointBrowser() {
         return;
       }
 
+      // Try IndexedDB cache first for instant loading
+      if (!options?.forceRefresh && cache.ready) {
+        const cached = await cache.getCachedItems(path);
+        if (cached) {
+          setFolders(cached.folders);
+          setFiles(cached.files);
+          setFromCache(true);
+          setCachedAt(cached.cachedAt);
+          setLoading(false);
+          // Still fetch fresh data in background
+          loadItemsFromServer(path, session.access_token, false);
+          return;
+        }
+      }
+
+      await loadItemsFromServer(path, session.access_token, true, options?.forceRefresh);
+    } catch (error: any) {
+      console.error('Error loading SharePoint items:', error);
+      toast.error('Failed to load SharePoint content. Please try syncing again.');
+      setFolders([]);
+      setFiles([]);
+      setFromCache(false);
+      setCachedAt(null);
+      setLoading(false);
+    }
+  }, [cache]);
+
+  const loadItemsFromServer = async (
+    path: string, 
+    accessToken: string,
+    updateUI: boolean,
+    forceRefresh?: boolean
+  ) => {
+    try {
+      // Incremental loading: fetch folders first
       const { data, error } = await supabase.functions.invoke('sharepoint-browse-folders-cached', {
         body: {
           folder_path: path,
-          force_refresh: options?.forceRefresh ?? false,
+          force_refresh: forceRefresh ?? false,
         },
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (error) {
@@ -359,10 +395,13 @@ export function SharePointBrowser() {
           toast.error('Failed to load SharePoint content. Please try syncing again.');
         }
 
-        setFolders([]);
-        setFiles([]);
-        setFromCache(false);
-        setCachedAt(null);
+        if (updateUI) {
+          setFolders([]);
+          setFiles([]);
+          setFromCache(false);
+          setCachedAt(null);
+          setLoading(false);
+        }
         return;
       }
 
@@ -375,47 +414,78 @@ export function SharePointBrowser() {
         cachedAt?: string | null;
       };
 
-      setConfigured(response.configured);
-      if (!response.configured) {
-        setCompanyId(null);
-        setSpConfig(null);
-      }
-      setNeedsO365(response.needsO365 ?? false);
-      setFolders(response.folders ?? []);
-      setFiles(response.files ?? []);
-      setFromCache(response.fromCache ?? false);
-      setCachedAt(response.cachedAt ?? null);
+      if (updateUI) {
+        setConfigured(response.configured);
+        if (!response.configured) {
+          setCompanyId(null);
+          setSpConfig(null);
+        }
+        setNeedsO365(response.needsO365 ?? false);
+        
+        // Show folders immediately (incremental loading)
+        setFolders(response.folders ?? []);
+        setLoading(false);
+        
+        // Load files after a brief delay to prioritize folder rendering
+        setLoadingFiles(true);
+        setTimeout(() => {
+          setFiles(response.files ?? []);
+          setLoadingFiles(false);
+        }, 50);
+        
+        setFromCache(response.fromCache ?? false);
+        setCachedAt(response.cachedAt ?? null);
 
-      // Pre-fetch immediate subfolders in background for faster navigation
-      if (response.folders && response.folders.length > 0 && !options?.forceRefresh) {
-        response.folders.slice(0, 3).forEach(folder => {
+        // Cache in IndexedDB for instant future loads
+        if (cache.ready) {
+          cache.setCachedItems(path, response.folders ?? [], response.files ?? []);
+        }
+      }
+
+      // Aggressive prefetching: prefetch ALL subfolders in background
+      if (response.folders && response.folders.length > 0 && !forceRefresh) {
+        response.folders.forEach(folder => {
           const subPath = path === '/' ? `/${folder.name}` : `${path}/${folder.name}`;
-          // Fire and forget - pre-warm the cache
+          // Fire and forget
           supabase.functions.invoke('sharepoint-browse-folders-cached', {
             body: { folder_path: subPath, force_refresh: false },
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          }).catch(() => {}); // Silently fail if pre-fetch fails
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }).then(async ({ data: prefetchData }) => {
+            // Cache prefetched data
+            if (cache.ready && prefetchData?.folders && prefetchData?.files) {
+              await cache.setCachedItems(subPath, prefetchData.folders, prefetchData.files);
+            }
+          }).catch(() => {}); // Silently fail
         });
       }
-    } catch (error: any) {
-      console.error('Error loading SharePoint items:', error);
-      toast.error('Failed to load SharePoint content. Please try syncing again.');
-      setFolders([]);
-      setFiles([]);
-      setFromCache(false);
-      setCachedAt(null);
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Error in loadItemsFromServer:', error);
+      if (updateUI) {
+        setLoading(false);
+      }
     }
-  }, []);
+  };
 
-  const navigateToFolder = (folderName: string) => {
-    if (loading) return; // Prevent navigation while loading
-    const newPath = currentPath === '/' ? `/${folderName}` : `${currentPath}/${folderName}`;
-    setPathHistory([...pathHistory, currentPath]);
-    setCurrentPath(newPath);
-    // Use cache for faster navigation, only force refresh on manual sync
-    loadItems(newPath, { forceRefresh: false });
+  const navigateToFolder = (folderName: string, folderPath?: string) => {
+    if (loading) return;
+    
+    if (folderPath) {
+      // From search result - navigate to parent first
+      setCurrentPath(folderPath);
+      setSearchQuery('');
+      setSearchResults(null);
+      setPathHistory([]);
+      loadItems(folderPath).then(() => {
+        const newPath = folderPath === '/' ? `/${folderName}` : `${folderPath}/${folderName}`;
+        setPathHistory([folderPath]);
+        setCurrentPath(newPath);
+      });
+    } else {
+      // Normal navigation
+      const newPath = currentPath === '/' ? `/${folderName}` : `${currentPath}/${folderName}`;
+      setPathHistory([...pathHistory, currentPath]);
+      setCurrentPath(newPath);
+    }
   };
 
   const navigateBack = () => {
@@ -437,6 +507,16 @@ export function SharePointBrowser() {
     if (!query.trim()) {
       setSearchResults(null);
       return;
+    }
+
+    // Check IndexedDB cache first
+    if (cache.ready) {
+      const cached = await cache.getCachedSearch(query);
+      if (cached) {
+        setSearchResults(cached);
+        setIsSearching(false);
+        return;
+      }
     }
 
     setIsSearching(true);
@@ -483,7 +563,13 @@ export function SharePointBrowser() {
         return;
       }
 
-      setSearchResults(data as any);
+      const results = data as any;
+      setSearchResults(results);
+
+      // Cache search results
+      if (cache.ready) {
+        cache.setCachedSearch(query, results.folders || [], results.files || []);
+      }
     } catch (error) {
       console.error('Search error:', error);
       toast.error('Search failed. Please try again.');
@@ -509,13 +595,21 @@ export function SharePointBrowser() {
   const displayFolders = searchResults?.folders || folders;
   const displayFiles = searchResults?.files || files;
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-  };
+  // Pagination
+  const totalItems = displayFolders.length + displayFiles.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (displayPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  
+  const paginatedFolders = displayFolders.slice(
+    Math.max(0, startIndex),
+    Math.min(displayFolders.length, endIndex)
+  );
+  const remainingSlots = endIndex - startIndex - paginatedFolders.length;
+  const paginatedFiles = displayFiles.slice(
+    Math.max(0, startIndex - displayFolders.length),
+    Math.max(0, startIndex - displayFolders.length) + remainingSlots
+  );
 
   const getBreadcrumbs = () => {
     if (currentPath === '/') return [];
@@ -523,33 +617,10 @@ export function SharePointBrowser() {
     return parts;
   };
 
-  const getPermissionsSummary = (permissions?: Permission[]) => {
-    if (!permissions || permissions.length === 0) return 'No permissions info';
-    
-    const users = new Set<string>();
-    const groups = new Set<string>();
-    
-    permissions.forEach(perm => {
-      perm.grantedTo?.forEach(identity => {
-        if (identity.type === 'user') {
-          users.add(identity.displayName);
-        } else {
-          groups.add(identity.displayName);
-        }
-      });
-    });
-    
-    const parts = [];
-    if (users.size > 0) parts.push(`${users.size} user${users.size > 1 ? 's' : ''}`);
-    if (groups.size > 0) parts.push(`${groups.size} group${groups.size > 1 ? 's' : ''}`);
-    
-    return parts.length > 0 ? parts.join(', ') : 'Shared with link';
-  };
-
   if (loading && folders.length === 0 && files.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-4">
+        <SharePointSkeleton rows={10} />
       </div>
     );
   }
@@ -594,6 +665,7 @@ export function SharePointBrowser() {
   }
 
   const breadcrumbs = getBreadcrumbs();
+  const useVirtualScrolling = totalItems > LARGE_LIST_THRESHOLD;
 
   return (
     <div className="space-y-6">
@@ -723,139 +795,102 @@ export function SharePointBrowser() {
         )}
       </div>
 
-      {/* Combined Table View */}
+      {/* Table View */}
       {(displayFolders.length > 0 || displayFiles.length > 0) && (
         <Card>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12"></TableHead>
-                  <TableHead>Name</TableHead>
-                  {searchResults && <TableHead className="hidden lg:table-cell">Location</TableHead>}
-                  <TableHead className="hidden md:table-cell">Modified</TableHead>
-                  <TableHead className="hidden lg:table-cell">Modified By</TableHead>
-                  <TableHead className="hidden sm:table-cell">Size</TableHead>
-                  <TableHead className="w-32">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {/* Folders */}
-                {displayFolders.map((folder) => (
-                  <TableRow 
-                    key={folder.id}
-                    className={`cursor-pointer hover:bg-muted/50 ${loading || isSearching ? 'opacity-50 pointer-events-none' : ''}`}
-                    onClick={() => {
-                      if (searchResults && 'path' in folder) {
-                        // Navigate to the folder's location first, then open it
-                        const folderPath = folder.path as string;
-                        setCurrentPath(folderPath);
-                        setSearchQuery('');
-                        setSearchResults(null);
-                        loadItems(folderPath).then(() => {
-                          navigateToFolder(folder.name);
-                        });
-                      } else {
-                        navigateToFolder(folder.name);
-                      }
-                    }}
-                  >
-                    <TableCell>
-                      <Folder className="h-5 w-5 text-primary" />
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {folder.name}
-                        <span className="text-xs text-muted-foreground">
-                          ({folder.childCount} {folder.childCount === 1 ? 'item' : 'items'})
-                        </span>
-                      </div>
-                    </TableCell>
-                    {searchResults && (
-                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                        {('path' in folder) ? (folder.path as string) || '/' : currentPath}
-                      </TableCell>
+            {useVirtualScrolling && !searchResults ? (
+              <VirtualizedTable
+                folders={displayFolders}
+                files={displayFiles}
+                onFolderNavigate={navigateToFolder}
+                isSearchResult={!!searchResults}
+                currentPath={currentPath}
+                loading={loading || isSearching}
+              />
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12"></TableHead>
+                      <TableHead>Name</TableHead>
+                      {searchResults && <TableHead className="hidden lg:table-cell">Location</TableHead>}
+                      <TableHead className="hidden md:table-cell">Modified</TableHead>
+                      <TableHead className="hidden lg:table-cell">Modified By</TableHead>
+                      <TableHead className="hidden sm:table-cell">Size</TableHead>
+                      <TableHead className="w-32">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedFolders.map((folder) => (
+                      <FolderRow
+                        key={folder.id}
+                        folder={folder}
+                        onNavigate={navigateToFolder}
+                        isSearchResult={!!searchResults}
+                        currentPath={currentPath}
+                        loading={loading || isSearching}
+                      />
+                    ))}
+                    
+                    {paginatedFiles.map((file) => (
+                      <FileRow
+                        key={file.id}
+                        file={file}
+                        isSearchResult={!!searchResults}
+                        currentPath={currentPath}
+                      />
+                    ))}
+
+                    {loadingFiles && paginatedFiles.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={searchResults ? 7 : 6} className="text-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground mt-2">Loading files...</p>
+                        </TableCell>
+                      </TableRow>
                     )}
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                      {formatAUDateTimeFull(folder.lastModifiedDateTime)}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                      —
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
-                      —
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm">
-                        <ChevronRight className="h-4 w-4" />
+                  </TableBody>
+                </Table>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} items
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDisplayPage(p => Math.max(1, p - 1))}
+                        disabled={displayPage === 1}
+                      >
+                        Previous
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                
-                {/* Files */}
-                {displayFiles.map((doc) => (
-                  <TableRow key={doc.id} className="hover:bg-muted/50">
-                    <TableCell>
-                      <FileText className="h-5 w-5 text-muted-foreground" />
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate max-w-xs">{doc.name}</span>
-                        <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded flex-shrink-0">
-                          {doc.fileType}
-                        </span>
-                      </div>
-                    </TableCell>
-                    {searchResults && (
-                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                        {('path' in doc) ? (doc.path as string) || '/' : currentPath}
-                      </TableCell>
-                    )}
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                      {formatAUDateTimeFull(doc.lastModifiedDateTime)}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground truncate max-w-xs">
-                      {doc.lastModifiedBy || '—'}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
-                      {formatFileSize(doc.size)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => window.open(doc.webUrl, '_blank')}
-                          title="Open in SharePoint"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                        {doc.downloadUrl && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.open(doc.downloadUrl, '_blank')}
-                            title="Download"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDisplayPage(p => Math.min(totalPages, p + 1))}
+                        disabled={displayPage === totalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
       )}
 
       {/* Empty State */}
-      {displayFolders.length === 0 && displayFiles.length === 0 && !loading && !isSearching && (
+      {displayFolders.length === 0 && displayFiles.length === 0 && !loading && !isSearching && !loadingFiles && (
         <Card>
           <CardContent className="py-12 text-center">
-            <Folder className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <AlertCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-xl font-semibold mb-2">
               {searchQuery ? 'No results found' : 'This folder is empty'}
             </h3>
@@ -899,7 +934,6 @@ export function SharePointBrowser() {
           </Button>
         </div>
       )}
-
     </div>
   );
 }
