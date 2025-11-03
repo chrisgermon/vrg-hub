@@ -12,7 +12,9 @@ serve(async (req) => {
   }
 
   try {
-    const { folder_name, folder_path } = await req.json();
+    const requestBody = await req.json();
+    const { folder_name, folder_path } = requestBody ?? {};
+    const requestedCompanyId = requestBody?.company_id as string | undefined;
 
     if (!folder_name || folder_name.trim().length === 0) {
       return new Response(
@@ -54,7 +56,7 @@ serve(async (req) => {
       .order('updated_at', { ascending: false })
       .maybeSingle();
 
-    let companyId = userConnectionHint?.company_id as string | undefined;
+    let companyId = (requestedCompanyId ?? userConnectionHint?.company_id ?? null) as string | null;
     if (!companyId) {
       const { data: profile } = await supabase
         .from('profiles')
@@ -64,15 +66,23 @@ serve(async (req) => {
       companyId = (profile?.company_id as string | undefined) ?? user.id;
     }
 
-    console.log(`Using company_id: ${companyId} for user ${user.id}`);
+    console.log(`Using company_id: ${companyId} (requested: ${requestedCompanyId ?? 'none'}) for user ${user.id}`);
 
     // Get SharePoint configuration (fallback to any active config if company specific not found)
-    let { data: spConfig, error: configError } = await supabase
-      .from('sharepoint_configurations')
-      .select('*')
-      .eq('company_id', companyId)
-      .eq('is_active', true)
-      .maybeSingle();
+    let spConfig = null as Record<string, any> | null;
+    let configError: { message?: string } | null = null;
+
+    if (companyId) {
+      const { data, error } = await supabase
+        .from('sharepoint_configurations')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      spConfig = data;
+      configError = error;
+    }
 
     if (!spConfig && !configError) {
       const { data: fallbackConfig, error: fallbackError } = await supabase
@@ -106,6 +116,7 @@ serve(async (req) => {
           configured: false,
           debug: {
             companyId,
+            requestedCompanyId: requestedCompanyId ?? null,
             hasConnection: !!(userConnectionHint?.access_token),
             configError: configError?.message
           }
