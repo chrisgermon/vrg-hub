@@ -31,8 +31,9 @@ export function ConnectOffice365Button() {
       const popup = window.open(
         data.authUrl,
         'office365-auth',
-        `width=${width},height=${height},left=${left},top=${top}`
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=no,status=no,noopener=no,noreferrer=no`
       );
+      popup?.focus();
 
       // Listen for successful connection
       const handleMessage = (event: MessageEvent) => {

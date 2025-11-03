@@ -197,12 +197,28 @@ export function SharePointBrowser() {
       }
 
       console.log('SharePoint: Checking configuration for company', resolvedCompanyId);
-      const { data: spConfigData, error: spError } = await supabase
+      let { data: spConfigData, error: spError } = await supabase
         .from('sharepoint_configurations')
         .select('*')
         .eq('company_id', resolvedCompanyId)
         .eq('is_active', true)
         .maybeSingle();
+
+      // Fallback: pick latest active configuration if company-specific not found
+      if (!spConfigData) {
+        const { data: fallback, error: fbErr } = await supabase
+          .from('sharepoint_configurations')
+          .select('*')
+          .eq('is_active', true)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (fallback) {
+          spConfigData = fallback as any;
+          resolvedCompanyId = (fallback as any).company_id;
+        }
+        if (fbErr) spError = fbErr as any;
+      }
 
       console.log('SharePoint: Configuration result:', { spConfigData, spError });
 
