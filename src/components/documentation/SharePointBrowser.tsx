@@ -508,16 +508,37 @@ export function SharePointBrowser() {
                 </Button>
               </BreadcrumbLink>
             </BreadcrumbItem>
-            {breadcrumbs.map((part, index) => (
-              <Fragment key={`bc-${index}`}>
-                <BreadcrumbSeparator>
-                  <ChevronRight className="h-4 w-4" />
-                </BreadcrumbSeparator>
-                <BreadcrumbItem>
-                  <BreadcrumbLink>{part}</BreadcrumbLink>
-                </BreadcrumbItem>
-              </Fragment>
-            ))}
+            {breadcrumbs.map((part, index) => {
+              const isLast = index === breadcrumbs.length - 1;
+              const pathToSegment = '/' + breadcrumbs.slice(0, index + 1).join('/');
+              
+              return (
+                <Fragment key={`bc-${index}`}>
+                  <BreadcrumbSeparator>
+                    <ChevronRight className="h-4 w-4" />
+                  </BreadcrumbSeparator>
+                  <BreadcrumbItem>
+                    {isLast ? (
+                      <BreadcrumbLink className="font-medium">{part}</BreadcrumbLink>
+                    ) : (
+                      <BreadcrumbLink asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto p-0 hover:underline"
+                          onClick={() => {
+                            setCurrentPath(pathToSegment);
+                            loadItems(pathToSegment, { forceRefresh: true });
+                          }}
+                        >
+                          {part}
+                        </Button>
+                      </BreadcrumbLink>
+                    )}
+                  </BreadcrumbItem>
+                </Fragment>
+              );
+            })}
           </BreadcrumbList>
         </Breadcrumb>
 
