@@ -30,6 +30,9 @@ verify_jwt = true
 [functions.sharepoint-browse-folders-cached]
 verify_jwt = true
 
+[functions.sharepoint-search]
+verify_jwt = true
+
 [functions.handle-incoming-email]
 verify_jwt = false
 

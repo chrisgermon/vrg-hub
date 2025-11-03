@@ -19,6 +19,7 @@ interface SharePointFolder {
   childCount: number;
   lastModifiedDateTime: string;
   permissions?: Permission[];
+  path?: string; // Path from root, used in search results
 }
 
 interface SharePointFile {
@@ -33,6 +34,7 @@ interface SharePointFile {
   fileType: string;
   downloadUrl?: string;
   permissions?: Permission[];
+  path?: string; // Path from root, used in search results
 }
 
 interface Permission {
@@ -60,6 +62,11 @@ export function SharePointBrowser() {
   const [fromCache, setFromCache] = useState(false);
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<{
+    folders: SharePointFolder[];
+    files: SharePointFile[];
+  } | null>(null);
   const [selectedItem, setSelectedItem] = useState<SharePointFile | SharePointFolder | null>(null);
   const [uploading, setUploading] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -422,15 +429,60 @@ export function SharePointBrowser() {
   const navigateToRoot = () => {
     setCurrentPath('/');
     setPathHistory([]);
+    setSearchQuery('');
+    setSearchResults(null);
   };
 
-  // Filter folders and files based on search query
-  const filteredFolders = folders.filter(folder =>
-    folder.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  const filteredFiles = files.filter(file =>
-    file.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const performGlobalSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults(null);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please log in to search');
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('sharepoint-search', {
+        body: { search_query: query },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error) {
+        console.error('Search error:', error);
+        toast.error('Search failed. Please try again.');
+        return;
+      }
+
+      setSearchResults(data);
+    } catch (error) {
+      console.error('Search error:', error);
+      toast.error('Search failed. Please try again.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim()) {
+        performGlobalSearch(searchQuery);
+      } else {
+        setSearchResults(null);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Use search results if available, otherwise show current folder contents
+  const displayFolders = searchResults?.folders || folders;
+  const displayFiles = searchResults?.files || files;
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -612,19 +664,42 @@ export function SharePointBrowser() {
       </div>
 
       {/* Search Input */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="text"
-          placeholder="Search folders and files..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
+      <div className="space-y-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search all SharePoint files and folders..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+            disabled={isSearching}
+          />
+          {isSearching && (
+            <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+        </div>
+        {searchResults && (
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>
+              Found {searchResults.folders.length + searchResults.files.length} results
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchQuery('');
+                setSearchResults(null);
+              }}
+            >
+              Clear search
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Combined Table View */}
-      {(filteredFolders.length > 0 || filteredFiles.length > 0) && (
+      {(displayFolders.length > 0 || displayFiles.length > 0) && (
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -632,6 +707,7 @@ export function SharePointBrowser() {
                 <TableRow>
                   <TableHead className="w-12"></TableHead>
                   <TableHead>Name</TableHead>
+                  {searchResults && <TableHead className="hidden lg:table-cell">Location</TableHead>}
                   <TableHead className="hidden md:table-cell">Modified</TableHead>
                   <TableHead className="hidden lg:table-cell">Modified By</TableHead>
                   <TableHead className="hidden sm:table-cell">Size</TableHead>
@@ -640,11 +716,24 @@ export function SharePointBrowser() {
               </TableHeader>
               <TableBody>
                 {/* Folders */}
-                {filteredFolders.map((folder) => (
+                {displayFolders.map((folder) => (
                   <TableRow 
                     key={folder.id}
-                    className={`cursor-pointer hover:bg-muted/50 ${loading ? 'opacity-50 pointer-events-none' : ''}`}
-                    onClick={() => navigateToFolder(folder.name)}
+                    className={`cursor-pointer hover:bg-muted/50 ${loading || isSearching ? 'opacity-50 pointer-events-none' : ''}`}
+                    onClick={() => {
+                      if (searchResults && 'path' in folder) {
+                        // Navigate to the folder's location first, then open it
+                        const folderPath = folder.path as string;
+                        setCurrentPath(folderPath);
+                        setSearchQuery('');
+                        setSearchResults(null);
+                        loadItems(folderPath).then(() => {
+                          navigateToFolder(folder.name);
+                        });
+                      } else {
+                        navigateToFolder(folder.name);
+                      }
+                    }}
                   >
                     <TableCell>
                       <Folder className="h-5 w-5 text-primary" />
@@ -657,6 +746,11 @@ export function SharePointBrowser() {
                         </span>
                       </div>
                     </TableCell>
+                    {searchResults && (
+                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                        {('path' in folder) ? (folder.path as string) || '/' : currentPath}
+                      </TableCell>
+                    )}
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                       {formatAUDateTimeFull(folder.lastModifiedDateTime)}
                     </TableCell>
@@ -675,7 +769,7 @@ export function SharePointBrowser() {
                 ))}
                 
                 {/* Files */}
-                {filteredFiles.map((doc) => (
+                {displayFiles.map((doc) => (
                   <TableRow key={doc.id} className="hover:bg-muted/50">
                     <TableCell>
                       <FileText className="h-5 w-5 text-muted-foreground" />
@@ -688,6 +782,11 @@ export function SharePointBrowser() {
                         </span>
                       </div>
                     </TableCell>
+                    {searchResults && (
+                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                        {('path' in doc) ? (doc.path as string) || '/' : currentPath}
+                      </TableCell>
+                    )}
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                       {formatAUDateTimeFull(doc.lastModifiedDateTime)}
                     </TableCell>
@@ -728,7 +827,7 @@ export function SharePointBrowser() {
       )}
 
       {/* Empty State */}
-      {filteredFolders.length === 0 && filteredFiles.length === 0 && !loading && (
+      {displayFolders.length === 0 && displayFiles.length === 0 && !loading && !isSearching && (
         <Card>
           <CardContent className="py-12 text-center">
             <Folder className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -757,7 +856,7 @@ export function SharePointBrowser() {
       )}
 
       {/* Upload button for non-empty folders */}
-      {(filteredFolders.length > 0 || filteredFiles.length > 0) && (
+      {!searchResults && (displayFolders.length > 0 || displayFiles.length > 0) && (
         <div className="fixed bottom-6 right-6 z-50">
           <Button
             size="lg"
