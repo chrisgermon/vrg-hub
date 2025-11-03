@@ -529,7 +529,7 @@ export function SharePointBrowser() {
         } catch {}
 
         const errorMsg = typeof errorBody === 'object' && errorBody !== null 
-          ? errorBody.error 
+          ? (errorBody.error || 'Failed to create folder')
           : 'Failed to create folder';
 
         if (status === 409) {
@@ -537,13 +537,21 @@ export function SharePointBrowser() {
         } else if (status === 401) {
           setNeedsO365(true);
           toast.error('Your Microsoft 365 session expired. Please reconnect.');
+        } else if (status === 404) {
+          const needsConnect = typeof errorBody === 'object' && errorBody !== null &&
+            (errorBody.configured === false) && (errorBody.debug?.hasConnection === false);
+          if (needsConnect) {
+            setNeedsO365(true);
+            toast.error('Connect your Office 365 account to continue.');
+          } else {
+            toast.error('SharePoint not configured. Please set it up in Integrations.');
+          }
         } else if (status === 403) {
           toast.error('Permission denied. You cannot create folders here.');
         } else {
           console.error('Create folder error:', error);
           toast.error(errorMsg);
         }
-        // Prevent error boundary from triggering
         return;
       }
 
