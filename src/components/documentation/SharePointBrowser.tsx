@@ -376,6 +376,18 @@ export function SharePointBrowser() {
       setFiles(response.files ?? []);
       setFromCache(response.fromCache ?? false);
       setCachedAt(response.cachedAt ?? null);
+
+      // Pre-fetch immediate subfolders in background for faster navigation
+      if (response.folders && response.folders.length > 0 && !options?.forceRefresh) {
+        response.folders.slice(0, 3).forEach(folder => {
+          const subPath = path === '/' ? `/${folder.name}` : `${path}/${folder.name}`;
+          // Fire and forget - pre-warm the cache
+          supabase.functions.invoke('sharepoint-browse-folders-cached', {
+            body: { folder_path: subPath, force_refresh: false },
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }).catch(() => {}); // Silently fail if pre-fetch fails
+        });
+      }
     } catch (error: any) {
       console.error('Error loading SharePoint items:', error);
       toast.error('Failed to load SharePoint content. Please try syncing again.');
@@ -393,7 +405,8 @@ export function SharePointBrowser() {
     const newPath = currentPath === '/' ? `/${folderName}` : `${currentPath}/${folderName}`;
     setPathHistory([...pathHistory, currentPath]);
     setCurrentPath(newPath);
-    loadItems(newPath, { forceRefresh: true });
+    // Use cache for faster navigation, only force refresh on manual sync
+    loadItems(newPath, { forceRefresh: false });
   };
 
   const navigateBack = () => {

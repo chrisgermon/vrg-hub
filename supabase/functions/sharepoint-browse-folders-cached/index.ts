@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const CACHE_TTL_HOURS = 1; // Cache expires after 1 hour
+const CACHE_TTL_HOURS = 4; // Cache expires after 4 hours for better performance
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
