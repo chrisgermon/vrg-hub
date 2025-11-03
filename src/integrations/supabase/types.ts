@@ -1624,6 +1624,36 @@ export type Database = {
         }
         Relationships: []
       }
+      menu_headings: {
+        Row: {
+          created_at: string | null
+          heading_key: string
+          id: string
+          is_active: boolean | null
+          label: string
+          sort_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          heading_key: string
+          id?: string
+          is_active?: boolean | null
+          label: string
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          heading_key?: string
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       modalities: {
         Row: {
           ae_title: string | null

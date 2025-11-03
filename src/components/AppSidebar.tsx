@@ -100,6 +100,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
   const [editingItem, setEditingItem] = useState<{ key: string; label: string; icon?: string } | null>(null);
   const [menuCustomizations, setMenuCustomizations] = useState<Record<string, { label?: string; icon?: string; visible?: boolean }>>({});
   const [menuConfigs, setMenuConfigs] = useState<any[]>([]);
+  const [globalHeadings, setGlobalHeadings] = useState<any[]>([]);
   const { toast } = useToast();
 
   // Load menu customizations with real-time updates
@@ -131,7 +132,24 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
       }
     };
 
+    const loadGlobalHeadings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('menu_headings')
+          .select('*')
+          .eq('is_active', true)
+          .order('sort_order');
+
+        if (!error && data) {
+          setGlobalHeadings(data || []);
+        }
+      } catch (error) {
+        console.error('Error loading global headings:', error);
+      }
+    };
+
     loadMenuCustomizations();
+    loadGlobalHeadings();
 
     // Set up real-time subscription for menu configuration changes
     const channel = supabase
@@ -147,6 +165,18 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
         () => {
           // Reload customizations when changes occur
           loadMenuCustomizations();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'menu_headings',
+        },
+        () => {
+          // Reload headings when changes occur
+          loadGlobalHeadings();
         }
       )
       .subscribe();
@@ -608,14 +638,12 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 ) : menuItem;
               })}
 
-              {/* Render custom headings from menu_configurations */}
-              {menuConfigs
-                .filter(config => config.item_type === 'heading' && config.is_visible)
-                .map((heading) => (
-                  <SidebarGroupLabel key={heading.item_key} className="px-4 py-2 mt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    {!collapsed && heading.custom_heading_label}
-                  </SidebarGroupLabel>
-                ))}
+              {/* Render global headings from menu_headings table */}
+              {globalHeadings.map((heading) => (
+                <SidebarGroupLabel key={heading.id} className="px-4 py-2 mt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  {!collapsed && heading.label}
+                </SidebarGroupLabel>
+              ))}
 
               {/* Categorized Items - flatten single-item categories */}
               {menuConfig.categories.map((category) => {
