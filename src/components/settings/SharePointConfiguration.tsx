@@ -169,10 +169,75 @@ export function SharePointConfiguration() {
     }
   };
 
-  const reconfigure = async () => {
-    await autoConfigureVRGDocuments();
-  };
+   const reconfigure = async () => {
+     await autoConfigureVRGDocuments();
+   };
 
+   const connectCompanyOffice365 = async () => {
+     setLoading(true);
+     try {
+       const { data: { session } } = await supabase.auth.getSession();
+       if (!session) {
+         toast({ title: 'Sign in required', description: 'Please sign in again', variant: 'destructive' });
+         return;
+       }
+
+       // Resolve company id (prefer existing connection, fallback to profile brand)
+       let resolvedCompanyId: string | undefined;
+       const { data: userConn } = await supabase
+         .from('office365_connections')
+         .select('company_id')
+         .eq('user_id', session.user.id)
+         .order('updated_at', { ascending: false })
+         .maybeSingle();
+       resolvedCompanyId = userConn?.company_id;
+       if (!resolvedCompanyId) {
+         const { data: profile } = await supabase
+           .from('profiles')
+           .select('brand_id')
+           .eq('id', session.user.id)
+           .maybeSingle();
+         resolvedCompanyId = profile?.brand_id || undefined;
+       }
+
+       if (!resolvedCompanyId) {
+         toast({ title: 'Missing company', description: 'No company context found to connect.', variant: 'destructive' });
+         return;
+       }
+
+       const { data, error } = await supabase.functions.invoke('office365-oauth-initiate', {
+         body: { company_id: resolvedCompanyId },
+         headers: { Authorization: `Bearer ${session.access_token}` },
+       });
+       if (error) throw error;
+
+       const authUrl = (data as any)?.authorization_url || (data as any)?.authUrl;
+       const width = 600, height = 700;
+       const left = window.screen.width / 2 - width / 2;
+       const top = window.screen.height / 2 - height / 2;
+        const popup = window.open(
+          authUrl,
+          'office365-company-auth',
+          `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=no,status=no,noopener=no`
+        );
+       popup?.focus();
+
+       const handleMessage = (event: MessageEvent) => {
+         if ((event.data as any)?.type === 'office365-connected') {
+           window.removeEventListener('message', handleMessage);
+           toast({ title: 'Connected', description: 'Company Office 365 connected' });
+           checkConnection();
+           loadCurrentConfig();
+         }
+       };
+       window.addEventListener('message', handleMessage);
+     } catch (e: any) {
+       console.error('Company O365 connect error', e);
+       toast({ title: 'Error', description: e?.message || 'Failed to start connection', variant: 'destructive' });
+     } finally {
+       setLoading(false);
+     }
+   };
   const disconnect = async () => {
     setLoading(true);
     try {
@@ -214,9 +279,15 @@ export function SharePointConfiguration() {
         <CardContent className="space-y-4">
           <div className="flex flex-col items-center justify-center py-8 space-y-4">
             <p className="text-sm text-muted-foreground text-center">
-              Connect your Office 365 account to configure SharePoint document access
+              Connect your Office 365 account or connect the company to configure SharePoint document access
             </p>
-            <ConnectOffice365Button />
+            <div className="flex gap-3">
+              <ConnectOffice365Button />
+              <Button variant="outline" onClick={connectCompanyOffice365} disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Connect Company Office 365
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
