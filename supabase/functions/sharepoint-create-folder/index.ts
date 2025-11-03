@@ -230,9 +230,12 @@ serve(async (req) => {
         const tokens = await tokenResponse.json();
         const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
+        const newExpiryIso = newExpiresAt.toISOString();
+
         const updateData: Record<string, any> = {
           access_token: tokens.access_token,
-          token_expires_at: newExpiresAt.toISOString(),
+          token_expires_at: newExpiryIso,
+          expires_at: newExpiryIso,
           updated_at: new Date().toISOString(),
         };
 

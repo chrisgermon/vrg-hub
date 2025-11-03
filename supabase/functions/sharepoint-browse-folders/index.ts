@@ -64,7 +64,18 @@ serve(async (req) => {
 
     console.log('User authenticated:', user.email);
 
-    const { folder_path } = await req.json();
+    let requestBody: Record<string, any> = {};
+    if (req.headers.get('content-type')?.includes('application/json')) {
+      try {
+        requestBody = await req.json();
+      } catch (parseError) {
+        console.error('Failed to parse request body, defaulting to empty object:', parseError);
+      }
+    }
+
+    const folder_path = typeof requestBody.folder_path === 'string'
+      ? requestBody.folder_path
+      : undefined;
 
     // First, check if the user has connected their Office 365 account
     const { data: userO365 } = await supabaseAdmin
@@ -104,9 +115,11 @@ serve(async (req) => {
     // Check if token is expired and refresh if needed
     let connection = userConnection;
     const now = new Date();
-    const expiresAt = new Date(connection.expires_at);
-    
-    if (now >= expiresAt) {
+    const expiresAtString = connection.token_expires_at || connection.expires_at;
+    const expiresAt = expiresAtString ? new Date(expiresAtString) : null;
+    const tokenExpired = !expiresAt || Number.isNaN(expiresAt.getTime()) || now >= expiresAt;
+
+    if (tokenExpired) {
       console.log('Access token expired, refreshing...');
       
       if (!connection.refresh_token) {
@@ -159,9 +172,12 @@ serve(async (req) => {
       const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
       // Update the connection with new tokens
+      const newExpiryIso = newExpiresAt.toISOString();
+
       const updateData: Record<string, any> = {
         access_token: tokens.access_token,
-        expires_at: newExpiresAt.toISOString(),
+        expires_at: newExpiryIso,
+        token_expires_at: newExpiryIso,
         updated_at: new Date().toISOString(),
       };
       if (tokens.refresh_token) {
