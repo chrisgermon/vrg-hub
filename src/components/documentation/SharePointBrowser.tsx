@@ -1,8 +1,9 @@
 import { useState, useEffect, Fragment, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Download, ExternalLink, Loader2, AlertCircle, Folder, ChevronRight, Home, Users, Lock } from "lucide-react";
+import { FileText, Download, ExternalLink, Loader2, AlertCircle, Folder, ChevronRight, Home, Users, Lock, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatAUDateTimeFull } from "@/lib/dateUtils";
@@ -58,6 +59,7 @@ export function SharePointBrowser() {
   const [pathHistory, setPathHistory] = useState<string[]>([]);
   const [fromCache, setFromCache] = useState(false);
   const [cachedAt, setCachedAt] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState<SharePointFile | SharePointFolder | null>(null);
   const [uploading, setUploading] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -422,6 +424,14 @@ export function SharePointBrowser() {
     setPathHistory([]);
   };
 
+  // Filter folders and files based on search query
+  const filteredFolders = folders.filter(folder =>
+    folder.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const filteredFiles = files.filter(file =>
+    file.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -601,8 +611,20 @@ export function SharePointBrowser() {
         </div>
       </div>
 
+      {/* Search Input */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Search folders and files..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {/* Combined Table View */}
-      {(folders.length > 0 || files.length > 0) && (
+      {(filteredFolders.length > 0 || filteredFiles.length > 0) && (
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -618,7 +640,7 @@ export function SharePointBrowser() {
               </TableHeader>
               <TableBody>
                 {/* Folders */}
-                {folders.map((folder) => (
+                {filteredFolders.map((folder) => (
                   <TableRow 
                     key={folder.id}
                     className={`cursor-pointer hover:bg-muted/50 ${loading ? 'opacity-50 pointer-events-none' : ''}`}
@@ -653,7 +675,7 @@ export function SharePointBrowser() {
                 ))}
                 
                 {/* Files */}
-                {files.map((doc) => (
+                {filteredFiles.map((doc) => (
                   <TableRow key={doc.id} className="hover:bg-muted/50">
                     <TableCell>
                       <FileText className="h-5 w-5 text-muted-foreground" />
@@ -706,17 +728,23 @@ export function SharePointBrowser() {
       )}
 
       {/* Empty State */}
-      {folders.length === 0 && files.length === 0 && !loading && (
+      {filteredFolders.length === 0 && filteredFiles.length === 0 && !loading && (
         <Card>
           <CardContent className="py-12 text-center">
             <Folder className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">This folder is empty</h3>
+            <h3 className="text-xl font-semibold mb-2">
+              {searchQuery ? 'No results found' : 'This folder is empty'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              There are no files or folders in this location.
+              {searchQuery 
+                ? `No files or folders match "${searchQuery}"`
+                : 'There are no files or folders in this location.'}
             </p>
-            <Button onClick={() => document.getElementById('sharepoint-upload')?.click()}>
-              Upload Files
-            </Button>
+            {!searchQuery && (
+              <Button onClick={() => document.getElementById('sharepoint-upload')?.click()}>
+                Upload Files
+              </Button>
+            )}
             <input
               id="sharepoint-upload"
               type="file"
@@ -729,7 +757,7 @@ export function SharePointBrowser() {
       )}
 
       {/* Upload button for non-empty folders */}
-      {(folders.length > 0 || files.length > 0) && (
+      {(filteredFolders.length > 0 || filteredFiles.length > 0) && (
         <div className="fixed bottom-6 right-6 z-50">
           <Button
             size="lg"
