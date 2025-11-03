@@ -86,7 +86,7 @@ serve(async (req) => {
     // Check SharePoint configuration
     const { data: configs } = await supabaseAdmin
       .from('sharepoint_configurations')
-      .select('site_id, folder_path, company_id')
+      .select('site_id, folder_path, company_id, site_url')
       .eq('company_id', companyId)
       .eq('is_active', true)
       .order('updated_at', { ascending: false })
@@ -158,6 +158,7 @@ serve(async (req) => {
             files,
             fromCache: true,
             cachedAt: cachedItems[0]?.cached_at,
+            siteUrl: config.site_url || undefined,
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -390,13 +391,8 @@ serve(async (req) => {
         permissions: [], // Permissions not available without separate API call
       }));
 
-    // Extract SharePoint site URL from site_id
-    // Format: hostname,siteId,webId -> extract hostname
-    let siteUrl = '';
-    if (config.site_id && config.site_id.includes(',')) {
-      const hostname = config.site_id.split(',')[0];
-      siteUrl = `https://${hostname}${browsePath === '/' ? '' : browsePath}`;
-    }
+    // Use the stored SharePoint site URL from configuration
+    const siteUrl = config.site_url || '';
 
     // Return response (compression handled by CDN/Cloudflare)
     return new Response(
