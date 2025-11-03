@@ -91,7 +91,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/requests/new/:slug/:categorySlug", element: <NewDynamicRequest /> },
   { path: "/requests/tickets/new", element: <NewTicket /> },
   { path: "/catalog", element: <Catalog /> },
-  { path: "/documentation", element: <Documentation /> },
+  { path: "/documents", element: <Documentation /> },
   { path: "/news/view-all", element: <NewsViewAll /> },
   { path: "/news", element: <NewsManagement /> },
   { path: "/news/new", element: <ArticleEditor /> },

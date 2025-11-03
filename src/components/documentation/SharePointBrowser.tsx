@@ -911,15 +911,6 @@ export function SharePointBrowser() {
               Open SharePoint Site
             </Button>
           )}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => syncSharePointFiles(currentPath)}
-            disabled={syncing}
-            title="Sync from SharePoint"
-          >
-            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sync'}
-          </Button>
           <Button
             variant="outline"
             size="sm"

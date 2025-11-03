@@ -160,7 +160,7 @@ export function WidgetRenderer({ widget, isEditor = false }: WidgetRendererProps
     case "quick-links":
       const links = widget.config.links || [
         { label: "My Requests", href: "/requests" },
-        { label: "Documentation", href: "/documentation" },
+        { label: "Documentation", href: "/documents" },
         { label: "Help & Support", href: "/help" },
       ];
       return (
