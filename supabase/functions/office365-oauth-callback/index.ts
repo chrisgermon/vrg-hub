@@ -62,9 +62,7 @@ serve(async (req) => {
         tenant_id: tenantId,
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
-        token_expires_at: expiresAt.toISOString(),
-        connected_by: user_id,
-        is_active: true,
+        expires_at: expiresAt.toISOString(),
       }, {
         onConflict: 'company_id',
       });
