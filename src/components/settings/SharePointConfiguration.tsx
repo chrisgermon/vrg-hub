@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, CheckCircle2, FolderOpen, Link as LinkIcon, RefreshCw } from 'lucide-react';
+import { Loader2, CheckCircle2, FolderOpen, Link as LinkIcon, RefreshCw, Unplug } from 'lucide-react';
 import { ConnectOffice365Button } from '@/components/documentation/ConnectOffice365Button';
 
 interface SharePointSite {
@@ -173,6 +173,32 @@ export function SharePointConfiguration() {
     await autoConfigureVRGDocuments();
   };
 
+  const disconnect = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sharepoint-disconnect');
+
+      if (error) throw error;
+
+      setConnected(false);
+      setCurrentConfig(null);
+      
+      toast({
+        title: 'Disconnected',
+        description: 'SharePoint has been disconnected successfully',
+      });
+    } catch (error: any) {
+      console.error('Error disconnecting:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to disconnect SharePoint',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!connected) {
     return (
       <Card>
@@ -232,16 +258,29 @@ export function SharePointConfiguration() {
           </div>
         )}
 
-        <Button 
-          onClick={reconfigure} 
-          disabled={loading}
-          className="w-full"
-          variant="outline"
-        >
-          {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Reconnect & Clear Cache
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={reconfigure} 
+            disabled={loading}
+            className="flex-1"
+            variant="outline"
+          >
+            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Reconnect & Clear Cache
+          </Button>
+          
+          <Button 
+            onClick={disconnect} 
+            disabled={loading}
+            variant="destructive"
+            className="flex-1"
+          >
+            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            <Unplug className="w-4 h-4 mr-2" />
+            Disconnect
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
