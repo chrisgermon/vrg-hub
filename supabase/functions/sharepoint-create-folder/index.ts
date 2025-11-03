@@ -58,10 +58,10 @@ serve(async (req) => {
     if (!companyId) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('brand_id')
+        .select('company_id')
         .eq('id', user.id)
         .maybeSingle();
-      companyId = (profile?.brand_id as string | undefined) || user.id;
+      companyId = (profile?.company_id as string | undefined) ?? user.id;
     }
 
     console.log(`Using company_id: ${companyId} for user ${user.id}`);
