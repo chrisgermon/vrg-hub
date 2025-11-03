@@ -54,21 +54,47 @@ serve(async (req) => {
 
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-    const { error: insertError } = await supabase
+    const { data: existingConn, error: selectError } = await supabase
       .from('office365_connections')
-      .upsert({
-        company_id,
-        user_id: null, // Company-level connection, not user-specific
-        tenant_id: tenantId,
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        expires_at: expiresAt.toISOString(),
-      }, {
-        onConflict: 'company_id',
-      });
+      .select('id')
+      .eq('company_id', company_id)
+      .maybeSingle();
 
-    if (insertError) {
-      console.error('Database error:', insertError);
+    if (selectError) {
+      console.error('Select existing connection error:', selectError);
+      throw new Error('Failed to check existing connection');
+    }
+
+    let upsertError = null as any;
+
+    if (existingConn?.id) {
+      const { error } = await supabase
+        .from('office365_connections')
+        .update({
+          user_id: null,
+          tenant_id: tenantId,
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          expires_at: expiresAt.toISOString(),
+        })
+        .eq('id', existingConn.id);
+      upsertError = error;
+    } else {
+      const { error } = await supabase
+        .from('office365_connections')
+        .insert({
+          company_id,
+          user_id: null, // Company-level connection, not user-specific
+          tenant_id: tenantId,
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          expires_at: expiresAt.toISOString(),
+        });
+      upsertError = error;
+    }
+
+    if (upsertError) {
+      console.error('Database error:', upsertError);
       throw new Error('Failed to store connection');
     }
 
