@@ -33,7 +33,10 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const { userRole, user, signOut } = useAuth();
   const { effectiveRole, isImpersonating } = useRoleImpersonation();
-  const [logoUrl, setLogoUrl] = useState<string>(crowdITLogo);
+  const [logoUrl, setLogoUrl] = useState<string>(() => {
+    // Initialize with cached logo if available
+    return localStorage.getItem('company_logo_url') || crowdITLogo;
+  });
   const [profileOpen, setProfileOpen] = useState(false);
   const { toast } = useToast();
 
@@ -61,15 +64,18 @@ export function Layout({ children }: LayoutProps) {
         const brandLogo = profileData?.brand?.logo_url;
         if (brandLogo) {
           setLogoUrl(brandLogo);
+          localStorage.setItem('company_logo_url', brandLogo);
           return;
         }
 
         if (configData?.logo_url) {
           setLogoUrl(configData.logo_url);
+          localStorage.setItem('company_logo_url', configData.logo_url);
           return;
         }
 
         setLogoUrl(crowdITLogo);
+        localStorage.setItem('company_logo_url', crowdITLogo);
       } catch (error) {
         console.error('Error loading company logo:', error);
         setLogoUrl(crowdITLogo);
