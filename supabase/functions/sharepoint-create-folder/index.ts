@@ -64,6 +64,9 @@ serve(async (req) => {
       companyId = profile?.brand_id || user.id;
     }
 
+    console.log(`Using company_id: ${companyId} for user ${user.id}`);
+    console.log(`Connection data:`, connection ? 'found' : 'not found');
+
     // Get SharePoint configuration
     const { data: spConfig, error: configError } = await supabase
       .from('sharepoint_configurations')
@@ -72,11 +75,20 @@ serve(async (req) => {
       .eq('is_active', true)
       .maybeSingle();
 
+    console.log(`SharePoint config lookup - Error: ${configError?.message || 'none'}, Found: ${!!spConfig}`);
+    console.log(`Query params - company_id: ${companyId}, is_active: true`);
+
     if (configError || !spConfig) {
+      console.error('SharePoint configuration not found or error occurred');
       return new Response(
         JSON.stringify({ 
           error: 'SharePoint not configured',
-          configured: false
+          configured: false,
+          debug: {
+            companyId,
+            hasConnection: !!connection,
+            configError: configError?.message
+          }
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
