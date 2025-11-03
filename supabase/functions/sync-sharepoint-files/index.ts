@@ -123,19 +123,22 @@ Deno.serve(async (req) => {
     }
 
     // Fetch files from SharePoint
-    // Use requested folder path if provided, otherwise use config default
-    const folderPath = requestedFolderPath !== undefined ? requestedFolderPath : (spConfig.folder_path || '/');
+    // Determine target folder path with canonical normalization
+    const rawPath = requestedFolderPath !== undefined ? requestedFolderPath : (spConfig.folder_path || '/');
+    const canonicalPath = (() => {
+      if (!rawPath || typeof rawPath !== 'string' || rawPath.trim() === '' || rawPath === '/') return '/';
+      const start = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+      return start.endsWith('/') ? start.slice(0, -1) : start;
+    })();
     const siteId = requestedSiteId || spConfig.site_id;
     
-    console.log(`Syncing SharePoint folder: "${folderPath}" for company: ${companyId}`);
+    console.log(`Syncing SharePoint folder: "${canonicalPath}" for company: ${companyId}`);
     
     // Construct proper Graph API URL
     let graphUrl: string;
-    if (folderPath && folderPath !== '/' && folderPath.trim() !== '') {
-      // Ensure folder path starts with / and doesn't end with /
-      const normalizedPath = folderPath.startsWith('/') ? folderPath : `/${folderPath}`;
-      const cleanPath = normalizedPath.endsWith('/') ? normalizedPath.slice(0, -1) : normalizedPath;
-      graphUrl = `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/root:${cleanPath}:/children`;
+    if (canonicalPath !== '/') {
+      const graphPath = canonicalPath.slice(1); // remove leading slash
+      graphUrl = `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/root:/${graphPath}:/children`;
     } else {
       graphUrl = `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/root/children`;
     }
@@ -163,7 +166,7 @@ Deno.serve(async (req) => {
       company_id: companyId,
       item_type: item.folder ? 'folder' : 'file',
       item_id: item.id,
-      parent_path: folderPath,
+      parent_path: canonicalPath,
       name: item.name,
       web_url: item.webUrl,
       size: item.size || 0,

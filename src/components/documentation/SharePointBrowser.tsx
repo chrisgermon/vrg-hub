@@ -159,8 +159,8 @@ export function SharePointBrowser() {
       };
       if (spConfig?.site_id) payload.site_id = spConfig.site_id;
       
-      // Use custom folder path if provided, otherwise use configured folder path
-      const targetFolderPath = customFolderPath !== undefined ? customFolderPath : (spConfig?.folder_path || currentPath || '/');
+      // Use custom folder path if provided; otherwise prefer currentPath, then configured default
+      const targetFolderPath = customFolderPath !== undefined ? customFolderPath : (currentPath || spConfig?.folder_path || '/');
       payload.folder_path = targetFolderPath;
 
       const { data, error } = await supabase.functions.invoke('sync-sharepoint-files', {
@@ -225,7 +225,7 @@ export function SharePointBrowser() {
       return;
     }
     loadItems(currentPath);
-  }, [configured, currentPath, loadItems]);
+  }, [configured, currentPath]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -393,6 +393,7 @@ export function SharePointBrowser() {
     const newPath = currentPath === '/' ? `/${folderName}` : `${currentPath}/${folderName}`;
     setPathHistory([...pathHistory, currentPath]);
     setCurrentPath(newPath);
+    loadItems(newPath, { forceRefresh: true });
   };
 
   const navigateBack = () => {
@@ -529,7 +530,7 @@ export function SharePointBrowser() {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => syncSharePointFiles()}
+            onClick={() => syncSharePointFiles(currentPath)}
             disabled={syncing}
             title="Sync from SharePoint"
           >
