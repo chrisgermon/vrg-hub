@@ -125,14 +125,24 @@ export function UserInviteManager() {
   };
 
   const onSubmit = async (values: InviteFormValues) => {
-    if (!user) return;
+    console.log('Form submitted with values:', values);
+    
+    if (!user) {
+      console.error('No user found');
+      toast.error("You must be logged in to send invites");
+      return;
+    }
+
+    console.log('Current user:', user.id);
 
     if (!canManageRole(values.role)) {
+      console.error('Cannot manage role:', values.role);
       toast.error("You do not have permission to assign that role");
       return;
     }
 
     if (!canAccessCompany(values.brand_id)) {
+      console.error('Cannot access company:', values.brand_id);
       toast.error("You can only invite users to your own brand");
       return;
     }
@@ -141,6 +151,8 @@ export function UserInviteManager() {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + values.days_valid);
 
+      console.log('Creating invite in database...');
+      
       // Create the invite in the database
       const { data: newInvite, error: insertError } = await supabase
         .from('user_invites')
@@ -156,8 +168,12 @@ export function UserInviteManager() {
         .single();
 
       if (insertError) {
+        console.error('Insert error:', insertError);
         throw insertError;
       }
+
+      console.log('Invite created successfully:', newInvite);
+      console.log('Calling send-user-invite-email function...');
 
       // Send the invite email
       const emailResult = await supabase.functions.invoke('send-user-invite-email', {
@@ -166,10 +182,13 @@ export function UserInviteManager() {
         }
       });
 
+      console.log('Email function result:', emailResult);
+
       if (emailResult.error) {
         console.error('Failed to send invite email:', emailResult.error);
-        toast.error('Invite created but failed to send email');
+        toast.error('Invite created but failed to send email: ' + emailResult.error.message);
       } else {
+        console.log('Email sent successfully');
         toast.success('Invite sent successfully!');
       }
 
