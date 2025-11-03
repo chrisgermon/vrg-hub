@@ -13,6 +13,7 @@ import { SharePointSkeleton } from "./SharePointSkeleton";
 import { VirtualizedTable } from "./VirtualizedTable";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FolderRow, FileRow } from "./SharePointTableRow";
+import { FileUploadProgress } from "./FileUploadProgress";
 
 interface SharePointFolder {
   id: string;
@@ -78,6 +79,13 @@ export function SharePointBrowser() {
   const [spConfig, setSpConfig] = useState<any>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [displayPage, setDisplayPage] = useState(1);
+  const [uploadProgress, setUploadProgress] = useState<Array<{
+    name: string;
+    progress: number;
+    status: 'uploading' | 'success' | 'error';
+    error?: string;
+  }>>([]);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
 
   const cache = useSharePointCache();
 
@@ -244,57 +252,130 @@ export function SharePointBrowser() {
     if (!files || files.length === 0) return;
 
     setUploading(true);
+    setShowUploadDialog(true);
+    
+    // Initialize progress for all files
+    const initialProgress = Array.from(files).map(file => ({
+      name: file.name,
+      progress: 0,
+      status: 'uploading' as const,
+    }));
+    setUploadProgress(initialProgress);
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error('Please log in to upload files');
+        setShowUploadDialog(false);
         return;
       }
 
-      for (const file of Array.from(files)) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('folder_path', currentPath);
+      // Upload files sequentially to track individual progress
+      const results: boolean[] = [];
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        try {
+          // Create FormData
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('folder_path', currentPath);
 
-        const { data, error } = await supabase.functions.invoke('sharepoint-upload-file', {
-          body: formData,
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
+          // Get the edge function URL
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          if (!currentSession) throw new Error('Session expired');
 
-        if (error) {
-          console.error('Upload error:', error);
-          let status: number | undefined = (error as any)?.status;
-          let bodyText = '';
-          try {
-            const res = (error as any)?.context?.response as Response | undefined;
-            if (res) {
-              status = res.status || status;
-              const bodyAny = await res.clone().json().catch(async () => await res.text());
-              bodyText = typeof bodyAny === 'string' ? bodyAny : (bodyAny?.error || JSON.stringify(bodyAny));
-            }
-          } catch {}
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+          const functionUrl = `${supabaseUrl}/functions/v1/sharepoint-upload-file`;
 
-          const lower = (bodyText || '').toLowerCase();
-          if (status === 401 || lower.includes('token expired')) {
-            setNeedsO365(true);
-            toast.error('Your Microsoft 365 session expired. Please reconnect your Office 365 account to continue.');
-          } else if (status === 403 || lower.includes('access denied') || lower.includes('insufficient')) {
-            setNeedsO365(true);
-            toast.error('Permission denied. Reconnect your Office 365 account to grant write access, or ask an admin for permission to this folder.');
-          } else if (status === 404 || lower.includes('not found')) {
-            toast.error('Folder path not found in SharePoint configuration. Please verify the configured folder.');
-          } else {
-            toast.error(`Failed to upload ${file.name}`);
-          }
-        } else {
-          toast.success(`Uploaded ${file.name} to SharePoint`);
+          // Use XMLHttpRequest for progress tracking
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+
+            xhr.upload.addEventListener('progress', (e) => {
+              if (e.lengthComputable) {
+                const percentComplete = Math.round((e.loaded / e.total) * 100);
+                setUploadProgress(prev => prev.map((item, idx) => 
+                  idx === i ? { ...item, progress: percentComplete } : item
+                ));
+              }
+            });
+
+            xhr.addEventListener('load', () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                setUploadProgress(prev => prev.map((item, idx) => 
+                  idx === i ? { ...item, progress: 100, status: 'success' } : item
+                ));
+                resolve();
+              } else {
+                let errorMsg = 'Upload failed';
+                try {
+                  const response = JSON.parse(xhr.responseText);
+                  errorMsg = response.error || errorMsg;
+                } catch {}
+                
+                setUploadProgress(prev => prev.map((item, idx) => 
+                  idx === i ? { ...item, status: 'error', error: errorMsg } : item
+                ));
+                reject(new Error(errorMsg));
+              }
+            });
+
+            xhr.addEventListener('error', () => {
+              setUploadProgress(prev => prev.map((item, idx) => 
+                idx === i ? { ...item, status: 'error', error: 'Network error' } : item
+              ));
+              reject(new Error('Network error'));
+            });
+
+            xhr.open('POST', functionUrl);
+            xhr.setRequestHeader('Authorization', `Bearer ${currentSession.access_token}`);
+            xhr.setRequestHeader('apikey', supabaseAnonKey);
+            xhr.send(formData);
+          });
+
+          results.push(true);
+        } catch (error: any) {
+          console.error(`Upload error for ${file.name}:`, error);
+          
+          // Update progress with error
+          setUploadProgress(prev => prev.map((item, idx) => 
+            idx === i ? { 
+              ...item, 
+              status: 'error', 
+              error: error.message || 'Upload failed' 
+            } : item
+          ));
+          
+          results.push(false);
         }
       }
 
+      // Check if all uploads succeeded
+      const allSuccess = results.every(r => r);
+      if (allSuccess) {
+        toast.success('All files uploaded successfully');
+      } else {
+        toast.warning('Some files failed to upload');
+      }
+
+      // Close dialog after 2 seconds
+      setTimeout(() => {
+        setShowUploadDialog(false);
+        setUploadProgress([]);
+      }, 2000);
+
+      // Sync files after upload
       await syncSharePointFiles();
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload files');
+      setTimeout(() => {
+        setShowUploadDialog(false);
+        setUploadProgress([]);
+      }, 2000);
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -960,6 +1041,12 @@ export function SharePointBrowser() {
           </Button>
         </div>
       )}
+
+      {/* Upload Progress Dialog */}
+      <FileUploadProgress 
+        open={showUploadDialog} 
+        files={uploadProgress}
+      />
     </div>
   );
 }
