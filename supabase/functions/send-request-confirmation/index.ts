@@ -32,9 +32,10 @@ const handler = async (req: Request): Promise<Response> => {
       .from('tickets')
       .select(`
         *,
-        form_template:form_template_id(name),
-        department:department_id(name),
-        profile:user_id(full_name, email)
+        form_templates:form_template_id(name),
+        departments:department_id(name),
+        request_types:request_type_id(name),
+        request_categories:category_id(name)
       `)
       .eq('id', ticketId)
       .single();
@@ -43,10 +44,21 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error(`Ticket not found: ${ticketError?.message}`);
     }
 
-    // Determine recipient email
+    // Fetch user profile separately if user_id exists
+    let userProfile = null;
+    if (ticket.user_id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', ticket.user_id)
+        .single();
+      userProfile = profile;
+    }
+
+    // Determine recipient email (prioritize explicit recipientEmail, then metadata, then profile)
     const toEmail = recipientEmail || 
                     ticket.metadata?.sender_email || 
-                    ticket.profile?.email;
+                    userProfile?.email;
 
     if (!toEmail) {
       throw new Error('No recipient email found');
@@ -145,7 +157,16 @@ const handler = async (req: Request): Promise<Response> => {
           
           <div class="content">
             <h2 style="margin-top: 0;">Request ${requestNumber}</h2>
-            <p>Thank you for submitting your request. We've received it and our team will review it shortly.</p>
+            <p>Thank you for submitting your request via email. We've received it and our team will review it shortly.</p>
+            
+            ${!ticket.user_id && ticket.metadata?.sender_email ? `
+            <div style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 15px; margin: 20px 0;">
+              <p style="margin: 0; color: #78350f;">
+                <strong>📧 Email-based Request</strong><br/>
+                This request was created from your email: <strong>${ticket.metadata.sender_email}</strong>
+              </p>
+            </div>
+            ` : ''}
             
             <div class="detail-box">
               <h3 style="margin-top: 0;">Request Details</h3>
@@ -172,17 +193,31 @@ const handler = async (req: Request): Promise<Response> => {
                 <span class="detail-value">${ticket.priority?.toUpperCase() || 'MEDIUM'}</span>
               </div>
               
-              ${ticket.form_template ? `
+              ${ticket.form_templates ? `
               <div class="detail-row">
-                <span class="detail-label">Type:</span>
-                <span class="detail-value">${ticket.form_template.name}</span>
+                <span class="detail-label">Form Type:</span>
+                <span class="detail-value">${ticket.form_templates.name}</span>
               </div>
               ` : ''}
               
-              ${ticket.department ? `
+              ${ticket.request_types ? `
+              <div class="detail-row">
+                <span class="detail-label">Request Type:</span>
+                <span class="detail-value">${ticket.request_types.name}</span>
+              </div>
+              ` : ''}
+              
+              ${ticket.request_categories ? `
+              <div class="detail-row">
+                <span class="detail-label">Category:</span>
+                <span class="detail-value">${ticket.request_categories.name}</span>
+              </div>
+              ` : ''}
+              
+              ${ticket.departments ? `
               <div class="detail-row">
                 <span class="detail-label">Department:</span>
-                <span class="detail-value">${ticket.department.name}</span>
+                <span class="detail-value">${ticket.departments.name}</span>
               </div>
               ` : ''}
               
@@ -199,7 +234,12 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             
             <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px;">
-              You can track the progress of your request at any time by clicking the button above or replying to this email.
+              <strong>💬 Need to add more information?</strong><br/>
+              Simply <strong>reply to this email</strong> to add comments or provide additional details to your request. Your reply will be automatically added to ${requestNumber}.
+            </p>
+            
+            <p style="color: #6b7280; font-size: 14px;">
+              You can also track the progress of your request at any time by clicking the "View Request Details" button above.
             </p>
           </div>
           
@@ -211,12 +251,14 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    // Send email via Mailgun API
+    // Send email via Mailgun API with Reply-To header for threading
     const formData = new FormData();
     formData.append("from", `CrowdHub Support <support@${mailgunDomain}>`);
     formData.append("to", toEmail);
     formData.append("subject", `Request Confirmed - ${requestNumber}`);
     formData.append("html", emailHtml);
+    formData.append("h:Reply-To", `reply+${requestNumber}@${mailgunDomain}`);
+    formData.append("h:Message-ID", `<${ticketId}@${mailgunDomain}>`);
 
     const mailgunResponse = await fetch(
       `https://api.mailgun.net/v3/${mailgunDomain}/messages`,
