@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Plus, RefreshCw } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { RequestsList } from '@/components/requests/RequestsList';
 import { useAuth } from '@/hooks/useAuth';
+import { useRequestDelete } from '@/hooks/useRequestDelete';
 import { DetailsPanel, DetailsSection, DetailsField } from '@/components/ui/details-panel';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +21,8 @@ export default function Requests() {
   const queryClient = useQueryClient();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(id || null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { deleteRequests, isDeleting, canDelete } = useRequestDelete();
 
   const isManagerOrAdmin = ['manager', 'marketing_manager', 'tenant_admin', 'super_admin'].includes(userRole || '');
 
@@ -77,6 +81,17 @@ export default function Requests() {
     await queryClient.invalidateQueries({ queryKey: ['request'] });
     // Give a small delay for visual feedback
     setTimeout(() => setIsRefreshing(false), 500);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedRequestId) return;
+    
+    const success = await deleteRequests([selectedRequestId]);
+    if (success) {
+      setShowDeleteDialog(false);
+      handleCloseDetails();
+      await queryClient.invalidateQueries({ queryKey: ['request'] });
+    }
   };
 
   return (
@@ -182,7 +197,7 @@ export default function Requests() {
               </DetailsSection>
             )}
 
-            <div className="pt-4">
+            <div className="pt-4 space-y-2">
               <Button 
                 onClick={() => {
                   const num = (selectedRequest as any)?.request_number;
@@ -196,10 +211,42 @@ export default function Requests() {
               >
                 View Full Details
               </Button>
+              {canDelete && (
+                <Button 
+                  onClick={() => setShowDeleteDialog(true)}
+                  variant="destructive"
+                  className="w-full"
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Request
+                </Button>
+              )}
             </div>
           </div>
         )}
       </DetailsPanel>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this request? This action cannot be undone and will be logged in the audit trail.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

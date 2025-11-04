@@ -7,9 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Eye, Clock, CheckCircle, XCircle, Package, Search, ArrowUpDown, RefreshCw } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Loader2, Eye, Clock, CheckCircle, XCircle, Package, Search, ArrowUpDown, RefreshCw, Trash2 } from 'lucide-react';
 import { formatAUDate } from '@/lib/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
+import { useRequestDelete } from '@/hooks/useRequestDelete';
 import { RequestStatus } from '@/types/request';
 import { formatRequestIdShort, formatRequestId } from '@/lib/requestUtils';
 
@@ -38,8 +41,11 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'priority' | 'status'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
+  const { deleteRequests, isDeleting, canDelete } = useRequestDelete();
 
   useEffect(() => {
     loadRequests();
@@ -69,11 +75,36 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
 
       if (error) throw error;
       setRequests((data as any) || []);
+      setSelectedRequests([]);
     } catch (error) {
       console.error('Error loading requests:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedRequests(filteredAndSortedRequests.map(r => r.id));
+    } else {
+      setSelectedRequests([]);
+    }
+  };
+
+  const handleSelectRequest = (requestId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedRequests(prev => [...prev, requestId]);
+    } else {
+      setSelectedRequests(prev => prev.filter(id => id !== requestId));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    const success = await deleteRequests(selectedRequests);
+    if (success) {
+      setShowDeleteDialog(false);
+      loadRequests(true);
     }
   };
 
@@ -180,6 +211,16 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
             />
           </div>
           <div className="flex gap-2">
+            {canDelete && selectedRequests.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={isDeleting}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete ({selectedRequests.length})
+              </Button>
+            )}
             <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
               <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Sort by" />
@@ -219,6 +260,15 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
             <Table>
               <TableHeader>
                 <TableRow>
+                  {canDelete && (
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={selectedRequests.length === filteredAndSortedRequests.length && filteredAndSortedRequests.length > 0}
+                        onCheckedChange={handleSelectAll}
+                        aria-label="Select all"
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>ID</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Status</TableHead>
@@ -237,7 +287,31 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
                   return (
                     <TableRow 
                       key={request.id}
-                      className={`cursor-pointer transition-colors ${selectedRequestId === request.id ? 'bg-muted' : 'hover:bg-muted/50'}`}
+                      className={`transition-colors ${selectedRequestId === request.id ? 'bg-muted' : 'hover:bg-muted/50'}`}
+                    >
+                      {canDelete && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedRequests.includes(request.id)}
+                            onCheckedChange={(checked) => handleSelectRequest(request.id, checked as boolean)}
+                            aria-label={`Select request ${request.id}`}
+                          />
+                        </TableCell>
+                      )}
+                      <TableCell 
+                        className="font-mono text-xs cursor-pointer"
+                        onClick={() => {
+                          if (onRequestSelect) {
+                            onRequestSelect(request.id);
+                          } else {
+                            navigate(`/request/${requestNum}`);
+                          }
+                        }}
+                      >
+                        {request.request_number ? formatRequestIdShort(request.request_number) : 'N/A'}
+                      </TableCell>
+                    <TableCell 
+                      className="font-medium cursor-pointer"
                       onClick={() => {
                         if (onRequestSelect) {
                           onRequestSelect(request.id);
@@ -246,17 +320,66 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
                         }
                       }}
                     >
-                      <TableCell className="font-mono text-xs">
-                        {request.request_number ? formatRequestIdShort(request.request_number) : 'N/A'}
-                      </TableCell>
-                    <TableCell className="font-medium">{request.title}</TableCell>
-                    <TableCell>{getStatusBadge(request.status)}</TableCell>
-                    <TableCell>{getPriorityBadge(request.priority)}</TableCell>
-                    <TableCell>{(request as any).manager_id || (request as any).admin_id ? 'Assigned' : '-'}</TableCell>
-                    <TableCell>
+                      {request.title}
+                    </TableCell>
+                    <TableCell 
+                      className="cursor-pointer"
+                      onClick={() => {
+                        if (onRequestSelect) {
+                          onRequestSelect(request.id);
+                        } else {
+                          navigate(`/request/${requestNum}`);
+                        }
+                      }}
+                    >
+                      {getStatusBadge(request.status)}
+                    </TableCell>
+                    <TableCell 
+                      className="cursor-pointer"
+                      onClick={() => {
+                        if (onRequestSelect) {
+                          onRequestSelect(request.id);
+                        } else {
+                          navigate(`/request/${requestNum}`);
+                        }
+                      }}
+                    >
+                      {getPriorityBadge(request.priority)}
+                    </TableCell>
+                    <TableCell 
+                      className="cursor-pointer"
+                      onClick={() => {
+                        if (onRequestSelect) {
+                          onRequestSelect(request.id);
+                        } else {
+                          navigate(`/request/${requestNum}`);
+                        }
+                      }}
+                    >
+                      {(request as any).manager_id || (request as any).admin_id ? 'Assigned' : '-'}
+                    </TableCell>
+                    <TableCell 
+                      className="cursor-pointer"
+                      onClick={() => {
+                        if (onRequestSelect) {
+                          onRequestSelect(request.id);
+                        } else {
+                          navigate(`/request/${requestNum}`);
+                        }
+                      }}
+                    >
                       {formatAUDate(request.created_at)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell 
+                      className="cursor-pointer"
+                      onClick={() => {
+                        if (onRequestSelect) {
+                          onRequestSelect(request.id);
+                        } else {
+                          navigate(`/request/${requestNum}`);
+                        }
+                      }}
+                    >
                       {formatAUDate(request.updated_at)}
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
@@ -276,6 +399,28 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
             </Table>
           </div>
         )}
+
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Requests</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete {selectedRequests.length} request{selectedRequests.length > 1 ? 's' : ''}? 
+                This action cannot be undone and will be logged in the audit trail.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteSelected}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
