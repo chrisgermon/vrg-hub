@@ -10,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 
 interface RequestStatusChangerProps {
   requestId: string;
@@ -46,9 +45,9 @@ export function RequestStatusChanger({
 
   const availableStatuses = getAvailableStatuses();
 
-  // Don't show the component if user has no permission to change status
+  // Show read-only if user has no permission to change status
   if (availableStatuses.length === 0) {
-    return null;
+    return <p className="text-sm capitalize">{currentStatus.replace('_', ' ')}</p>;
   }
 
   const handleStatusChange = async (newStatus: RequestStatus) => {
@@ -84,48 +83,26 @@ export function RequestStatusChanger({
     }
   };
 
-  const getStatusLabel = (status: RequestStatus): string => {
-    const labels: Record<RequestStatus, string> = {
-      open: 'Open',
-      in_progress: 'In Progress',
-      completed: 'Complete',
-    };
-    return labels[status];
-  };
-
   return (
-    <div className="space-y-2">
-      <Label htmlFor="status-select">Change Status</Label>
-      <Select
-        value={currentStatus}
-        onValueChange={(value) => handleStatusChange(value as RequestStatus)}
-        disabled={updating}
-      >
-        <SelectTrigger id="status-select">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {isManager ? (
-            <>
-              <SelectItem value="open">Open</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="completed">Complete</SelectItem>
-            </>
-          ) : isCreator ? (
+    <Select
+      value={currentStatus}
+      onValueChange={(value) => handleStatusChange(value as RequestStatus)}
+      disabled={updating}
+    >
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {isManager ? (
+          <>
+            <SelectItem value="open">Open</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
             <SelectItem value="completed">Complete</SelectItem>
-          ) : null}
-        </SelectContent>
-      </Select>
-      {isCreator && !isManager && (
-        <p className="text-xs text-muted-foreground">
-          You can mark this request as complete when resolved
-        </p>
-      )}
-      {isManager && (
-        <p className="text-xs text-muted-foreground">
-          Change the status of this request
-        </p>
-      )}
-    </div>
+          </>
+        ) : isCreator ? (
+          <SelectItem value="completed">Complete</SelectItem>
+        ) : null}
+      </SelectContent>
+    </Select>
   );
 }

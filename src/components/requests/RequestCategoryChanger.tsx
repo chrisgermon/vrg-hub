@@ -10,62 +10,62 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-interface RequestType {
+interface RequestCategory {
   id: string;
   name: string;
 }
 
-interface RequestTypeChangerProps {
+interface RequestCategoryChangerProps {
   requestId: string;
-  currentTypeId?: string;
+  currentCategoryId?: string;
   requestUserId: string;
-  onTypeChanged: () => void;
+  onCategoryChanged: () => void;
 }
 
-export function RequestTypeChanger({
+export function RequestCategoryChanger({
   requestId,
-  currentTypeId,
+  currentCategoryId,
   requestUserId,
-  onTypeChanged,
-}: RequestTypeChangerProps) {
+  onCategoryChanged,
+}: RequestCategoryChangerProps) {
   const { user, userRole } = useAuth();
   const { toast } = useToast();
   const [updating, setUpdating] = useState(false);
-  const [requestTypes, setRequestTypes] = useState<RequestType[]>([]);
+  const [categories, setCategories] = useState<RequestCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isManager = ['manager', 'marketing_manager', 'tenant_admin', 'super_admin'].includes(userRole || '');
 
   useEffect(() => {
-    const loadRequestTypes = async () => {
+    const loadCategories = async () => {
       try {
         const { data, error } = await supabase
-          .from('request_types')
+          .from('request_categories')
           .select('id, name')
           .eq('is_active', true)
           .order('name');
 
         if (error) throw error;
-        setRequestTypes(data || []);
+        setCategories(data || []);
       } catch (error) {
-        console.error('Error loading request types:', error);
+        console.error('Error loading categories:', error);
       } finally {
         setLoading(false);
       }
     };
     
-    loadRequestTypes();
+    loadCategories();
   }, []);
 
-  const handleTypeChange = async (newTypeId: string) => {
-    if (newTypeId === currentTypeId) return;
+  const handleCategoryChange = async (newCategoryId: string) => {
+    if (newCategoryId === currentCategoryId) return;
 
     setUpdating(true);
     try {
       const { error } = await supabase
         .from('tickets')
         .update({ 
-          request_type_id: newTypeId,
+          category_id: newCategoryId,
           updated_at: new Date().toISOString()
         })
         .eq('id', requestId);
@@ -73,16 +73,16 @@ export function RequestTypeChanger({
       if (error) throw error;
 
       toast({
-        title: 'Request Type Updated',
-        description: 'Request type has been changed successfully',
+        title: 'Category Updated',
+        description: 'Request category has been changed successfully',
       });
 
-      onTypeChanged();
+      onCategoryChanged();
     } catch (error) {
-      console.error('Error updating request type:', error);
+      console.error('Error updating category:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update request type',
+        description: 'Failed to update category',
         variant: 'destructive',
       });
     } finally {
@@ -90,28 +90,28 @@ export function RequestTypeChanger({
     }
   };
 
-  // Non-managers see read-only display
+  // Only managers can change category
   if (!isManager) {
-    return <p className="text-sm">{requestTypes.find(t => t.id === currentTypeId)?.name || 'General Request'}</p>;
+    return <p className="text-sm">{categories.find(c => c.id === currentCategoryId)?.name || 'N/A'}</p>;
   }
 
   if (loading) {
-    return <p className="text-xs text-muted-foreground">Loading types...</p>;
+    return <p className="text-xs text-muted-foreground">Loading...</p>;
   }
 
   return (
     <Select
-      value={currentTypeId || ''}
-      onValueChange={handleTypeChange}
+      value={currentCategoryId || ''}
+      onValueChange={handleCategoryChange}
       disabled={updating}
     >
       <SelectTrigger>
-        <SelectValue placeholder="Select type..." />
+        <SelectValue placeholder="Select category..." />
       </SelectTrigger>
       <SelectContent>
-        {requestTypes.map((type) => (
-          <SelectItem key={type.id} value={type.id}>
-            {type.name}
+        {categories.map((category) => (
+          <SelectItem key={category.id} value={category.id}>
+            {category.name}
           </SelectItem>
         ))}
       </SelectContent>

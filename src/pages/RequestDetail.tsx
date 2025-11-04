@@ -21,6 +21,7 @@ import { CCEmailsManager } from '@/components/requests/CCEmailsManager';
 import { RequestStatusChanger } from '@/components/requests/RequestStatusChanger';
 import { RequestPriorityChanger } from '@/components/requests/RequestPriorityChanger';
 import { RequestTypeChanger } from '@/components/requests/RequestTypeChanger';
+import { RequestCategoryChanger } from '@/components/requests/RequestCategoryChanger';
 import DOMPurify from 'dompurify';
 
 type UnifiedRequest = {
@@ -563,10 +564,7 @@ export default function RequestDetail() {
 
                   <div>
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Request Type</p>
-                    <div className="bg-accent/50 rounded-md px-3 py-2 mb-2">
-                      <p className="text-sm font-medium">{(request as any).request_type?.name || 'General Request'}</p>
-                    </div>
-                    {request.type === 'department' && (
+                    {request.type === 'department' ? (
                       <RequestTypeChanger
                         requestId={request.id}
                         currentTypeId={(request as any).request_type_id}
@@ -575,46 +573,55 @@ export default function RequestDetail() {
                           window.location.reload();
                         }}
                       />
+                    ) : (
+                      <p className="text-sm">{(request as any).request_type?.name || 'General Request'}</p>
                     )}
                   </div>
 
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Category</p>
-                    <p className="text-sm">{(request as any).category?.name || 'N/A'}</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Category</p>
+                    {request.type === 'department' ? (
+                      <RequestCategoryChanger
+                        requestId={request.id}
+                        currentCategoryId={(request as any).category_id}
+                        requestUserId={request.user_id}
+                        onCategoryChanged={() => {
+                          window.location.reload();
+                        }}
+                      />
+                    ) : (
+                      <p className="text-sm">{(request as any).category?.name || 'N/A'}</p>
+                    )}
                   </div>
 
                   <Separator />
 
                   <div>
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Status</p>
-                    <Badge variant={getStatusColor(request.status) as any} className="mb-2 text-xs px-3 py-1">
-                      {getStatusLabel(request.status)}
-                    </Badge>
-                    {request.type === 'department' && (
+                    {request.type === 'department' ? (
                       <RequestStatusChanger
                         requestId={request.id}
                         currentStatus={request.status as any}
                         requestUserId={request.user_id}
                         onStatusChanged={() => {
-                          // Invalidate query to refresh data
                           window.location.reload();
                         }}
                       />
+                    ) : (
+                      <Badge variant={getStatusColor(request.status) as any} className="text-xs px-3 py-1">
+                        {getStatusLabel(request.status)}
+                      </Badge>
                     )}
                   </div>
 
                   <div>
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Priority</p>
-                    <Badge variant="outline" className="uppercase mb-2 text-xs px-3 py-1 font-semibold">
-                      {request.priority}
-                    </Badge>
                     <RequestPriorityChanger
                       requestId={request.id}
                       currentPriority={request.priority as any}
                       requestUserId={request.user_id}
                       requestType={request.type}
                       onPriorityChanged={() => {
-                        // Invalidate query to refresh data
                         window.location.reload();
                       }}
                     />
