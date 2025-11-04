@@ -92,7 +92,7 @@ async function handleNewRequest(supabase: any, emailData: Partial<IncomingEmail>
     // Fetch available form templates and departments
     const { data: formTemplates } = await supabase
       .from('form_templates')
-      .select('id, name, description, department, department_id')
+      .select('id, name, description, form_type')
       .eq('is_active', true);
 
     const { data: departments } = await supabase
