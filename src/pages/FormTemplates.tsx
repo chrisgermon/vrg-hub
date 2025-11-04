@@ -256,7 +256,7 @@ export default function FormTemplates() {
     );
   }
 
-  // Group categories by request type
+  // Group categories by request type and sort alphabetically
   const categoriesByType = categories.reduce((acc, cat) => {
     if (!acc[cat.request_type_name]) {
       acc[cat.request_type_name] = [];
@@ -264,6 +264,11 @@ export default function FormTemplates() {
     acc[cat.request_type_name].push(cat);
     return acc;
   }, {} as Record<string, CategoryWithForm[]>);
+
+  // Sort categories alphabetically within each request type
+  Object.keys(categoriesByType).forEach(typeName => {
+    categoriesByType[typeName].sort((a, b) => a.name.localeCompare(b.name));
+  });
 
   return (
     <div className="container mx-auto p-6">
