@@ -3,10 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedRequestForm } from '@/components/requests/UnifiedRequestForm';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Settings } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { useRoleImpersonation } from '@/hooks/useRoleImpersonation';
 
 interface RequestType {
   id: string;
@@ -29,10 +30,13 @@ interface RequestCategory {
 export default function NewDynamicRequest() {
   const { slug, categorySlug } = useParams<{ slug: string; categorySlug?: string }>();
   const navigate = useNavigate();
+  const { effectiveRole } = useRoleImpersonation();
   const [requestType, setRequestType] = useState<RequestType | null>(null);
   const [category, setCategory] = useState<RequestCategory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const isSuperAdmin = effectiveRole === 'super_admin';
 
   useEffect(() => {
     const fetchRequestData = async () => {
@@ -136,22 +140,34 @@ export default function NewDynamicRequest() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={handleBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          {categorySlug ? 'Back to Categories' : 'Back to Request Types'}
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">
-            {requestType.name}
-            {category && ` - ${category.name}`}
-          </h1>
-          {(category?.description || requestType.description) && (
-            <p className="text-muted-foreground mt-2">
-              {category?.description || requestType.description}
-            </p>
-          )}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={handleBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            {categorySlug ? 'Back to Categories' : 'Back to Request Types'}
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">
+              {requestType.name}
+              {category && ` - ${category.name}`}
+            </h1>
+            {(category?.description || requestType.description) && (
+              <p className="text-muted-foreground mt-2">
+                {category?.description || requestType.description}
+              </p>
+            )}
+          </div>
         </div>
+        {isSuperAdmin && category && (
+          <Button 
+            variant="outline" 
+            onClick={() => navigate(`/form-templates?edit=${category.id}`)}
+            className="shrink-0"
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            Edit Form
+          </Button>
+        )}
       </div>
 
       <UnifiedRequestForm

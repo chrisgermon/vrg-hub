@@ -46,6 +46,18 @@ export default function FormTemplates() {
     loadCategories();
   }, []);
 
+  // Handle edit query parameter
+  useEffect(() => {
+    const editCategoryId = searchParams.get('edit');
+    if (editCategoryId && categories.length > 0) {
+      const categoryToEdit = categories.find(cat => cat.id === editCategoryId);
+      if (categoryToEdit) {
+        handleEditFormForCategory(categoryToEdit);
+        setSearchParams({}); // Clear the query param
+      }
+    }
+  }, [categories, searchParams]);
+
   const loadCategories = async () => {
     try {
       // Fetch all categories with their request types
