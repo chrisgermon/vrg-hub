@@ -148,7 +148,7 @@ export function PendingApprovals({ refreshTrigger }: PendingApprovalsProps) {
                   )}
                   {request.brand && (
                     <p className="text-sm text-muted-foreground">
-                      Brand: {request.brand.name}
+                      Company: {request.brand.name}
                     </p>
                   )}
                   {request.location && (

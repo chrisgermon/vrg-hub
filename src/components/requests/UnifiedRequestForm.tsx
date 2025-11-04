@@ -339,10 +339,10 @@ export function UnifiedRequestForm({
             <CardTitle>{requestTypeName}{categoryName ? ` - ${categoryName}` : ''}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Brand and Location - Side by Side */}
+            {/* Company and Location - Side by Side */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="brand">Brand</Label>
+                <Label htmlFor="brand">Company</Label>
                 <select
                   id="brand"
                   value={brandId}
@@ -350,7 +350,7 @@ export function UnifiedRequestForm({
                   className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   disabled={loading}
                 >
-                  <option value="">Select Brand</option>
+                  <option value="">Select Company</option>
                   {brands.map((brand) => (
                     <option key={brand.id} value={brand.id}>
                       {brand.display_name}
@@ -460,10 +460,10 @@ export function UnifiedRequestForm({
               />
             </div>
 
-            {/* Brand and Location - Side by Side */}
+            {/* Company and Location - Side by Side */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="brand">Brand</Label>
+                <Label htmlFor="brand">Company</Label>
                 <select
                   id="brand"
                   value={brandId}
@@ -471,7 +471,7 @@ export function UnifiedRequestForm({
                   className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   disabled={loading}
                 >
-                  <option value="">Select Brand</option>
+                  <option value="">Select Company</option>
                   {brands.map((brand) => (
                     <option key={brand.id} value={brand.id}>
                       {brand.display_name}

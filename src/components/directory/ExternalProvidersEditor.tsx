@@ -172,7 +172,7 @@ export function ExternalProvidersEditor({ onClose }: ExternalProvidersEditorProp
 
       <div className="space-y-4">
         <div>
-          <Label>Brand</Label>
+          <Label>Company</Label>
           <Select value={selectedBrand} onValueChange={setSelectedBrand}>
             <SelectTrigger>
               <SelectValue />

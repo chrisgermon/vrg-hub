@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-interface Brand {
+interface Company {
   id: string;
   display_name: string;
 }
@@ -35,13 +35,13 @@ export function BrandLocationSelect({
   onLocationChange,
   required = false,
 }: BrandLocationSelectProps) {
-  const [brands, setBrands] = useState<Brand[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [loadingBrands, setLoadingBrands] = useState(true);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [loadingLocations, setLoadingLocations] = useState(false);
 
   useEffect(() => {
-    loadBrands();
+    loadCompanies();
   }, []);
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export function BrandLocationSelect({
     }
   }, [selectedBrandId]);
 
-  const loadBrands = async () => {
+  const loadCompanies = async () => {
     try {
       const { data, error } = await supabase
         .from('brands')
@@ -61,11 +61,11 @@ export function BrandLocationSelect({
         .order('sort_order');
 
       if (error) throw error;
-      setBrands(data || []);
+      setCompanies(data || []);
     } catch (error) {
-      console.error('Error loading brands:', error);
+      console.error('Error loading companies:', error);
     } finally {
-      setLoadingBrands(false);
+      setLoadingCompanies(false);
     }
   };
 
@@ -90,26 +90,26 @@ export function BrandLocationSelect({
 
   const handleBrandChange = (brandId: string) => {
     onBrandChange(brandId);
-    onLocationChange(''); // Reset location when brand changes
+    onLocationChange(''); // Reset location when company changes
   };
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="brand">Brand {required && '*'}</Label>
+        <Label htmlFor="brand">Company {required && '*'}</Label>
         <Select
           value={selectedBrandId && selectedBrandId.length > 0 ? selectedBrandId : undefined}
           onValueChange={handleBrandChange}
-          disabled={loadingBrands}
+          disabled={loadingCompanies}
           required={required}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Select a brand" />
+            <SelectValue placeholder="Select a company" />
           </SelectTrigger>
           <SelectContent>
-            {brands.map((brand) => (
-              <SelectItem key={brand.id} value={brand.id}>
-                {brand.display_name}
+            {companies.map((company) => (
+              <SelectItem key={company.id} value={company.id}>
+                {company.display_name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -131,7 +131,7 @@ export function BrandLocationSelect({
             <SelectContent>
               {locations.length === 0 ? (
                 <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                  No locations available for this brand
+                  No locations available for this company
                 </div>
               ) : (
                 locations.map((location) => (

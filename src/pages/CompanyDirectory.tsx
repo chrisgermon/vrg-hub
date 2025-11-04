@@ -112,7 +112,7 @@ export default function CompanyDirectory() {
           )}
         </div>
 
-        {/* Brand Logo Selector */}
+        {/* Company Logo Selector */}
         <div className="flex flex-wrap items-center gap-4 pb-4 border-b">
           {isLoadingBrands ? (
             <div className="text-sm text-muted-foreground">Loading brands...</div>

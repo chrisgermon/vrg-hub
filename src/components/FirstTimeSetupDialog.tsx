@@ -165,7 +165,7 @@ export function FirstTimeSetupDialog() {
       >
         <DialogHeader>
           <DialogTitle>
-            {step === "brand" ? "Select Your Brand" : "Select Your Location"}
+            {step === "brand" ? "Select Your Company" : "Select Your Location"}
           </DialogTitle>
           <DialogDescription>
             {step === "brand"

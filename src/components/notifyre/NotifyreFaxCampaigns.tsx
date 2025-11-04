@@ -345,7 +345,7 @@ export const NotifyreFaxCampaigns = () => {
                     <TableHead>Delivered</TableHead>
                     <TableHead>Failed</TableHead>
                     <TableHead>Pending</TableHead>
-                    <TableHead>Brand & Location</TableHead>
+                    <TableHead>Company & Location</TableHead>
                     <TableHead>Sent At</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>

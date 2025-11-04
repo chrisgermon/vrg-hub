@@ -86,7 +86,7 @@ export function BrandLogoUpload({ brandId, currentLogoUrl, onLogoUpdated }: Bran
 
       toast({
         title: 'Success',
-        description: 'Brand logo uploaded successfully',
+        description: 'Company logo uploaded successfully',
       });
     } catch (error) {
       console.error('Error uploading logo:', error);
@@ -127,7 +127,7 @@ export function BrandLogoUpload({ brandId, currentLogoUrl, onLogoUpdated }: Bran
 
       toast({
         title: 'Success',
-        description: 'Brand logo removed successfully',
+        description: 'Company logo removed successfully',
       });
     } catch (error) {
       console.error('Error removing logo:', error);
@@ -148,7 +148,7 @@ export function BrandLogoUpload({ brandId, currentLogoUrl, onLogoUpdated }: Bran
           <div className="relative">
             <img 
               src={previewUrl} 
-              alt="Brand logo preview"
+              alt="Company logo preview"
               className="h-16 w-16 object-contain rounded-lg border"
             />
           </div>

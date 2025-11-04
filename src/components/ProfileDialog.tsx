@@ -201,7 +201,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
           </div>
 
           <div className="border-t pt-4">
-            <h3 className="text-sm font-medium mb-4">Primary Brand & Location</h3>
+            <h3 className="text-sm font-medium mb-4">Primary Company & Location</h3>
             <BrandLocationSelect
               selectedBrandId={formData.brand_id}
               selectedLocationId={formData.location_id}

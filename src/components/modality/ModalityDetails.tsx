@@ -639,7 +639,7 @@ export function ModalityDetails() {
       // Prepare modalities data
       const modalitiesData = [
         ['Modalities'],
-        ['Name', 'Type', 'Brand', 'IP Address', 'AE Title', 'Port', 'Worklist IP', 'Worklist AE', 'Worklist Port', 'Notes'],
+        ['Name', 'Type', 'Company', 'IP Address', 'AE Title', 'Port', 'Worklist IP', 'Worklist AE', 'Worklist Port', 'Notes'],
         ...modalities.map(m => [
           m.name,
           m.modality_type || '-',
@@ -821,14 +821,14 @@ export function ModalityDetails() {
             <Dialog open={showLocationSelector} onOpenChange={setShowLocationSelector}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Select Brand and Location</DialogTitle>
+                  <DialogTitle>Select Company and Location</DialogTitle>
                   <DialogDescription>
                     Please select the brand and location for this modality configuration
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label>Brand *</Label>
+                    <Label>Company *</Label>
                     <Select value={selectedBrandId || undefined} onValueChange={setSelectedBrandId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select brand" />
@@ -1080,7 +1080,7 @@ export function ModalityDetails() {
                                 />
                               </div>
                               <div>
-                                <Label htmlFor="brand_id">Brand</Label>
+                                <Label htmlFor="brand_id">Company</Label>
                                 <Select name="brand_id" defaultValue={editingModality?.brand_id || undefined}>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select brand" />
@@ -1220,7 +1220,7 @@ export function ModalityDetails() {
                           <TableHeader>
                             <TableRow>
                               <TableHead>Name</TableHead>
-                              <TableHead>Brand</TableHead>
+                              <TableHead>Company</TableHead>
                               <TableHead>Location</TableHead>
                               <TableHead>IP Address</TableHead>
                               <TableHead>AE Title</TableHead>

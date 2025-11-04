@@ -103,7 +103,7 @@ export function BrandsManager() {
 
       toast({
         title: 'Success',
-        description: `Brand ${editingBrand ? 'updated' : 'created'} successfully`,
+        description: `Company ${editingBrand ? 'updated' : 'created'} successfully`,
       });
 
       setShowDialog(false);
@@ -134,7 +134,7 @@ export function BrandsManager() {
 
       toast({
         title: 'Success',
-        description: 'Brand deleted successfully',
+        description: 'Company deleted successfully',
       });
 
       loadBrands();
@@ -175,12 +175,12 @@ export function BrandsManager() {
             <DialogTrigger asChild>
               <Button onClick={() => setEditingBrand(null)}>
                 <Plus className="w-4 h-4 mr-2" />
-                Add Brand
+                Add Company
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{editingBrand ? 'Edit' : 'Add'} Brand</DialogTitle>
+                <DialogTitle>{editingBrand ? 'Edit' : 'Add'} Company</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSave} className="space-y-4">
                 <div className="space-y-2">
@@ -217,7 +217,7 @@ export function BrandsManager() {
                 </div>
                 {editingBrand && (
                   <div className="space-y-2">
-                    <Label>Brand Logo</Label>
+                    <Label>Company Logo</Label>
                     <BrandLogoUpload
                       brandId={editingBrand.id}
                       currentLogoUrl={editingBrand.logo_url}

@@ -219,7 +219,7 @@ export function LocationsManager() {
               </DialogHeader>
               <form onSubmit={handleSave} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="brand_id">Brand *</Label>
+                  <Label htmlFor="brand_id">Company *</Label>
                   <Select
                     name="brand_id"
                     defaultValue={editingLocation?.brand_id}
@@ -358,7 +358,7 @@ export function LocationsManager() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Brand</TableHead>
+                  <TableHead>Company</TableHead>
                   <TableHead>City</TableHead>
                   <TableHead>State</TableHead>
                   <TableHead>Phone</TableHead>

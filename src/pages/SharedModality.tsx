@@ -165,7 +165,7 @@ export default function SharedModality() {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Type</TableHead>
-                        <TableHead>Brand</TableHead>
+                        <TableHead>Company</TableHead>
                         <TableHead>Location</TableHead>
                         <TableHead>IP Address</TableHead>
                         <TableHead>AE Title</TableHead>

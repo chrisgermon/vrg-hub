@@ -558,7 +558,7 @@ const CampaignTable = ({
             <TableHead>Sent</TableHead>
             <TableHead>Opens</TableHead>
             <TableHead>Clicks</TableHead>
-            <TableHead>Brand & Location</TableHead>
+            <TableHead>Company & Location</TableHead>
             <TableHead>Send Date (AEDT)</TableHead>
             <TableHead>Send Time (AEDT)</TableHead>
             <TableHead>Actions</TableHead>

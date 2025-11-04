@@ -182,7 +182,7 @@ export default function DirectoryEditor() {
   return (
     <div className="space-y-6">
       <div>
-        <Label>Select Brand</Label>
+        <Label>Select Company</Label>
         <Select value={selectedBrand} onValueChange={setSelectedBrand}>
           <SelectTrigger>
             <SelectValue placeholder="Select brand" />

@@ -488,7 +488,7 @@ export default function RequestDetail() {
                     <div className="flex gap-4 text-sm">
                       {request.brands?.display_name && (
                         <div>
-                          <span className="font-medium">Brand: </span>
+                          <span className="font-medium">Company: </span>
                           <span>{request.brands.display_name}</span>
                         </div>
                       )}
