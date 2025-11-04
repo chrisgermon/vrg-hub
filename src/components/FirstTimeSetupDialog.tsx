@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface Brand {
+interface Company {
   id: string;
   display_name: string;
   logo_url: string | null;
@@ -32,19 +32,19 @@ export function FirstTimeSetupDialog() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<"brand" | "location">("brand");
+  const [step, setStep] = useState<"company" | "location">("company");
   const [selectedBrandId, setSelectedBrandId] = useState<string>("");
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
-  const [brands, setBrands] = useState<Brand[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [loadingBrands, setLoadingBrands] = useState(true);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [loadingLocations, setLoadingLocations] = useState(false);
 
   useEffect(() => {
-    // Show dialog if user is logged in but hasn't set brand/location
+    // Show dialog if user is logged in but hasn't set company/location
     if (user && profile && !profile.brand_id) {
       setOpen(true);
-      loadBrands();
+      loadCompanies();
     }
   }, [user, profile]);
 
@@ -54,7 +54,7 @@ export function FirstTimeSetupDialog() {
     }
   }, [selectedBrandId, step]);
 
-  const loadBrands = async () => {
+  const loadCompanies = async () => {
     try {
       const { data, error } = await supabase
         .from("brands")
@@ -63,11 +63,11 @@ export function FirstTimeSetupDialog() {
         .order("sort_order");
 
       if (error) throw error;
-      setBrands(data || []);
+      setCompanies(data || []);
     } catch (error) {
-      console.error("Error loading brands:", error);
+      console.error("Error loading companies:", error);
     } finally {
-      setLoadingBrands(false);
+      setLoadingCompanies(false);
     }
   };
 
@@ -97,8 +97,8 @@ export function FirstTimeSetupDialog() {
   const handleNextToLocation = () => {
     if (!selectedBrandId) {
       toast({
-        title: "Please select a brand",
-        description: "You must select a brand to continue",
+        title: "Please select a company",
+        description: "You must select a company to continue",
         variant: "destructive",
       });
       return;
@@ -165,55 +165,55 @@ export function FirstTimeSetupDialog() {
       >
         <DialogHeader>
           <DialogTitle>
-            {step === "brand" ? "Select Your Company" : "Select Your Location"}
+            {step === "company" ? "Select Your Company" : "Select Your Location"}
           </DialogTitle>
           <DialogDescription>
-            {step === "brand"
-              ? "Choose your primary brand to get started."
-              : "Choose your primary location within the selected brand."}
+            {step === "company"
+              ? "Choose your primary company to get started."
+              : "Choose your primary location within the selected company."}
           </DialogDescription>
         </DialogHeader>
 
-        {step === "brand" ? (
+        {step === "company" ? (
           <div className="space-y-6">
-            {loadingBrands ? (
+            {loadingCompanies ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4">
-                {brands.map((brand) => (
+                {companies.map((company) => (
                   <button
-                    key={brand.id}
+                    key={company.id}
                     type="button"
-                    onClick={() => handleBrandSelect(brand.id)}
+                    onClick={() => handleBrandSelect(company.id)}
                     className={cn(
                       "relative flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all hover:border-primary/50",
-                      selectedBrandId === brand.id
+                      selectedBrandId === company.id
                         ? "border-primary bg-primary/5"
                         : "border-border bg-card"
                     )}
                   >
-                    {selectedBrandId === brand.id && (
+                    {selectedBrandId === company.id && (
                       <div className="absolute top-2 right-2">
                         <Check className="h-5 w-5 text-primary" />
                       </div>
                     )}
-                    {brand.logo_url ? (
+                    {company.logo_url ? (
                       <img
-                        src={brand.logo_url}
-                        alt={brand.display_name}
+                        src={company.logo_url}
+                        alt={company.display_name}
                         className="h-16 w-auto object-contain mb-3"
                       />
                     ) : (
                       <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center mb-3">
                         <span className="text-2xl font-bold text-muted-foreground">
-                          {brand.display_name.charAt(0)}
+                          {company.display_name.charAt(0)}
                         </span>
                       </div>
                     )}
                     <span className="text-sm font-medium text-center">
-                      {brand.display_name}
+                      {company.display_name}
                     </span>
                   </button>
                 ))}
@@ -223,7 +223,7 @@ export function FirstTimeSetupDialog() {
             <div className="flex justify-end">
               <Button
                 onClick={handleNextToLocation}
-                disabled={!selectedBrandId || loadingBrands}
+                disabled={!selectedBrandId || loadingCompanies}
               >
                 Next
               </Button>
@@ -245,7 +245,7 @@ export function FirstTimeSetupDialog() {
                   >
                     {locations.length === 0 ? (
                       <div className="col-span-full text-center py-8 text-muted-foreground">
-                        No locations available for this brand
+                        No locations available for this company
                       </div>
                     ) : (
                       locations.map((location) => (
@@ -281,7 +281,7 @@ export function FirstTimeSetupDialog() {
                 <div className="flex justify-between">
                   <Button
                     variant="outline"
-                    onClick={() => setStep("brand")}
+                    onClick={() => setStep("company")}
                     disabled={loading}
                   >
                     Back

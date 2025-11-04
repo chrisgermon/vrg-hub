@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-interface Brand {
+interface Company {
   id: string;
   name: string;
   display_name: string;
@@ -30,13 +30,13 @@ export const CampaignBrandLocationSelect = ({
   currentLocationId,
   onUpdate 
 }: CampaignBrandLocationSelectProps) => {
-  const [brands, setBrands] = useState<Brand[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedBrandId, setSelectedBrandId] = useState<string | undefined>(currentBrandId || undefined);
   const [selectedLocationId, setSelectedLocationId] = useState<string | undefined>(currentLocationId || undefined);
 
   useEffect(() => {
-    loadBrands();
+    loadCompanies();
   }, []);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export const CampaignBrandLocationSelect = ({
     }
   }, [selectedBrandId]);
 
-  const loadBrands = async () => {
+  const loadCompanies = async () => {
     const { data, error } = await supabase
       .from('brands')
       .select('id, name, display_name')
@@ -56,11 +56,11 @@ export const CampaignBrandLocationSelect = ({
       .order('sort_order');
 
     if (error) {
-      console.error('Error loading brands:', error);
+      console.error('Error loading companies:', error);
       return;
     }
 
-    setBrands(data || []);
+    setCompanies(data || []);
   };
 
   const loadLocations = async (brandId: string) => {
@@ -131,13 +131,13 @@ export const CampaignBrandLocationSelect = ({
     <div className="flex gap-2">
       <Select value={selectedBrandId} onValueChange={handleBrandChange}>
         <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder="Select brand" />
+          <SelectValue placeholder="Select company" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="none">No brand</SelectItem>
-          {brands.map((brand) => (
-            <SelectItem key={brand.id} value={brand.id}>
-              {brand.display_name}
+          <SelectItem value="none">No company</SelectItem>
+          {companies.map((company) => (
+            <SelectItem key={company.id} value={company.id}>
+              {company.display_name}
             </SelectItem>
           ))}
         </SelectContent>

@@ -20,7 +20,7 @@ import { USER_ROLE_KEYS, formatRoleLabel } from "@/lib/access-control";
 
 const inviteFormSchema = z.object({
   email: z.string().email("Invalid email address"),
-  brand_id: z.string().uuid("Please select a brand"),
+  brand_id: z.string().uuid("Please select a company"),
   role: z.enum(USER_ROLE_KEYS),
   days_valid: z.coerce.number().min(1).max(90).default(30),
 });
@@ -41,7 +41,7 @@ interface UserInvite {
   };
 }
 
-interface Brand {
+interface Company {
   id: string;
   name: string;
 }
@@ -58,7 +58,7 @@ export function UserInviteManager() {
     defaultTenantRole,
   } = useAccessControl();
   const [invites, setInvites] = useState<UserInvite[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -115,7 +115,7 @@ export function UserInviteManager() {
         throw brandsError;
       }
 
-      setBrands(brandsData || []);
+      setCompanies(brandsData || []);
     } catch (error: any) {
       console.error("Error fetching data:", error);
       toast.error("Failed to load invites");
@@ -143,7 +143,7 @@ export function UserInviteManager() {
 
     if (!canAccessCompany(values.brand_id)) {
       console.error('Cannot access company:', values.brand_id);
-      toast.error("You can only invite users to your own brand");
+      toast.error("You can only invite users to your own company");
       return;
     }
 
@@ -316,13 +316,13 @@ export function UserInviteManager() {
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a brand" />
+                              <SelectValue placeholder="Select a company" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {brands.map((brand) => (
-                              <SelectItem key={brand.id} value={brand.id}>
-                                {brand.name}
+                            {companies.map((company) => (
+                              <SelectItem key={company.id} value={company.id}>
+                                {company.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
