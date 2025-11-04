@@ -105,7 +105,7 @@ export default function FormTemplates() {
     }
   };
 
-  const handleSave = async (templateData: Partial<FormTemplate>) => {
+  const handleSave = async (templateData: Partial<FormTemplate> & { categoryId?: string }) => {
     try {
       // Check for duplicate names (excluding current template if editing)
       const { data: existingTemplates } = await supabase
@@ -162,20 +162,21 @@ export default function FormTemplates() {
         if (error) throw error;
         templateId = newTemplate.id;
 
-        // Link to category if creating for a category
-        if (editingCategory && templateId) {
-          const { error: linkError } = await supabase
-            .from('request_categories')
-            .update({ form_template_id: templateId })
-            .eq('id', editingCategory.id);
-
-          if (linkError) throw linkError;
-        }
-
         toast({
           title: 'Success',
           description: 'Form template created successfully',
         });
+      }
+
+      // Link template to category
+      const categoryIdToLink = templateData.categoryId || editingCategory?.id;
+      if (categoryIdToLink && templateId) {
+        const { error: linkError } = await supabase
+          .from('request_categories')
+          .update({ form_template_id: templateId })
+          .eq('id', categoryIdToLink);
+
+        if (linkError) throw linkError;
       }
 
       setEditingTemplate(null);
@@ -219,6 +220,7 @@ export default function FormTemplates() {
         </div>
         <FormBuilder
           template={editingTemplate || undefined}
+          categoryId={editingCategory?.id}
           onSave={handleSave}
           onCancel={() => {
             setEditingTemplate(null);

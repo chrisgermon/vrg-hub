@@ -68,7 +68,7 @@ export interface FormTemplate {
 
 export interface FormBuilderProps {
   template?: FormTemplate;
-  onSave: (template: Partial<FormTemplate>) => void;
+  onSave: (template: Partial<FormTemplate> & { categoryId?: string }) => void;
   onCancel: () => void;
 }
 

@@ -13,10 +13,14 @@ import { SortableField } from './SortableField';
 import { FieldEditor } from './FieldEditor';
 import { NotificationSettings } from './NotificationSettings';
 import { ApprovalSettings } from './ApprovalSettings';
+import { RequestTypeSelector } from './RequestTypeSelector';
+import { IconSelector } from './IconSelector';
 import { Save, X, Bell } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
+export function FormBuilder({ template, onSave, onCancel, categoryId }: FormBuilderProps & { categoryId?: string }) {
   const [name, setName] = useState(template?.name || '');
   const [description, setDescription] = useState(template?.description || '');
   const [fields, setFields] = useState<FormField[]>(template?.fields || []);
@@ -37,6 +41,45 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
   const [approverId, setApproverId] = useState<string | null>(
     template?.settings?.approver_id || null
   );
+  
+  // Category management fields
+  const [requestTypeId, setRequestTypeId] = useState<string | null>(null);
+  const [categoryName, setCategoryName] = useState('');
+  const [categorySlug, setCategorySlug] = useState('');
+  const [categoryIcon, setCategoryIcon] = useState('FileText');
+  const [loadingCategory, setLoadingCategory] = useState(false);
+  const { toast } = useToast();
+
+  // Load category data if editing
+  useEffect(() => {
+    if (categoryId) {
+      loadCategoryData(categoryId);
+    }
+  }, [categoryId]);
+
+  const loadCategoryData = async (id: string) => {
+    setLoadingCategory(true);
+    try {
+      const { data, error } = await supabase
+        .from('request_categories')
+        .select('request_type_id, name, slug, icon')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setRequestTypeId(data.request_type_id);
+        setCategoryName(data.name);
+        setCategorySlug(data.slug);
+        setCategoryIcon(data.icon || 'FileText');
+      }
+    } catch (error) {
+      console.error('Error loading category:', error);
+    } finally {
+      setLoadingCategory(false);
+    }
+  };
 
   const handleAddField = (type: FieldType) => {
     const newField: FormField = {
@@ -82,31 +125,147 @@ export function FormBuilder({ template, onSave, onCancel }: FormBuilderProps) {
     setFields(reorderedFields);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name) {
-      alert('Please provide a form name');
+      toast({
+        title: 'Error',
+        description: 'Please provide a form name',
+        variant: 'destructive',
+      });
       return;
     }
 
-    onSave({
-      name,
-      description,
-      fields: fields.map((field, index) => ({ ...field, order: index })),
-      is_active: isActive,
-      settings: {
-        notification_user_ids: notificationUserIds,
-        notification_level: notificationLevel,
-        enable_sms_notifications: enableSmsNotifications,
-        require_approval: requireApproval,
-        approver_id: approverId,
-      },
-    });
+    if (!requestTypeId) {
+      toast({
+        title: 'Error',
+        description: 'Please select a request type',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!categoryName) {
+      toast({
+        title: 'Error',
+        description: 'Please provide a category name',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Generate slug from category name if not provided
+      const finalSlug = categorySlug || categoryName.toLowerCase().replace(/\s+/g, '-');
+
+      // Save or update the category
+      let finalCategoryId = categoryId;
+      
+      if (categoryId) {
+        // Update existing category
+        const { error: categoryError } = await supabase
+          .from('request_categories')
+          .update({
+            name: categoryName,
+            slug: finalSlug,
+            icon: categoryIcon,
+            request_type_id: requestTypeId,
+          })
+          .eq('id', categoryId);
+
+        if (categoryError) throw categoryError;
+      } else {
+        // Create new category
+        const { data: newCategory, error: categoryError } = await supabase
+          .from('request_categories')
+          .insert({
+            name: categoryName,
+            slug: finalSlug,
+            icon: categoryIcon,
+            request_type_id: requestTypeId,
+            is_active: true,
+          })
+          .select()
+          .single();
+
+        if (categoryError) throw categoryError;
+        finalCategoryId = newCategory.id;
+      }
+
+      // Now save the form with the category link
+      onSave({
+        name,
+        description,
+        fields: fields.map((field, index) => ({ ...field, order: index })),
+        is_active: isActive,
+        settings: {
+          notification_user_ids: notificationUserIds,
+          notification_level: notificationLevel,
+          enable_sms_notifications: enableSmsNotifications,
+          require_approval: requireApproval,
+          approver_id: approverId,
+        },
+        categoryId: finalCategoryId,
+      });
+    } catch (error) {
+      console.error('Error saving:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save form and category',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
     <div className="flex gap-6 h-full">
       {/* Left Panel - Form Settings */}
-      <Card className="w-80 p-6 space-y-6">
+      <Card className="w-80 p-6 space-y-6 overflow-y-auto max-h-screen">
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Request Category</h3>
+          
+          {loadingCategory ? (
+            <div className="text-sm text-muted-foreground">Loading...</div>
+          ) : (
+            <div className="space-y-4">
+              <RequestTypeSelector
+                value={requestTypeId}
+                onChange={setRequestTypeId}
+              />
+
+              <div>
+                <Label htmlFor="category-name">Category Name</Label>
+                <Input
+                  id="category-name"
+                  value={categoryName}
+                  onChange={(e) => {
+                    setCategoryName(e.target.value);
+                    // Auto-generate slug from name
+                    setCategorySlug(e.target.value.toLowerCase().replace(/\s+/g, '-'));
+                  }}
+                  placeholder="e.g., Computer Support"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="category-slug">Category Slug</Label>
+                <Input
+                  id="category-slug"
+                  value={categorySlug}
+                  onChange={(e) => setCategorySlug(e.target.value)}
+                  placeholder="computer-support"
+                />
+              </div>
+
+              <IconSelector
+                value={categoryIcon}
+                onChange={setCategoryIcon}
+              />
+            </div>
+          )}
+        </div>
+
+        <Separator />
+
         <div>
           <h3 className="text-lg font-semibold mb-4">Form Settings</h3>
           
