@@ -41,6 +41,19 @@ serve(async (req) => {
 
     const userRole = profile?.user_roles?.[0]?.role || "requester";
 
+    // Fetch brands and locations for AI matching
+    const { data: brands } = await supabase
+      .from("brands")
+      .select("id, name, display_name")
+      .eq("is_active", true)
+      .order("sort_order");
+
+    const { data: locations } = await supabase
+      .from("locations")
+      .select("id, name, brand_id")
+      .eq("is_active", true)
+      .order("sort_order");
+
     // Define available tools based on permissions
     const tools = [
       {
@@ -68,8 +81,16 @@ serve(async (req) => {
                 enum: ["low", "medium", "high", "urgent"],
                 description: "Priority: urgent=system down, high=major impact, medium=normal, low=minor"
               },
+              brand_id: {
+                type: "string",
+                description: "UUID of the company/brand. Match location mentions to the appropriate brand."
+              },
+              location_id: {
+                type: "string",
+                description: "UUID of the specific location. Use fuzzy matching to find the best match."
+              },
             },
-            required: ["title", "description"],
+            required: ["title", "description", "brand_id", "location_id"],
           },
         },
       },
@@ -89,23 +110,35 @@ serve(async (req) => {
             role: "system",
             content: `You are a proactive AI assistant for an IT management system. Your role: ${userRole}.
 
+Available Companies (Brands):
+${brands?.map(b => `- ${b.display_name} (id: ${b.id})`).join('\n')}
+
+Available Locations:
+${locations?.map(l => `- ${l.name} (brand_id: ${l.brand_id}, id: ${l.id})`).join('\n')}
+
 IMPORTANT INSTRUCTIONS:
 - When users mention any IT issue or request, AUTOMATICALLY create the request using the create_it_request function
-- DO NOT ask for additional details like title, priority, or location - infer them intelligently from the user's description
+- DO NOT ask for additional details - infer them intelligently from the user's description
 - Infer priority based on urgency: "not working/down/broken" = high, "slow/issue" = medium, "would like" = low
-- Extract location from context if mentioned, otherwise use "Not specified"
+- Use intelligent fuzzy matching to find the best matching location and brand
 - Create a clear, professional title that summarizes the issue in 5-8 words
 - In the description, include all details the user provided plus any clarifying context
 
+Location Matching Examples:
+- "Rochedale" → Find location with "Rochedale" in name
+- "Hampton" → Match to "Hampton East" or closest Hampton location
+- "Woonona" → Match exact or closest match
+- If no location mentioned, use the first available location as default
+
 Examples:
 User: "The printer in Rochedale is jammed"
-→ Call create_it_request with: title="Printer Jam at Rochedale Office", priority="medium", location="Rochedale"
+→ Match "Rochedale" to location, find its brand_id, create request with matched location_id and brand_id
 
-User: "My computer won't turn on and I need it urgently"
-→ Call create_it_request with: title="Computer Not Turning On - Urgent", priority="urgent", location="Not specified"
+User: "My computer won't turn on at Hampton and I need it urgently"
+→ Match "Hampton" to closest location (e.g., Hampton East), use its brand_id
 
 User: "Can someone help fix the broken mouse?"
-→ Call create_it_request with: title="Broken Mouse Replacement Needed", priority="low", location="Not specified"
+→ Use first/default location and its brand_id if no location mentioned
 
 Be helpful, concise, and take action immediately rather than asking for more information.`,
           },
@@ -153,6 +186,8 @@ Be helpful, concise, and take action immediately rather than asking for more inf
             priority: functionArgs.priority || "medium",
             status: "open",
             type: "hardware",
+            brand_id: functionArgs.brand_id || null,
+            location_id: functionArgs.location_id || null,
           })
           .select()
           .single();
@@ -167,9 +202,13 @@ Be helpful, concise, and take action immediately rather than asking for more inf
           );
         }
 
+        // Get brand and location names for response
+        const selectedBrand = brands?.find(b => b.id === functionArgs.brand_id);
+        const selectedLocation = locations?.find(l => l.id === functionArgs.location_id);
+
         return new Response(
           JSON.stringify({
-            response: `✅ I've created IT request #${request.id} for you!\n\n**${functionArgs.title}**\nPriority: ${functionArgs.priority || 'medium'}\nLocation: ${functionArgs.location || 'Not specified'}\n\nThe IT team has been notified and will review your request shortly.`,
+            response: `✅ I've created IT request #${request.id} for you!\n\n**${functionArgs.title}**\nCompany: ${selectedBrand?.display_name || 'Not specified'}\nLocation: ${selectedLocation?.name || functionArgs.location || 'Not specified'}\nPriority: ${functionArgs.priority || 'medium'}\n\nThe IT team has been notified and will review your request shortly.`,
             action: "create_request",
             requestId: request.id,
             requestUrl: `/requests/${request.id}`,
