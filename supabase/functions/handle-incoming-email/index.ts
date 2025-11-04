@@ -89,22 +89,41 @@ async function handleNewRequest(supabase: any, emailData: Partial<IncomingEmail>
 
     console.log('[handle-incoming-email] Analyzing email content with AI');
 
-    // Fetch available form templates and departments
+    // Fetch available form templates
     const { data: formTemplates } = await supabase
       .from('form_templates')
       .select('id, name, description, form_type')
       .eq('is_active', true);
 
+    // Fetch departments
     const { data: departments } = await supabase
       .from('departments')
       .select('id, name, description')
       .eq('is_active', true);
 
+    // Fetch request types with their categories
+    const { data: requestTypes } = await supabase
+      .from('request_types')
+      .select(`
+        id,
+        name,
+        description,
+        department_id,
+        request_categories (
+          id,
+          name,
+          slug,
+          description
+        )
+      `)
+      .eq('is_active', true)
+      .eq('request_categories.is_active', true);
+
     if (!formTemplates || formTemplates.length === 0) {
       throw new Error('No active form templates found');
     }
 
-    // Build context for AI
+    // Build context for AI with full taxonomy
     const templatesList = formTemplates.map((t: any) => 
       `- ${t.name}: ${t.description || 'No description'}`
     ).join('\n');
@@ -112,6 +131,17 @@ async function handleNewRequest(supabase: any, emailData: Partial<IncomingEmail>
     const departmentsList = departments?.map((d: any) => 
       `- ${d.name}: ${d.description || 'No description'}`
     ).join('\n') || '';
+
+    // Build hierarchical request type and category structure
+    const requestTypesStructure = requestTypes?.map((rt: any) => {
+      const categories = rt.request_categories?.map((cat: any) => 
+        `    • ${cat.name}: ${cat.description || 'No description'}`
+      ).join('\n') || '    (no categories)';
+      
+      return `  ${rt.name}:\n    Description: ${rt.description || 'No description'}\n    Categories:\n${categories}`;
+    }).join('\n\n') || '';
+
+    console.log('[handle-incoming-email] Request Types Structure:', requestTypesStructure);
 
     // Call Lovable AI to analyze the email
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -127,15 +157,28 @@ async function handleNewRequest(supabase: any, emailData: Partial<IncomingEmail>
             role: 'system',
             content: `You are an AI assistant that categorizes support requests. Analyze the email and return a JSON object with the following fields:
 - template_name: The best matching form template name from the list
-- priority: One of "low", "medium", "high", "urgent"
+- request_type_name: The best matching request type from the taxonomy below
+- category_name: The best matching category under the request type
+- priority: One of "low", "medium", "high", "urgent" based on urgency indicators in the email
 - title: A concise summary of the request (max 100 characters)
 - extracted_info: Key information extracted from the email
+
+IMPORTANT: Match the request_type_name and category_name as precisely as possible to the taxonomy below.
 
 Available form templates:
 ${templatesList}
 
 Available departments:
 ${departmentsList}
+
+Request Types and Categories Taxonomy:
+${requestTypesStructure}
+
+Priority Guidelines:
+- "urgent": Immediate action required, system down, critical business impact
+- "high": Important issue, significant impact, needs quick resolution
+- "medium": Standard request, moderate importance
+- "low": Non-urgent, minor issue, informational
 
 Respond ONLY with valid JSON, no additional text.`
           },
@@ -153,11 +196,13 @@ Respond ONLY with valid JSON, no additional text.`
               type: 'object',
               properties: {
                 template_name: { type: 'string' },
+                request_type_name: { type: 'string' },
+                category_name: { type: 'string' },
                 priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
                 title: { type: 'string' },
                 extracted_info: { type: 'string' }
               },
-              required: ['template_name', 'priority', 'title', 'extracted_info'],
+              required: ['template_name', 'request_type_name', 'category_name', 'priority', 'title', 'extracted_info'],
               additionalProperties: false
             }
           }
@@ -194,6 +239,28 @@ Respond ONLY with valid JSON, no additional text.`
 
     const selectedTemplate = matchedTemplate || formTemplates[0];
 
+    // Find matching request type
+    let matchedRequestType = null;
+    let matchedCategory = null;
+
+    if (requestTypes && analysis.request_type_name) {
+      matchedRequestType = requestTypes.find((rt: any) => 
+        rt.name.toLowerCase().includes(analysis.request_type_name.toLowerCase()) ||
+        analysis.request_type_name.toLowerCase().includes(rt.name.toLowerCase())
+      );
+
+      // Find matching category within the request type
+      if (matchedRequestType && analysis.category_name) {
+        matchedCategory = matchedRequestType.request_categories?.find((cat: any) =>
+          cat.name.toLowerCase().includes(analysis.category_name.toLowerCase()) ||
+          analysis.category_name.toLowerCase().includes(cat.name.toLowerCase())
+        );
+      }
+    }
+
+    console.log('[handle-incoming-email] Matched Request Type:', matchedRequestType?.name || 'None');
+    console.log('[handle-incoming-email] Matched Category:', matchedCategory?.name || 'None');
+
     // Find or create user profile
     let userProfile = await supabase
       .from('profiles')
@@ -208,26 +275,38 @@ Respond ONLY with valid JSON, no additional text.`
       console.log('[handle-incoming-email] User not found in system, creating ticket with email reference');
     }
 
-    // Create new ticket
+    // Create new ticket with matched request type and category
+    const ticketData: any = {
+      title: analysis.title || subject.substring(0, 100),
+      description: content,
+      priority: analysis.priority,
+      status: 'open',
+      user_id: userId || null,
+      form_template_id: selectedTemplate.id,
+      department_id: selectedTemplate.department_id,
+      source: 'email',
+      metadata: {
+        sender_email: senderEmail,
+        ai_analysis: analysis,
+        original_subject: subject,
+        original_body: rawContent, // Store original for audit
+        email_message_id: emailData['Message-Id'],
+        matched_request_type: matchedRequestType?.name || null,
+        matched_category: matchedCategory?.name || null
+      }
+    };
+
+    // Add request type and category IDs if found
+    if (matchedRequestType) {
+      ticketData.request_type_id = matchedRequestType.id;
+    }
+    if (matchedCategory) {
+      ticketData.category_id = matchedCategory.id;
+    }
+
     const { data: newTicket, error: ticketError } = await supabase
       .from('tickets')
-      .insert({
-        title: analysis.title || subject.substring(0, 100),
-        description: content,
-        priority: analysis.priority,
-        status: 'open',
-        user_id: userId || null,
-        form_template_id: selectedTemplate.id,
-        department_id: selectedTemplate.department_id,
-        source: 'email',
-        metadata: {
-          sender_email: senderEmail,
-          ai_analysis: analysis,
-          original_subject: subject,
-          original_body: rawContent, // Store original for audit
-          email_message_id: emailData['Message-Id']
-        }
-      })
+      .insert(ticketData)
       .select()
       .single();
 
