@@ -6,12 +6,58 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Users, Calendar, Eye } from 'lucide-react';
+import { FileText, Users, Calendar, Eye, Download } from 'lucide-react';
 import { CycleManagement } from './CycleManagement';
 import { SubmissionPreview } from './SubmissionPreview';
+import { exportNewsletterToWord } from '@/lib/exportToWord';
+import { toast } from 'sonner';
 
 export function EditorDashboard() {
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+
+  const handleExportSubmission = async (submissionId: string) => {
+    try {
+      // Fetch submission data
+      const { data: submissionData, error: submissionError } = await supabase
+        .from('newsletter_submissions')
+        .select('*')
+        .eq('id', submissionId)
+        .single();
+
+      if (submissionError) throw submissionError;
+
+      // Fetch contributor profile
+      const { data: contributor } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', submissionData.contributor_id)
+        .single();
+
+      // Fetch department template
+      const { data: departmentTemplate } = await supabase
+        .from('department_section_templates')
+        .select('*')
+        .eq('department_name', submissionData.department)
+        .single();
+
+      const departmentSections = (departmentTemplate?.sections as any[]) || [];
+      const sectionsData = (submissionData.sections_data || []) as any[];
+
+      await exportNewsletterToWord(
+        submissionData.title,
+        submissionData.department,
+        contributor?.full_name || 'Unknown',
+        sectionsData,
+        departmentSections,
+        submissionData.no_update_this_month
+      );
+      
+      toast.success('Newsletter exported to Word document');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export newsletter');
+    }
+  };
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['newsletter-stats'],
@@ -165,13 +211,24 @@ export function EditorDashboard() {
                             : '-'}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedSubmissionId(submission.id)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleExportSubmission(submission.id)}
+                              title="Export to Word"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedSubmissionId(submission.id)}
+                              title="Preview"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { X, CheckCircle, XCircle } from 'lucide-react';
+import { X, CheckCircle, XCircle, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDepartmentSections } from '@/lib/newsletterDepartments';
+import { exportNewsletterToWord } from '@/lib/exportToWord';
 
 interface SectionData {
   section: string;
@@ -102,6 +103,24 @@ export function SubmissionPreview({
     onError: () => toast.error('Failed to update submission'),
   });
 
+  const handleExportToWord = async () => {
+    try {
+      const departmentSections = (departmentTemplate?.sections as any[]) || [];
+      await exportNewsletterToWord(
+        submission.title,
+        submission.department,
+        submission.contributor?.full_name || 'Unknown',
+        sectionsData,
+        departmentSections,
+        submission.no_update_this_month
+      );
+      toast.success('Newsletter exported to Word document');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export to Word document');
+    }
+  };
+
   if (isLoading) return <div>Loading...</div>;
   if (!submission) return <div>Submission not found</div>;
 
@@ -113,7 +132,7 @@ export function SubmissionPreview({
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div>
+          <div className="flex-1">
             <CardTitle>{submission.title}</CardTitle>
             <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
               <span>{submission.contributor?.full_name}</span>
@@ -128,9 +147,20 @@ export function SubmissionPreview({
               </Badge>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleExportToWord}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Export to Word
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
