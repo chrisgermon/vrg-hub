@@ -1,5 +1,6 @@
-import HTMLtoDOCX from 'html-to-docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, UnderlineType } from 'docx';
 import { saveAs } from 'file-saver';
+import DOMPurify from 'dompurify';
 
 interface SectionData {
   section: string;
@@ -13,6 +14,99 @@ interface DepartmentSection {
   isRequired: boolean;
 }
 
+function parseHtmlToDocxParagraphs(html: string): Paragraph[] {
+  const sanitizedHtml = DOMPurify.sanitize(html);
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = sanitizedHtml;
+  
+  const paragraphs: Paragraph[] = [];
+  
+  const processNode = (node: Node): TextRun[] => {
+    const runs: TextRun[] = [];
+    
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent?.trim();
+      if (text) {
+        runs.push(new TextRun({ text }));
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as HTMLElement;
+      const tagName = element.tagName.toLowerCase();
+      
+      if (tagName === 'strong' || tagName === 'b') {
+        const text = element.textContent?.trim();
+        if (text) {
+          runs.push(new TextRun({ text, bold: true }));
+        }
+      } else if (tagName === 'em' || tagName === 'i') {
+        const text = element.textContent?.trim();
+        if (text) {
+          runs.push(new TextRun({ text, italics: true }));
+        }
+      } else if (tagName === 'u') {
+        const text = element.textContent?.trim();
+        if (text) {
+          runs.push(new TextRun({ text, underline: { type: UnderlineType.SINGLE } }));
+        }
+      } else {
+        element.childNodes.forEach(child => {
+          runs.push(...processNode(child));
+        });
+      }
+    }
+    
+    return runs;
+  };
+  
+  tempDiv.childNodes.forEach(node => {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as HTMLElement;
+      const tagName = element.tagName.toLowerCase();
+      
+      if (tagName === 'p') {
+        const runs = processNode(element);
+        if (runs.length > 0) {
+          paragraphs.push(new Paragraph({ children: runs, spacing: { after: 200 } }));
+        }
+      } else if (tagName === 'h1' || tagName === 'h2' || tagName === 'h3') {
+        const text = element.textContent?.trim();
+        if (text) {
+          const level = tagName === 'h1' ? HeadingLevel.HEADING_1 : 
+                       tagName === 'h2' ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3;
+          paragraphs.push(new Paragraph({
+            text,
+            heading: level,
+            spacing: { before: 240, after: 120 }
+          }));
+        }
+      } else if (tagName === 'ul' || tagName === 'ol') {
+        element.querySelectorAll('li').forEach(li => {
+          const text = li.textContent?.trim();
+          if (text) {
+            paragraphs.push(new Paragraph({
+              text: `• ${text}`,
+              spacing: { after: 100 },
+              indent: { left: 720 }
+            }));
+          }
+        });
+      } else {
+        const runs = processNode(element);
+        if (runs.length > 0) {
+          paragraphs.push(new Paragraph({ children: runs, spacing: { after: 200 } }));
+        }
+      }
+    } else if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent?.trim();
+      if (text) {
+        paragraphs.push(new Paragraph({ text, spacing: { after: 200 } }));
+      }
+    }
+  });
+  
+  return paragraphs;
+}
+
 export async function exportNewsletterToWord(
   title: string,
   department: string,
@@ -22,164 +116,94 @@ export async function exportNewsletterToWord(
   noUpdateThisMonth: boolean = false
 ) {
   try {
-    // Build HTML content with proper styling
-    let htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { 
-            font-family: 'Calibri', 'Arial', sans-serif; 
-            font-size: 11pt;
-            line-height: 1.5;
-            color: #000000;
-          }
-          h1 { 
-            font-size: 20pt; 
-            font-weight: bold; 
-            color: #2B579A;
-            margin-bottom: 8pt;
-            border-bottom: 2px solid #2B579A;
-            padding-bottom: 4pt;
-          }
-          h2 { 
-            font-size: 16pt; 
-            font-weight: bold; 
-            color: #4472C4;
-            margin-top: 16pt;
-            margin-bottom: 8pt;
-          }
-          h3 { 
-            font-size: 14pt; 
-            font-weight: bold; 
-            color: #5B9BD5;
-            margin-top: 12pt;
-            margin-bottom: 6pt;
-          }
-          p { 
-            margin: 8pt 0; 
-            text-align: justify;
-          }
-          ul, ol { 
-            margin: 8pt 0; 
-            padding-left: 20pt;
-          }
-          li { 
-            margin: 4pt 0; 
-          }
-          .header-info {
-            font-size: 10pt;
-            color: #666666;
-            margin-bottom: 16pt;
-            font-style: italic;
-          }
-          .section-title {
-            background-color: #E7E6E6;
-            padding: 8pt;
-            margin-top: 16pt;
-            margin-bottom: 8pt;
-            border-left: 4pt solid #4472C4;
-          }
-          .content-block {
-            margin: 8pt 0;
-            padding-left: 8pt;
-          }
-          .no-update {
-            text-align: center;
-            font-style: italic;
-            color: #666666;
-            padding: 16pt;
-            background-color: #F2F2F2;
-            border-radius: 4pt;
-          }
-          strong, b { 
-            font-weight: bold; 
-          }
-          em, i { 
-            font-style: italic; 
-          }
-          table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 8pt 0;
-          }
-          th, td {
-            border: 1px solid #DDDDDD;
-            padding: 8pt;
-            text-align: left;
-          }
-          th {
-            background-color: #4472C4;
-            color: white;
-            font-weight: bold;
-          }
-        </style>
-      </head>
-      <body>
-        <h1>${title}</h1>
-        <div class="header-info">
-          <strong>Department:</strong> ${department}<br/>
-          <strong>Contributor:</strong> ${contributorName}<br/>
-          <strong>Generated:</strong> ${new Date().toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })}
-        </div>
-    `;
-
+    const sections: Paragraph[] = [];
+    
+    // Title
+    sections.push(
+      new Paragraph({
+        text: title,
+        heading: HeadingLevel.HEADING_1,
+        spacing: { after: 240 },
+      })
+    );
+    
+    // Header info
+    sections.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: 'Department: ', bold: true }),
+          new TextRun({ text: department }),
+        ],
+        spacing: { after: 100 },
+      })
+    );
+    
+    sections.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: 'Contributor: ', bold: true }),
+          new TextRun({ text: contributorName }),
+        ],
+        spacing: { after: 100 },
+      })
+    );
+    
+    sections.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: 'Generated: ', bold: true }),
+          new TextRun({ 
+            text: new Date().toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })
+          }),
+        ],
+        spacing: { after: 400 },
+      })
+    );
+    
     if (noUpdateThisMonth) {
-      htmlContent += `
-        <div class="no-update">
-          <p><strong>No updates for this month</strong></p>
-        </div>
-      `;
+      sections.push(
+        new Paragraph({
+          children: [new TextRun({ text: 'No updates for this month', italics: true })],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 200, after: 200 },
+        })
+      );
     } else {
       // Add each section with its content
       sectionsData.forEach(sectionData => {
         const section = departmentSections.find(s => s.key === sectionData.section);
         if (section && sectionData.content) {
-          htmlContent += `
-            <div class="section-title">
-              <h2>${section.name}${section.isRequired ? ' (Required)' : ''}</h2>
-            </div>
-            <div class="content-block">
-              ${sectionData.content}
-            </div>
-          `;
+          // Section title
+          sections.push(
+            new Paragraph({
+              text: `${section.name}${section.isRequired ? ' (Required)' : ''}`,
+              heading: HeadingLevel.HEADING_2,
+              spacing: { before: 400, after: 200 },
+            })
+          );
+          
+          // Section content - parse HTML
+          const contentParagraphs = parseHtmlToDocxParagraphs(sectionData.content);
+          sections.push(...contentParagraphs);
         }
       });
     }
-
-    htmlContent += `
-      </body>
-      </html>
-    `;
-
-    // Convert HTML to DOCX
-    const fileBuffer = await HTMLtoDOCX(htmlContent, null, {
-      table: { row: { cantSplit: true } },
-      footer: true,
-      pageNumber: true,
-      font: 'Calibri',
-      fontSize: 22, // 11pt in half-points
-      complexScriptSize: 22,
-      header: true,
-      title: title,
-      subject: `Newsletter - ${department}`,
-      creator: contributorName,
-      description: `Newsletter submission for ${department}`,
-    });
-
-    // Save the file
-    const blob = new Blob([fileBuffer as BlobPart], {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: sections,
+      }],
     });
     
+    const blob = await Packer.toBlob(doc);
     const fileName = `${title.replace(/[^a-z0-9]/gi, '_')}_${department.replace(/[^a-z0-9]/gi, '_')}.docx`;
     saveAs(blob, fileName);
-
+    
     return true;
   } catch (error) {
     console.error('Error exporting to Word:', error);
