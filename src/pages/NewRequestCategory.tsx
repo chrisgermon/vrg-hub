@@ -2,13 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Search, Loader2, ArrowLeft,
-  Wrench, AirVent, Lightbulb, Sparkles, Package, HelpCircle
-} from 'lucide-react';
+import { Search, Loader2, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { getIconComponent } from '@/utils/iconMap';
 
 interface RequestCategory {
   id: string;
@@ -84,18 +81,6 @@ export default function NewRequestCategory() {
     }
   };
 
-  const getIconForCategory = (iconName: string | null) => {
-    const iconMap: Record<string, any> = {
-      'wrench': Wrench,
-      'air-vent': AirVent,
-      'lightbulb': Lightbulb,
-      'sparkles': Sparkles,
-      'package': Package,
-      'help-circle': HelpCircle,
-    };
-    return iconMap[iconName || ''] || HelpCircle;
-  };
-
   const handleCategoryClick = (categorySlug: string) => {
     navigate(`/requests/new/${slug}/${categorySlug}`);
   };
@@ -146,7 +131,7 @@ export default function NewRequestCategory() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {filteredCategories.map((category) => {
-          const IconComponent = getIconForCategory(category.icon);
+          const IconComponent = getIconComponent(category.icon);
           return (
             <Card
               key={category.id}
