@@ -30,8 +30,6 @@ interface Field {
 interface FormTemplate {
   id: string;
   name: string;
-  department: string;
-  sub_department?: string;
   fields: Field[];
   description?: string;
   settings?: {
@@ -39,7 +37,6 @@ interface FormTemplate {
     notification_level?: 'all' | 'new_only' | 'updates_only';
     enable_sms_notifications?: boolean;
     category_slug?: string;
-    request_type_id?: string;
   };
 }
 
@@ -80,28 +77,31 @@ export function DynamicDepartmentRequestForm({
 
   const loadTemplate = async () => {
     try {
-      let query = supabase
-        .from('form_templates')
-        .select('*')
-        .eq('department', department)
-        .eq('is_active', true);
+      setLoading(true);
+      
+      // Load form template through the category relationship
+      const { data: categories, error: catError } = await supabase
+        .from('request_categories')
+        .select(`
+          *,
+          form_templates (*)
+        `)
+        .eq('is_active', true)
+        .eq('name', department)
+        .single();
 
-      if (subDepartment) {
-        query = query.eq('sub_department', subDepartment);
+      if (catError) throw catError;
+
+      if (categories?.form_templates) {
+        const templateData: FormTemplate = {
+          ...(categories.form_templates as any),
+          fields: (categories.form_templates as any).fields as Field[],
+          settings: (categories.form_templates as any).settings as any,
+        };
+        setTemplate(templateData);
+      } else {
+        throw new Error('No form template found for this category');
       }
-
-      const { data, error} = await query.single();
-
-      if (error) throw error;
-
-      // Cast fields from Json to Field[]
-      const templateData: FormTemplate = {
-        ...data,
-        fields: data.fields as unknown as Field[],
-        settings: data.settings as any,
-      };
-
-      setTemplate(templateData);
     } catch (error) {
       console.error('Error loading form template:', error);
       toast.error('Failed to load form template');

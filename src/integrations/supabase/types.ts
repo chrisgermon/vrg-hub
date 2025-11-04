@@ -987,8 +987,6 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
-          department: string | null
-          department_id: string | null
           description: string | null
           fields: Json
           form_type: Database["public"]["Enums"]["form_type_enum"]
@@ -996,15 +994,12 @@ export type Database = {
           is_active: boolean
           name: string
           settings: Json | null
-          sub_department: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           created_at?: string
           created_by?: string | null
-          department?: string | null
-          department_id?: string | null
           description?: string | null
           fields?: Json
           form_type?: Database["public"]["Enums"]["form_type_enum"]
@@ -1012,15 +1007,12 @@ export type Database = {
           is_active?: boolean
           name: string
           settings?: Json | null
-          sub_department?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           created_at?: string
           created_by?: string | null
-          department?: string | null
-          department_id?: string | null
           description?: string | null
           fields?: Json
           form_type?: Database["public"]["Enums"]["form_type_enum"]
@@ -1028,19 +1020,10 @@ export type Database = {
           is_active?: boolean
           name?: string
           settings?: Json | null
-          sub_department?: string | null
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "form_templates_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       hardware_catalog: {
         Row: {
@@ -2822,6 +2805,7 @@ export type Database = {
           cc_emails: string[] | null
           created_at: string | null
           description: string | null
+          form_required: boolean | null
           form_template_id: string | null
           icon: string | null
           id: string
@@ -2838,6 +2822,7 @@ export type Database = {
           cc_emails?: string[] | null
           created_at?: string | null
           description?: string | null
+          form_required?: boolean | null
           form_template_id?: string | null
           icon?: string | null
           id?: string
@@ -2854,6 +2839,7 @@ export type Database = {
           cc_emails?: string[] | null
           created_at?: string | null
           description?: string | null
+          form_required?: boolean | null
           form_template_id?: string | null
           icon?: string | null
           id?: string

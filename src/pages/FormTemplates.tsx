@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { FormBuilder } from '@/components/form-builder/FormBuilder';
 import { FormTemplate } from '@/types/form-builder';
-import { Plus, Edit, Trash2, Loader2, Sparkles } from 'lucide-react';
+import { Plus, Edit, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Table,
@@ -126,25 +126,16 @@ export default function FormTemplates() {
       let templateId = editingTemplate?.id;
 
       if (editingTemplate) {
-        const updateData: any = {
-          name: templateData.name!,
-          description: templateData.description,
-          fields: templateData.fields as any,
-          is_active: templateData.is_active,
-          settings: templateData.settings,
-        };
-        
-        // Only include form_type and department_id if they are set
-        if (templateData.form_type) {
-          updateData.form_type = templateData.form_type;
-        }
-        if (templateData.department_id) {
-          updateData.department_id = templateData.department_id;
-        }
-
+        // Update existing template
         const { error } = await supabase
           .from('form_templates')
-          .update(updateData)
+          .update({
+            name: templateData.name!,
+            description: templateData.description,
+            fields: templateData.fields as any,
+            is_active: templateData.is_active,
+            settings: templateData.settings,
+          })
           .eq('id', editingTemplate.id);
 
         if (error) throw error;
@@ -154,13 +145,13 @@ export default function FormTemplates() {
           description: 'Form template updated successfully',
         });
       } else {
+        // Create new template
         const { data: newTemplate, error } = await supabase
           .from('form_templates')
           .insert({
             name: templateData.name!,
             description: templateData.description,
-            form_type: templateData.form_type as 'department_request' | 'hardware_request' | 'toner_request' | 'user_account_request' | 'general',
-            department_id: templateData.department_id,
+            form_type: 'general',
             fields: templateData.fields as any,
             is_active: templateData.is_active ?? true,
             settings: templateData.settings,
@@ -171,51 +162,20 @@ export default function FormTemplates() {
         if (error) throw error;
         templateId = newTemplate.id;
 
+        // Link to category if creating for a category
+        if (editingCategory && templateId) {
+          const { error: linkError } = await supabase
+            .from('request_categories')
+            .update({ form_template_id: templateId })
+            .eq('id', editingCategory.id);
+
+          if (linkError) throw linkError;
+        }
+
         toast({
           title: 'Success',
           description: 'Form template created successfully',
         });
-      }
-
-      // If request type and category info provided, create/update request category
-      const requestTypeId = templateData.settings?.request_type_id;
-      const categoryName = templateData.settings?.category_name;
-      const categorySlug = templateData.settings?.category_slug;
-
-      if (requestTypeId && categoryName && categorySlug && templateId) {
-        // Check if category already exists
-        const { data: existingCategory } = await supabase
-          .from('request_categories')
-          .select('id')
-          .eq('request_type_id', requestTypeId)
-          .eq('slug', categorySlug)
-          .maybeSingle();
-
-        if (existingCategory) {
-          // Update existing category
-          const { error: catError } = await supabase
-            .from('request_categories')
-            .update({
-              name: categoryName,
-              form_template_id: templateId,
-            })
-            .eq('id', existingCategory.id);
-
-          if (catError) throw catError;
-        } else {
-          // Create new category
-          const { error: catError } = await supabase
-            .from('request_categories')
-            .insert({
-              request_type_id: requestTypeId,
-              name: categoryName,
-              slug: categorySlug,
-              form_template_id: templateId,
-              is_active: true,
-            });
-
-          if (catError) throw catError;
-        }
       }
 
       setEditingTemplate(null);
@@ -227,42 +187,6 @@ export default function FormTemplates() {
       toast({
         title: 'Error',
         description: 'Failed to save form template',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this form template? This will also remove its category link.')) return;
-
-    try {
-      // First delete any associated request categories
-      const { error: categoryError } = await supabase
-        .from('request_categories')
-        .delete()
-        .eq('form_template_id', id);
-
-      if (categoryError) throw categoryError;
-
-      // Then delete the form template
-      const { error } = await supabase
-        .from('form_templates')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success',
-        description: 'Form template deleted successfully',
-      });
-
-      loadCategories();
-    } catch (error) {
-      console.error('Error deleting template:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete form template',
         variant: 'destructive',
       });
     }
@@ -281,19 +205,20 @@ export default function FormTemplates() {
   };
 
   if (isCreating || editingTemplate) {
-    // Pre-populate form with category info if creating/editing for a specific category
-    const initialTemplate = editingTemplate || (editingCategory ? {
-      settings: {
-        request_type_id: editingCategory.request_type_id,
-        category_name: editingCategory.name,
-        category_slug: editingCategory.slug,
-      }
-    } : undefined);
-
     return (
       <div className="container mx-auto p-6">
+        <div className="mb-4">
+          <h2 className="text-2xl font-bold">
+            {editingTemplate ? 'Edit Form' : 'Create Form'}
+            {editingCategory && (
+              <span className="text-muted-foreground ml-2">
+                for {editingCategory.request_type_name} → {editingCategory.name}
+              </span>
+            )}
+          </h2>
+        </div>
         <FormBuilder
-          template={initialTemplate as any}
+          template={editingTemplate || undefined}
           onSave={handleSave}
           onCancel={() => {
             setEditingTemplate(null);

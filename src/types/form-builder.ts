@@ -49,9 +49,6 @@ export interface FormTemplate {
   name: string;
   description?: string;
   form_type: 'department_request' | 'hardware_request' | 'toner_request' | 'user_account_request' | 'general';
-  department?: string;
-  department_id?: string;
-  sub_department?: string;
   fields: FormField[];
   settings?: {
     notification_emails?: string[];
@@ -61,9 +58,6 @@ export interface FormTemplate {
     auto_assign?: boolean;
     require_approval?: boolean;
     approver_id?: string | null;
-    request_type_id?: string;
-    category_name?: string;
-    category_slug?: string;
   };
   is_active: boolean;
   created_by?: string;

@@ -4,7 +4,6 @@ interface FormTemplate {
   id: string;
   name: string;
   description: string;
-  department: string;
 }
 
 interface RequestType {
@@ -136,7 +135,7 @@ export async function assignCategoriesAndIcons() {
   // Fetch all form templates
   const { data: templates, error: templatesError } = await supabase
     .from('form_templates')
-    .select('id, name, description, department, settings')
+    .select('id, name, description, settings')
     .eq('is_active', true);
   
   if (templatesError) {
