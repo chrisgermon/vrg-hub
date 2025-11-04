@@ -15,8 +15,8 @@ import { NotificationSettings } from './NotificationSettings';
 import { ApprovalSettings } from './ApprovalSettings';
 import { RequestTypeSelector } from './RequestTypeSelector';
 import { IconSelector } from './IconSelector';
-import { Save, X, Bell } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { Save, X } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -217,174 +217,180 @@ export function FormBuilder({ template, onSave, onCancel, categoryId }: FormBuil
   };
 
   return (
-    <div className="flex gap-6 h-full">
-      {/* Left Panel - Form Settings */}
-      <Card className="w-80 p-6 space-y-6 overflow-y-auto max-h-screen">
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Request Category</h3>
-          
-          {loadingCategory ? (
-            <div className="text-sm text-muted-foreground">Loading...</div>
-          ) : (
-            <div className="space-y-4">
-              <RequestTypeSelector
-                value={requestTypeId}
-                onChange={setRequestTypeId}
-              />
-
-              <div>
-                <Label htmlFor="category-name">Category Name</Label>
-                <Input
-                  id="category-name"
-                  value={categoryName}
-                  onChange={(e) => {
-                    setCategoryName(e.target.value);
-                    // Auto-generate slug from name
-                    setCategorySlug(e.target.value.toLowerCase().replace(/\s+/g, '-'));
-                  }}
-                  placeholder="e.g., Computer Support"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="category-slug">Category Slug</Label>
-                <Input
-                  id="category-slug"
-                  value={categorySlug}
-                  onChange={(e) => setCategorySlug(e.target.value)}
-                  placeholder="computer-support"
-                />
-              </div>
-
-              <IconSelector
-                value={categoryIcon}
-                onChange={setCategoryIcon}
-              />
-            </div>
-          )}
-        </div>
-
-        <Separator />
-
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Form Settings</h3>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="form-name">Form Name</Label>
-              <Input
-                id="form-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Hardware Request Form"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="form-description">Description</Label>
-              <Textarea
-                id="form-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Brief description of this form"
-                rows={3}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label htmlFor="form-active">Active</Label>
-              <Switch
-                id="form-active"
-                checked={isActive}
-                onCheckedChange={setIsActive}
-              />
-            </div>
-          </div>
-        </div>
-
-        <Separator />
-
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <Bell className="w-4 h-4" />
-            <h3 className="text-lg font-semibold">Notification Settings</h3>
-          </div>
-          <NotificationSettings
-            notificationUserIds={notificationUserIds}
-            notificationLevel={notificationLevel}
-            enableSmsNotifications={enableSmsNotifications}
-            onNotificationUserIdsChange={setNotificationUserIds}
-            onNotificationLevelChange={setNotificationLevel}
-            onEnableSmsNotificationsChange={setEnableSmsNotifications}
-          />
-        </div>
-
-        <Separator />
-
-        <div>
-          <ApprovalSettings
-            requireApproval={requireApproval}
-            approverId={approverId}
-            onRequireApprovalChange={setRequireApproval}
-            onApproverIdChange={setApproverId}
-          />
-        </div>
-
-        <Separator />
-
-        <div>
-          <h4 className="font-medium mb-3">Add Field</h4>
-          <FieldPalette onAddField={handleAddField} />
-        </div>
-
-        <div className="flex gap-2 pt-4 border-t">
-          <Button onClick={handleSave} className="flex-1">
+    <div className="flex flex-col gap-4 h-full">
+      {/* Top Bar - Save/Cancel */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">
+          {template ? 'Edit Form' : 'Create Form'}
+        </h2>
+        <div className="flex gap-2">
+          <Button onClick={handleSave}>
             <Save className="w-4 h-4 mr-2" />
             Save Form
           </Button>
           <Button variant="outline" onClick={onCancel}>
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 mr-2" />
+            Cancel
           </Button>
         </div>
-      </Card>
+      </div>
 
-      {/* Middle Panel - Form Preview */}
-      <Card className="flex-1 p-6">
-        <h3 className="text-lg font-semibold mb-4">Form Fields</h3>
-        
-        {fields.length === 0 ? (
-          <div className="text-center text-muted-foreground py-12">
-            Add fields from the left panel to build your form
-          </div>
-        ) : (
-          <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={fields.map(f => f.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-3">
-                {fields.map((field) => (
-                  <SortableField
-                    key={field.id}
-                    field={field}
-                    isSelected={selectedField?.id === field.id}
-                    onSelect={() => setSelectedField(field)}
-                    onDelete={() => handleDeleteField(field.id)}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-        )}
-      </Card>
-
-      {/* Right Panel - Field Editor */}
-      {selectedField && (
+      <div className="flex gap-6 flex-1 min-h-0">
+        {/* Left Panel - Settings Tabs */}
         <Card className="w-96 p-6">
-          <FieldEditor
-            field={selectedField}
-            onUpdate={handleUpdateField}
-            onClose={() => setSelectedField(null)}
-          />
+          <Tabs defaultValue="category" className="h-full flex flex-col">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsTrigger value="category">Category</TabsTrigger>
+              <TabsTrigger value="form">Form</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="category" className="space-y-4 flex-1">
+              {loadingCategory ? (
+                <div className="text-sm text-muted-foreground">Loading...</div>
+              ) : (
+                <>
+                  <RequestTypeSelector
+                    value={requestTypeId}
+                    onChange={setRequestTypeId}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <Label htmlFor="category-name">Category Name</Label>
+                      <Input
+                        id="category-name"
+                        value={categoryName}
+                        onChange={(e) => {
+                          setCategoryName(e.target.value);
+                          setCategorySlug(e.target.value.toLowerCase().replace(/\s+/g, '-'));
+                        }}
+                        placeholder="e.g., Computer Support"
+                      />
+                    </div>
+
+                    <div className="col-span-2">
+                      <Label htmlFor="category-slug">Category Slug</Label>
+                      <Input
+                        id="category-slug"
+                        value={categorySlug}
+                        onChange={(e) => setCategorySlug(e.target.value)}
+                        placeholder="computer-support"
+                      />
+                    </div>
+
+                    <div className="col-span-2">
+                      <IconSelector
+                        value={categoryIcon}
+                        onChange={setCategoryIcon}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4 mt-4 border-t">
+                    <h4 className="font-medium mb-3">Add Field</h4>
+                    <FieldPalette onAddField={handleAddField} />
+                  </div>
+                </>
+              )}
+            </TabsContent>
+
+            <TabsContent value="form" className="space-y-4 flex-1">
+              <div>
+                <Label htmlFor="form-name">Form Name</Label>
+                <Input
+                  id="form-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., Hardware Request Form"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="form-description">Description</Label>
+                <Textarea
+                  id="form-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Brief description of this form"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <Label htmlFor="form-active">Form Active</Label>
+                <Switch
+                  id="form-active"
+                  checked={isActive}
+                  onCheckedChange={setIsActive}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="settings" className="space-y-6 flex-1 overflow-y-auto">
+              <div>
+                <h4 className="font-semibold mb-3">Notifications</h4>
+                <NotificationSettings
+                  notificationUserIds={notificationUserIds}
+                  notificationLevel={notificationLevel}
+                  enableSmsNotifications={enableSmsNotifications}
+                  onNotificationUserIdsChange={setNotificationUserIds}
+                  onNotificationLevelChange={setNotificationLevel}
+                  onEnableSmsNotificationsChange={setEnableSmsNotifications}
+                />
+              </div>
+
+              <div className="pt-4 border-t">
+                <h4 className="font-semibold mb-3">Approval</h4>
+                <ApprovalSettings
+                  requireApproval={requireApproval}
+                  approverId={approverId}
+                  onRequireApprovalChange={setRequireApproval}
+                  onApproverIdChange={setApproverId}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
         </Card>
-      )}
+
+        {/* Middle Panel - Form Fields */}
+        <Card className="flex-1 p-6 min-w-0">
+          <h3 className="text-lg font-semibold mb-4">Form Fields</h3>
+          
+          {fields.length === 0 ? (
+            <div className="text-center text-muted-foreground py-12">
+              Add fields from the Category tab to build your form
+            </div>
+          ) : (
+            <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={fields.map(f => f.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-3">
+                  {fields.map((field) => (
+                    <SortableField
+                      key={field.id}
+                      field={field}
+                      isSelected={selectedField?.id === field.id}
+                      onSelect={() => setSelectedField(field)}
+                      onDelete={() => handleDeleteField(field.id)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </Card>
+
+        {/* Right Panel - Field Editor */}
+        {selectedField && (
+          <Card className="w-96 p-6 overflow-y-auto">
+            <FieldEditor
+              field={selectedField}
+              onUpdate={handleUpdateField}
+              onClose={() => setSelectedField(null)}
+            />
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
