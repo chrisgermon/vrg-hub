@@ -325,7 +325,6 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
   const getMenuCategories = () => {
     const commonItems = [
       { title: "Home", url: "/home", icon: Home },
-      { title: "Dashboard", url: "/dashboard", icon: BarChart3 },
       { title: "Requests", url: "/requests", icon: ShoppingCart },
       { title: "Reminders", url: "/reminders", icon: Bell },
       { title: "Knowledge Base", url: "/knowledge-base", icon: BookOpen },

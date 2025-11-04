@@ -57,7 +57,6 @@ const FormTemplates = lazy(() => import("./pages/FormTemplates"));
 const SeedFormTemplates = lazy(() => import("./pages/SeedFormTemplates"));
 const AssignCategories = lazy(() => import("./pages/AssignCategories"));
 const UploadLogoToStorage = lazy(() => import("./pages/UploadLogoToStorage"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Install = lazy(() => import("./pages/Install"));
 const Integrations = lazy(() => import("./pages/Integrations"));
 const Reminders = lazy(() => import("./pages/Reminders"));
@@ -132,7 +131,6 @@ const protectedLayoutRoutes: Array<{
   { path: "/reminders/edit/:id", element: <ReminderEdit /> },
   { path: "/reminders/:id", element: <ReminderDetail /> },
   { path: "/site-maps", element: <SiteMaps /> },
-  { path: "/dashboard", element: <Dashboard /> },
   { path: "/install", element: <Install /> },
   { path: "/mission-statement", element: <MissionStatement /> },
   { path: "/email-test", element: <EmailTest />, requiredRole: ["super_admin", "tenant_admin", "manager"] },

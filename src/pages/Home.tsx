@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompanyFeatures } from "@/hooks/useCompanyFeatures";
 import { usePermissions } from "@/hooks/usePermissions";
+import { Badge } from "@/components/ui/badge";
 
 export default function Home() {
   const { user, company } = useAuth();
@@ -26,9 +27,40 @@ export default function Home() {
   const { isFeatureEnabled } = useCompanyFeatures();
   const { hasPermission } = usePermissions();
 
-  // Stub: no notifications or requests in single-tenant mode
-  const unreadNotifications = 0;
-  const recentRequestsCount = 0;
+  // Dashboard stats
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: async () => {
+      const [hardwareReq, marketingReq, kbPages, profiles] = await Promise.all([
+        supabase.from('hardware_requests').select('id', { count: 'exact', head: true }),
+        supabase.from('marketing_requests').select('id', { count: 'exact', head: true }),
+        supabase.from('kb_pages').select('id', { count: 'exact', head: true }),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }),
+      ]);
+
+      return {
+        hardwareRequests: hardwareReq.count || 0,
+        marketingRequests: marketingReq.count || 0,
+        kbPages: kbPages.count || 0,
+        users: profiles.count || 0,
+      };
+    },
+  });
+
+  // Recent activity
+  const { data: recentActivity } = useQuery({
+    queryKey: ['recent-activity'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('hardware_requests')
+        .select('id, title, status, created_at')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   type FeatureKey = 
     | 'hardware_requests'
@@ -125,49 +157,44 @@ export default function Home() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 lg:gap-6">
-        <Card className="rounded-xl md:rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 md:p-6">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-              Unread Notifications
-            </CardTitle>
-            <Bell className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0">
-            <div className="text-2xl md:text-3xl font-bold">{unreadNotifications || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Click notifications icon to view
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+        {isFeatureEnabled('hardware_requests') && (
+          <Card className="rounded-xl md:rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                Hardware Requests
+              </CardTitle>
+              <Package className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-4 md:p-6 pt-0">
+              <div className="text-2xl md:text-3xl font-bold">{stats?.hardwareRequests || 0}</div>
+            </CardContent>
+          </Card>
+        )}
+
+        {isFeatureEnabled('marketing_requests') && (
+          <Card className="rounded-xl md:rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                Marketing Requests
+              </CardTitle>
+              <Megaphone className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-4 md:p-6 pt-0">
+              <div className="text-2xl md:text-3xl font-bold">{stats?.marketingRequests || 0}</div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="rounded-xl md:rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 md:p-6">
             <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-              Recent Requests
+              Users
             </CardTitle>
-            <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+            <Users className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="p-4 md:p-6 pt-0">
-            <div className="text-2xl md:text-3xl font-bold">{recentRequestsCount || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              In the last 30 days
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-xl md:rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 md:p-6">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-              Quick Actions
-            </CardTitle>
-            <Calendar className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0">
-            <div className="text-2xl md:text-3xl font-bold">{visibleActions.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Available shortcuts below
-            </p>
+            <div className="text-2xl md:text-3xl font-bold">{stats?.users || 0}</div>
           </CardContent>
         </Card>
       </div>
@@ -206,12 +233,9 @@ export default function Home() {
         <NewsFeedModule title="Latest News" maxItems={5} />
 
         {/* Pending Approvals (if user has permission) */}
-        {hasPermission('approve_requests') && (
+        {hasPermission('approve_requests') ? (
           <PendingApprovalsWidget title="Pending Approvals" />
-        )}
-
-        {/* Placeholder for when no approvals */}
-        {!hasPermission('approve_requests') && (
+        ) : (
           <Card className="rounded-xl md:rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200">
             <CardHeader className="p-4 md:p-6">
               <CardTitle className="text-xl md:text-2xl font-bold">Getting Started</CardTitle>
@@ -230,10 +254,6 @@ export default function Home() {
                   <span>Browse the company directory to find colleagues</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <Bell className="h-4 w-4 mt-0.5 text-primary" />
-                  <span>Check notifications for updates on your requests</span>
-                </li>
-                <li className="flex items-start gap-2">
                   <TrendingUp className="h-4 w-4 mt-0.5 text-primary" />
                   <span>Track your request history and status</span>
                 </li>
@@ -242,6 +262,33 @@ export default function Home() {
           </Card>
         )}
       </div>
+
+      {/* Recent Activity */}
+      {recentActivity && recentActivity.length > 0 && (
+        <Card className="rounded-xl md:rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200">
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="text-xl md:text-2xl font-bold">Recent Activity</CardTitle>
+            <p className="text-sm text-muted-foreground">Latest requests</p>
+          </CardHeader>
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="space-y-4">
+              {recentActivity.map((request) => (
+                <div key={request.id} className="flex items-center justify-between border-b pb-3 last:border-0">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{request.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(request.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {request.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
