@@ -62,226 +62,199 @@ export default function Home() {
     },
   });
 
-  type FeatureKey = 
-    | 'hardware_requests'
-    | 'toner_requests'
-    | 'user_accounts'
-    | 'marketing_requests'
-    | 'department_requests'
-    | 'monthly_newsletter'
-    | 'modality_management'
-    | 'print_ordering'
-    | 'fax_campaigns';
-
-  const quickActions: Array<{
-    icon: React.ComponentType<any>;
-    label: string;
-    description: string;
-    href: string;
-    color: string;
-    bgColor: string;
-    featureKey?: FeatureKey;
-  }> = [
+  const quickActions = [
     {
       icon: FileText,
       label: "New Request",
       description: "Submit a new request",
       href: "/requests/new",
-      color: "text-blue-600",
-      bgColor: "bg-blue-50 dark:bg-blue-950/30",
-    },
-    {
-      icon: Package,
-      label: "Hardware Request",
-      description: "Request equipment",
-      href: "/hardware/new",
-      color: "text-purple-600",
-      bgColor: "bg-purple-50 dark:bg-purple-950/30",
-      featureKey: "hardware_requests",
-    },
-    {
-      icon: Megaphone,
-      label: "Marketing Request",
-      description: "Marketing campaigns",
-      href: "/marketing/new",
-      color: "text-pink-600",
-      bgColor: "bg-pink-50 dark:bg-pink-950/30",
-      featureKey: "marketing_requests",
-    },
-    {
-      icon: Printer,
-      label: "Toner Request",
-      description: "Order printer supplies",
-      href: "/toner/new",
-      color: "text-green-600",
-      bgColor: "bg-green-50 dark:bg-green-950/30",
-      featureKey: "toner_requests",
-    },
-    {
-      icon: UserPlus,
-      label: "User Account",
-      description: "New user account",
-      href: "/user-accounts/new",
-      color: "text-orange-600",
-      bgColor: "bg-orange-50 dark:bg-orange-950/30",
-      featureKey: "user_accounts" as const,
-    },
-    {
-      icon: Users,
-      label: "Company Directory",
-      description: "View team members",
-      href: "/directory",
-      color: "text-cyan-600",
-      bgColor: "bg-cyan-50 dark:bg-cyan-950/30",
     },
   ];
 
-  const visibleActions = quickActions.filter(
-    action => !action.featureKey || isFeatureEnabled(action.featureKey)
-  );
-
   return (
-    <div className="flex-1 space-y-4 md:space-y-6 p-3 md:p-6 lg:p-8 mb-16 sm:mb-20 md:mb-32 max-w-7xl mx-auto">
-      {/* Hero Section */}
-      <div className="relative rounded-xl md:rounded-2xl overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-6 md:p-8 lg:p-12 text-white shadow-2xl">
-        <div className="relative z-10">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold mb-2 md:mb-3">
-            Welcome back, {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
-          </h1>
-          <p className="text-sm md:text-base lg:text-lg xl:text-xl text-white/90 max-w-2xl">
-            {company?.name || 'CrowdHub'} - Your central hub for all requests and services
-          </p>
+    <div className="flex-1 space-y-6 md:space-y-8 p-4 md:p-6 lg:p-8 mb-16 sm:mb-20 md:mb-24 max-w-7xl mx-auto">
+      {/* Hero Section with Quick Action */}
+      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-primary via-primary/95 to-primary/85 p-8 md:p-12 text-white shadow-xl">
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="flex-1">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3">
+              Welcome back, {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+            </h1>
+            <p className="text-base md:text-lg text-white/90 max-w-2xl mb-6 md:mb-0">
+              {company?.name || 'CrowdHub'} - Your central hub for all requests and services
+            </p>
+          </div>
+          <Button
+            size="lg"
+            variant="secondary"
+            className="shadow-lg hover:shadow-xl transition-all duration-200 bg-white text-primary hover:bg-white/90 font-semibold px-8 py-6 text-lg"
+            onClick={() => navigate('/requests/new')}
+          >
+            <FileText className="mr-2 h-5 w-5" />
+            New Request
+          </Button>
         </div>
-        <div className="absolute top-0 right-0 w-48 h-48 md:w-96 md:h-96 bg-white/10 rounded-full -mr-16 md:-mr-32 -mt-16 md:-mt-32" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 md:w-64 md:h-64 bg-white/5 rounded-full -ml-10 md:-ml-20 -mb-10 md:-mb-20" />
+        <div className="absolute top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-white/10 rounded-full -mr-24 md:-mr-32 -mt-24 md:-mt-32 blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 md:w-64 md:h-64 bg-white/5 rounded-full -ml-16 md:-ml-20 -mb-16 md:-mb-20 blur-3xl" />
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+      {/* Overview Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {isFeatureEnabled('hardware_requests') && (
-          <Card className="rounded-xl md:rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 md:p-6">
-              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+          <Card className="rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border-l-4 border-l-primary">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Hardware Requests
               </CardTitle>
-              <Package className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Package className="h-5 w-5 text-primary" />
+              </div>
             </CardHeader>
-            <CardContent className="p-4 md:p-6 pt-0">
-              <div className="text-2xl md:text-3xl font-bold">{stats?.hardwareRequests || 0}</div>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{stats?.hardwareRequests || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">Total submitted</p>
             </CardContent>
           </Card>
         )}
 
         {isFeatureEnabled('marketing_requests') && (
-          <Card className="rounded-xl md:rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 md:p-6">
-              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+          <Card className="rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border-l-4 border-l-secondary">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Marketing Requests
               </CardTitle>
-              <Megaphone className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+              <div className="p-2 rounded-lg bg-secondary/10">
+                <Megaphone className="h-5 w-5 text-secondary" />
+              </div>
             </CardHeader>
-            <CardContent className="p-4 md:p-6 pt-0">
-              <div className="text-2xl md:text-3xl font-bold">{stats?.marketingRequests || 0}</div>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{stats?.marketingRequests || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">Active campaigns</p>
             </CardContent>
           </Card>
         )}
 
-        <Card className="rounded-xl md:rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 md:p-6">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-              Users
+        {isFeatureEnabled('knowledge_base') && (
+          <Card className="rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border-l-4 border-l-accent">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Knowledge Base
+              </CardTitle>
+              <div className="p-2 rounded-lg bg-accent/10">
+                <FileText className="h-5 w-5 text-accent-foreground" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{stats?.kbPages || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">Articles available</p>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border-l-4 border-l-muted">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Team Members
             </CardTitle>
-            <Users className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+            <div className="p-2 rounded-lg bg-muted">
+              <Users className="h-5 w-5 text-muted-foreground" />
+            </div>
           </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0">
-            <div className="text-2xl md:text-3xl font-bold">{stats?.users || 0}</div>
+          <CardContent>
+            <div className="text-3xl font-bold text-foreground">{stats?.users || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Active users</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions Grid */}
-      <div>
-        <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3 lg:gap-4">
-          {visibleActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Button
-                key={action.href}
-                variant="outline"
-                className={`h-auto flex-col gap-2 md:gap-3 p-3 md:p-4 lg:p-6 hover:shadow-lg transition-all duration-200 ${action.bgColor} border-0`}
-                onClick={() => navigate(action.href)}
-              >
-                <div className={`p-2 md:p-3 rounded-full ${action.bgColor}`}>
-                  <Icon className={`h-5 w-5 md:h-6 md:w-6 ${action.color}`} />
-                </div>
-                <div className="text-center">
-                  <div className="font-semibold text-xs md:text-sm">{action.label}</div>
-                  <div className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1 hidden sm:block">
-                    {action.description}
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* News Feed - Takes 2 columns on large screens */}
+        <div className="lg:col-span-2">
+          <NewsFeedModule title="Latest News" maxItems={5} />
+        </div>
+
+        {/* Sidebar Content */}
+        <div className="space-y-6">
+          {/* Pending Approvals (if user has permission) */}
+          {hasPermission('approve_requests') ? (
+            <PendingApprovalsWidget title="Pending Approvals" />
+          ) : (
+            <Card className="rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  Quick Tips
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-accent/50 hover:bg-accent/70 transition-colors">
+                  <FileText className="h-5 w-5 mt-0.5 text-primary flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">Submit Requests</p>
+                    <p className="text-xs text-muted-foreground">Track all your requests in one place</p>
                   </div>
                 </div>
-              </Button>
-            );
-          })}
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-accent/50 hover:bg-accent/70 transition-colors">
+                  <Users className="h-5 w-5 mt-0.5 text-primary flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">Team Directory</p>
+                    <p className="text-xs text-muted-foreground">Find and connect with colleagues</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-accent/50 hover:bg-accent/70 transition-colors">
+                  <FileText className="h-5 w-5 mt-0.5 text-primary flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">Knowledge Base</p>
+                    <p className="text-xs text-muted-foreground">Access help articles and guides</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
-      </div>
-
-      {/* Content Modules */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        {/* News Feed */}
-        <NewsFeedModule title="Latest News" maxItems={5} />
-
-        {/* Pending Approvals (if user has permission) */}
-        {hasPermission('approve_requests') ? (
-          <PendingApprovalsWidget title="Pending Approvals" />
-        ) : (
-          <Card className="rounded-xl md:rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200">
-            <CardHeader className="p-4 md:p-6">
-              <CardTitle className="text-xl md:text-2xl font-bold">Getting Started</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 md:space-y-4 p-4 md:p-6 pt-0">
-              <p className="text-muted-foreground">
-                Welcome to {company?.name || 'CrowdHub'}! Here are some things you can do:
-              </p>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
-                  <FileText className="h-4 w-4 mt-0.5 text-primary" />
-                  <span>Submit requests for hardware, marketing, and more</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Users className="h-4 w-4 mt-0.5 text-primary" />
-                  <span>Browse the company directory to find colleagues</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <TrendingUp className="h-4 w-4 mt-0.5 text-primary" />
-                  <span>Track your request history and status</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* Recent Activity */}
       {recentActivity && recentActivity.length > 0 && (
-        <Card className="rounded-xl md:rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200">
-          <CardHeader className="p-4 md:p-6">
-            <CardTitle className="text-xl md:text-2xl font-bold">Recent Activity</CardTitle>
-            <p className="text-sm text-muted-foreground">Latest requests</p>
+        <Card className="rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                <TrendingUp className="h-6 w-6 text-primary" />
+                Recent Activity
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/requests')}
+                className="text-primary hover:text-primary/80"
+              >
+                View All
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">Latest requests from your organization</p>
           </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0">
-            <div className="space-y-4">
+          <CardContent>
+            <div className="space-y-3">
               {recentActivity.map((request) => (
-                <div key={request.id} className="flex items-center justify-between border-b pb-3 last:border-0">
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{request.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(request.created_at).toLocaleDateString()}
+                <div
+                  key={request.id}
+                  className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/requests/${request.id}`)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{request.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {new Date(request.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
                     </p>
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    {request.status}
+                  <Badge variant="outline" className="text-xs ml-2 capitalize">
+                    {request.status.replace(/_/g, ' ')}
                   </Badge>
                 </div>
               ))}
