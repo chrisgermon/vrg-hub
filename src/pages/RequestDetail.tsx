@@ -407,11 +407,11 @@ export default function RequestDetail() {
           {/* Left: Email-style Message View */}
           <div className="lg:col-span-2 space-y-4">
             {/* Ticket Header */}
-            <Card>
+            <Card className="shadow-sm border-l-4 border-l-primary">
               <CardContent className="p-6">
                 <div className="flex items-start gap-4 mb-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback className="bg-primary text-primary-foreground">
+                  <Avatar className="h-12 w-12 border-2 border-primary/20">
+                    <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                       {request.profile?.full_name?.substring(0, 2).toUpperCase() || 'VR'}
                     </AvatarFallback>
                   </Avatar>
@@ -428,7 +428,7 @@ export default function RequestDetail() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-sm text-muted-foreground">To:</span>
+                      <span className="text-sm font-medium text-muted-foreground">To:</span>
                       <span className="text-sm">{request.profile?.email || 'support@crowdit.com.au'}</span>
                     </div>
                   </div>
@@ -439,12 +439,12 @@ export default function RequestDetail() {
                 {/* Ticket Content */}
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-xl font-semibold mb-2">{request.title}</h2>
+                    <h2 className="text-xl font-bold">{request.title}</h2>
                   </div>
 
                   {primaryContent && (
-                    <div className="bg-muted/50 p-4 rounded-lg">
-                      <h3 className="font-semibold text-sm text-muted-foreground mb-3">Description</h3>
+                    <div className="bg-muted/30 p-5 rounded-lg border border-border/50">
+                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">Description</h3>
                       {shouldRenderAsHTML ? (
                         <div 
                           className="text-sm prose prose-sm max-w-none dark:prose-invert"
@@ -505,147 +505,196 @@ export default function RequestDetail() {
             </Card>
 
             {/* Update Form */}
-            <div id="update-form">
-              <RequestUpdateForm requestId={request.id} />
-            </div>
+            <Card className="shadow-sm" id="update-form">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="h-8 w-1 bg-primary rounded-full" />
+                  <h3 className="font-semibold text-lg">Add Update</h3>
+                </div>
+                <RequestUpdateForm requestId={request.id} />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Right Sidebar: Ticket Information */}
           <div className="space-y-4">
             {/* Ticket Information */}
-            <Card>
-              <CardContent className="p-4 space-y-3">
-                <h3 className="font-semibold">Request Information</h3>
+            <Card className="border-primary/20 shadow-sm">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="h-8 w-1 bg-primary rounded-full" />
+                  <h3 className="font-semibold text-lg">Request Information</h3>
+                </div>
                 
-                <div>
-                  <p className="text-xs text-muted-foreground">Request ID</p>
-                  <p className="text-sm font-mono">{request.request_number ? formatRequestId(request.request_number) : 'N/A'}</p>
-                </div>
+                <div className="space-y-4">
+                  <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Request ID</p>
+                    <p className="text-base font-mono font-semibold text-primary">{request.request_number ? formatRequestId(request.request_number) : 'N/A'}</p>
+                  </div>
 
-                <div>
-                  <p className="text-xs text-muted-foreground">Date Reported</p>
-                  <p className="text-sm">{format(new Date(request.created_at), 'dd/MM/yyyy h:mm a')}</p>
-                </div>
+                  <Separator />
 
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Request Type</p>
-                  <p className="text-sm mb-2">{(request as any).request_type?.name || 'General Request'}</p>
-                  {request.type === 'department' && (
-                    <RequestTypeChanger
-                      requestId={request.id}
-                      currentTypeId={(request as any).request_type_id}
-                      requestUserId={request.user_id}
-                      onTypeChanged={() => {
-                        window.location.reload();
-                      }}
-                    />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Date Reported</p>
+                    <p className="text-sm">{format(new Date(request.created_at), 'dd/MM/yyyy h:mm a')}</p>
+                  </div>
+
+                  {(request.brands?.display_name || request.locations?.name) && (
+                    <>
+                      <Separator />
+                      
+                      {request.brands?.display_name && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Company</p>
+                          <p className="text-sm font-medium">{request.brands.display_name}</p>
+                        </div>
+                      )}
+
+                      {request.locations?.name && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Location</p>
+                          <p className="text-sm font-medium">{request.locations.name}</p>
+                        </div>
+                      )}
+                    </>
                   )}
-                </div>
 
-                <div>
-                  <p className="text-xs text-muted-foreground">Category</p>
-                  <p className="text-sm">{(request as any).category?.name || 'N/A'}</p>
-                </div>
+                  <Separator />
 
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Status</p>
-                  <Badge variant={getStatusColor(request.status) as any} className="mb-2">
-                    {getStatusLabel(request.status)}
-                  </Badge>
-                  {request.type === 'department' && (
-                    <RequestStatusChanger
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Request Type</p>
+                    <div className="bg-accent/50 rounded-md px-3 py-2 mb-2">
+                      <p className="text-sm font-medium">{(request as any).request_type?.name || 'General Request'}</p>
+                    </div>
+                    {request.type === 'department' && (
+                      <RequestTypeChanger
+                        requestId={request.id}
+                        currentTypeId={(request as any).request_type_id}
+                        requestUserId={request.user_id}
+                        onTypeChanged={() => {
+                          window.location.reload();
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Category</p>
+                    <p className="text-sm">{(request as any).category?.name || 'N/A'}</p>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Status</p>
+                    <Badge variant={getStatusColor(request.status) as any} className="mb-2 text-xs px-3 py-1">
+                      {getStatusLabel(request.status)}
+                    </Badge>
+                    {request.type === 'department' && (
+                      <RequestStatusChanger
+                        requestId={request.id}
+                        currentStatus={request.status as any}
+                        requestUserId={request.user_id}
+                        onStatusChanged={() => {
+                          // Invalidate query to refresh data
+                          window.location.reload();
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Priority</p>
+                    <Badge variant="outline" className="uppercase mb-2 text-xs px-3 py-1 font-semibold">
+                      {request.priority}
+                    </Badge>
+                    <RequestPriorityChanger
                       requestId={request.id}
-                      currentStatus={request.status as any}
+                      currentPriority={request.priority as any}
                       requestUserId={request.user_id}
-                      onStatusChanged={() => {
+                      requestType={request.type}
+                      onPriorityChanged={() => {
                         // Invalidate query to refresh data
                         window.location.reload();
                       }}
                     />
-                  )}
-                </div>
+                  </div>
 
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Priority</p>
-                  <Badge variant="outline" className="uppercase mb-2">
-                    {request.priority}
-                  </Badge>
-                  <RequestPriorityChanger
+                  {request.total_amount && (
+                    <>
+                      <Separator />
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Total Amount</p>
+                        <p className="text-lg font-semibold text-primary">{request.currency} {request.total_amount.toLocaleString()}</p>
+                      </div>
+                    </>
+                  )}
+
+                  <Separator />
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assigned To</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setReassignDialogOpen(true)}
+                      >
+                        <UserCog className="w-3 h-3 mr-1" />
+                        Change
+                      </Button>
+                    </div>
+                    {(request as any).assigned_profile ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback className="text-xs bg-purple-500 text-white">
+                            {(request as any).assigned_profile.full_name?.substring(0, 2).toUpperCase() || 'NA'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">{(request as any).assigned_profile.full_name || 'Assigned'}</span>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Unassigned</p>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  <CCEmailsManager
                     requestId={request.id}
-                    currentPriority={request.priority as any}
-                    requestUserId={request.user_id}
                     requestType={request.type}
-                    onPriorityChanged={() => {
-                      // Invalidate query to refresh data
-                      window.location.reload();
-                    }}
+                    currentEmails={request.cc_emails || []}
                   />
                 </div>
-
-                {request.total_amount && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Amount</p>
-                    <p className="text-sm font-semibold">{request.currency} {request.total_amount.toLocaleString()}</p>
-                  </div>
-                )}
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs text-muted-foreground">Assigned To</p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 text-xs"
-                      onClick={() => setReassignDialogOpen(true)}
-                    >
-                      <UserCog className="w-3 h-3 mr-1" />
-                      Change
-                    </Button>
-                  </div>
-                  {(request as any).assigned_profile ? (
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback className="text-xs bg-purple-500 text-white">
-                          {(request as any).assigned_profile.full_name?.substring(0, 2).toUpperCase() || 'NA'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm">{(request as any).assigned_profile.full_name || 'Assigned'}</span>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Unassigned</p>
-                  )}
-                </div>
-
-                <Separator />
-
-                <CCEmailsManager
-                  requestId={request.id}
-                  requestType={request.type}
-                  currentEmails={request.cc_emails || []}
-                />
               </CardContent>
             </Card>
 
             {/* End-User Details */}
-            <Card>
-              <CardContent className="p-4 space-y-3">
-                <h3 className="font-semibold">End-User Details</h3>
-                
-                <div>
-                  <p className="text-xs text-muted-foreground">Client</p>
-                  <p className="text-sm text-primary">{request.profile?.full_name || 'Unknown'}</p>
+            <Card className="border-primary/20 shadow-sm">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-8 w-1 bg-primary rounded-full" />
+                  <h3 className="font-semibold text-lg">End-User Details</h3>
                 </div>
-
-                {!isDepartmentRequest && request.brands?.display_name && (
+                
+                <div className="space-y-3">
                   <div>
-                    <p className="text-xs text-muted-foreground">Site</p>
-                    <p className="text-sm text-primary">{request.brands.display_name}</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Client</p>
+                    <p className="text-sm font-medium text-primary">{request.profile?.full_name || 'Unknown'}</p>
                   </div>
-                )}
 
-                <div>
-                  <p className="text-xs text-muted-foreground">Email Address</p>
-                  <p className="text-sm">{request.profile?.email || 'N/A'}</p>
+                  {!isDepartmentRequest && request.brands?.display_name && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Site</p>
+                      <p className="text-sm font-medium text-primary">{request.brands.display_name}</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Email Address</p>
+                    <p className="text-sm">{request.profile?.email || 'N/A'}</p>
+                  </div>
                 </div>
 
                 {!isDepartmentRequest && request.locations?.name && (
