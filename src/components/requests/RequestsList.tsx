@@ -26,6 +26,9 @@ interface Request {
   updated_at: string;
   user_id: string;
   assigned_to?: string;
+  request_types?: {
+    name: string;
+  };
 }
 
 interface RequestsListProps {
@@ -57,7 +60,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
       
       let query = supabase
         .from('tickets')
-        .select('*, request_number');
+        .select('*, request_number, request_types:request_type_id(name)');
 
       // Apply filters based on tab
       if (filterType === 'my-requests') {
@@ -271,6 +274,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
                   )}
                   <TableHead>ID</TableHead>
                   <TableHead>Title</TableHead>
+                  <TableHead>Request Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Priority</TableHead>
                   <TableHead>Assigned To</TableHead>
@@ -321,6 +325,18 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
                       }}
                     >
                       {request.title}
+                    </TableCell>
+                    <TableCell 
+                      className="cursor-pointer"
+                      onClick={() => {
+                        if (onRequestSelect) {
+                          onRequestSelect(request.id);
+                        } else {
+                          navigate(`/request/${requestNum}`);
+                        }
+                      }}
+                    >
+                      {request.request_types?.name || '-'}
                     </TableCell>
                     <TableCell 
                       className="cursor-pointer"
