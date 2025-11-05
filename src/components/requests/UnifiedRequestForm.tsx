@@ -217,7 +217,7 @@ export function UnifiedRequestForm({
       await supabase.functions.invoke('notify-ticket-event', {
         body: {
           requestId: data.id,
-          requestType: 'hardware',
+          requestType: requestTypeId || 'hardware',
           eventType: 'created',
           actorId: user.id,
         },
@@ -313,7 +313,7 @@ export function UnifiedRequestForm({
       await supabase.functions.invoke('notify-ticket-event', {
         body: {
           requestId: data.id,
-          requestType: 'hardware',
+          requestType: requestTypeId || 'hardware',
           eventType: 'created',
           actorId: user.id,
         },

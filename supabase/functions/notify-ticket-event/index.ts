@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface NotifyTicketEventRequest {
   requestId: string;
-  requestType: 'hardware' | 'department';
+  requestType: string; // Can be request_type_id UUID or 'hardware' | 'department' for backwards compatibility
   eventType: 'created' | 'assigned' | 'reassigned' | 'status_changed' | 'commented' | 'escalated' | 'resolved';
   actorId?: string;
   oldValue?: string;
@@ -143,6 +143,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Notify users assigned via request_notification_assignments
+    // requestType can be a UUID (request_type_id) or 'hardware'/'department' for backwards compatibility
     const { data: notificationAssignments } = await supabase
       .from('request_notification_assignments')
       .select('assignee_ids, notification_level')
