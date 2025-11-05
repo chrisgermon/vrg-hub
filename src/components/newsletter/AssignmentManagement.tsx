@@ -20,12 +20,11 @@ export function AssignmentManagement() {
   const DEPARTMENTS = templates.map(t => t.department_name);
 
   const { data: profiles = [] } = useQuery({
-    queryKey: ['profiles-active'],
+    queryKey: ['profiles-all'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, email')
-        .eq('is_active', true)
         .order('full_name');
       if (error) throw error;
       return data || [];

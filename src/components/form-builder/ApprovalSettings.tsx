@@ -52,7 +52,6 @@ export function ApprovalSettings({
     const { data, error } = await supabase
       .from('profiles')
       .select('id, full_name, email')
-      .eq('is_active', true)
       .in('id', userIds)
       .order('full_name');
 
