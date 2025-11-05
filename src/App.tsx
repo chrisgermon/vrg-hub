@@ -69,6 +69,7 @@ const MissionStatement = lazy(() => import("./pages/MissionStatement"));
 const ExternalProviders = lazy(() => import("./pages/ExternalProviders"));
 const EmailTest = lazy(() => import("./pages/EmailTest"));
 const EmailTestingDashboard = lazy(() => import("./pages/EmailTestingDashboard"));
+const SetupVerification = lazy(() => import("./pages/SetupVerification"));
 const Documentation = lazy(() => import("./pages/Documentation"));
 
 const protectedLayoutRoutes: Array<{
@@ -136,6 +137,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/mission-statement", element: <MissionStatement /> },
   { path: "/email-test", element: <EmailTest />, requiredRole: ["super_admin", "tenant_admin", "manager"] },
   { path: "/email-testing", element: <EmailTestingDashboard />, requiredRole: ["super_admin", "tenant_admin", "manager"] },
+  { path: "/setup-verification", element: <SetupVerification />, requiredRole: ["super_admin", "tenant_admin"] },
   ];
 
 const queryClient = new QueryClient();
