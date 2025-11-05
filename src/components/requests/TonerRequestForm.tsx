@@ -79,7 +79,7 @@ export function TonerRequestForm() {
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase
+      const { data: tonerRequest, error } = await supabase
         .from('toner_requests')
         .insert({
           user_id: user.id,
@@ -99,7 +99,17 @@ export function TonerRequestForm() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error || !tonerRequest) throw error;
+
+      // Send notification email
+      await supabase.functions.invoke('notify-ticket-event', {
+        body: {
+          requestId: tonerRequest.id,
+          requestType: 'hardware',
+          eventType: 'created',
+          actorId: user.id,
+        },
+      });
 
       toast.success('Toner request submitted successfully');
       navigate('/requests');

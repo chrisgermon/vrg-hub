@@ -185,7 +185,17 @@ export function DynamicDepartmentRequestForm({
         .select()
         .single();
 
-      if (error) throw error;
+      if (error || !request) throw error;
+
+      // Send notification email
+      await supabase.functions.invoke('notify-ticket-event', {
+        body: {
+          requestId: request.id,
+          requestType: 'hardware',
+          eventType: 'created',
+          actorId: user.id,
+        },
+      });
 
       // Upload files if any
       if (files.length > 0) {

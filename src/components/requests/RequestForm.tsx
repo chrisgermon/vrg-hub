@@ -75,7 +75,17 @@ export function RequestForm() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error || !data) throw error;
+
+      // Send notification email
+      await supabase.functions.invoke('notify-ticket-event', {
+        body: {
+          requestId: data.id,
+          requestType: 'hardware',
+          eventType: 'created',
+          actorId: user.id,
+        },
+      });
 
       toast({
         title: 'Success',

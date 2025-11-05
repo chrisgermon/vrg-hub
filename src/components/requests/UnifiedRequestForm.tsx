@@ -213,6 +213,16 @@ export function UnifiedRequestForm({
 
       if (error) throw error;
 
+      // Send notification email
+      await supabase.functions.invoke('notify-ticket-event', {
+        body: {
+          requestId: data.id,
+          requestType: 'hardware',
+          eventType: 'created',
+          actorId: user.id,
+        },
+      });
+
       // Send confirmation email to requester
       try {
         await supabase.functions.invoke('send-request-confirmation', {
@@ -298,6 +308,16 @@ export function UnifiedRequestForm({
         .single();
 
       if (error) throw error;
+
+      // Send notification email
+      await supabase.functions.invoke('notify-ticket-event', {
+        body: {
+          requestId: data.id,
+          requestType: 'hardware',
+          eventType: 'created',
+          actorId: user.id,
+        },
+      });
 
       // Send confirmation email to requester
       try {

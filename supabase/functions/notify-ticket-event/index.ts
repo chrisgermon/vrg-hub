@@ -115,6 +115,26 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
+    // Notify users assigned via request_notification_assignments
+    const { data: notificationAssignments } = await supabase
+      .from('request_notification_assignments')
+      .select('user_id, notification_level, profiles:user_id(email)')
+      .eq('request_type_id', request.request_type_id);
+
+    if (notificationAssignments) {
+      notificationAssignments.forEach((assignment: any) => {
+        // Check notification level
+        const shouldNotify = 
+          assignment.notification_level === 'all' ||
+          (assignment.notification_level === 'new_only' && eventType === 'created') ||
+          (assignment.notification_level === 'updates_only' && eventType !== 'created');
+
+        if (shouldNotify && assignment.user_id !== actorId && assignment.profiles?.email) {
+          recipients.add(assignment.profiles.email);
+        }
+      });
+    }
+
     if (recipients.size === 0) {
       console.log('[notify-ticket-event] No recipients to notify');
       return new Response(JSON.stringify({ success: true, message: 'No recipients' }), {

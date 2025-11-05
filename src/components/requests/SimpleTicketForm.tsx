@@ -295,6 +295,16 @@ export function SimpleTicketForm({
         },
       });
 
+      // Send notification email
+      await supabase.functions.invoke('notify-ticket-event', {
+        body: {
+          requestId: ticket.id,
+          requestType: 'hardware',
+          eventType: 'created',
+          actorId: user.id,
+        },
+      });
+
       if (onSuccess) {
         await onSuccess({ ticket, formData: data, attachments });
       }
