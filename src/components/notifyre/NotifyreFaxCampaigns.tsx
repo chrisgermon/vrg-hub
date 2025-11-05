@@ -143,7 +143,7 @@ export const NotifyreFaxCampaigns = () => {
 
   const handleViewCampaign = (campaign: FaxCampaign) => {
     setSelectedCampaign(campaign);
-    loadCampaignLogs(campaign.campaign_id);
+    loadCampaignLogs(campaign.id);
   };
 
   const handleRefreshLogs = async () => {
@@ -151,13 +151,13 @@ export const NotifyreFaxCampaigns = () => {
     
     toast.info('Refreshing campaign data...');
     await loadCampaigns();
-    await loadCampaignLogs(selectedCampaign.campaign_id);
+    await loadCampaignLogs(selectedCampaign.id);
     
     // Update the selected campaign with fresh data
     const { data } = await supabase
       .from('notifyre_fax_campaigns')
       .select('*')
-      .eq('campaign_id', selectedCampaign.campaign_id)
+      .eq('id', selectedCampaign.id)
       .single();
     
     if (data) {
