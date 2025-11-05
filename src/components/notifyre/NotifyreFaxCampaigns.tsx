@@ -118,10 +118,10 @@ export const NotifyreFaxCampaigns = () => {
   const handleSyncFaxes = async () => {
     try {
       setSyncing(true);
-      toast.info('Syncing fax campaigns from Notifyre...');
+      toast.info('Running full sync from Notifyre...');
 
       const { data, error } = await supabase.functions.invoke('sync-notifyre-fax-logs', {
-        body: { force_full_sync: false }
+        body: { force_full_sync: true }
       });
 
       if (error) throw error;
