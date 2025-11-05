@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { exportNewsletterToWord } from '@/lib/exportToWord';
+import { exportCycleToWord, type CycleSubmission } from '@/lib/exportToWord';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -191,27 +191,23 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
       const cycle = cycles.find(c => c.id === cycleId);
       const cycleName = cycle?.name || 'Newsletter';
 
-      // Combine all submissions into one document
-      for (let i = 0; i < submissions.length; i++) {
-        const submission = submissions[i];
-        const sectionsData = (submission.sections_data || []) as any[];
-        const departmentSections = (templateMap.get(submission.department) as any[]) || [];
+      // Prepare submissions data
+      const cycleSubmissions: CycleSubmission[] = submissions.map(submission => ({
+        title: submission.title,
+        department: submission.department,
+        contributorName: profileMap.get(submission.contributor_id) || 'Unknown',
+        sectionsData: (submission.sections_data || []) as any[],
+        departmentSections: (templateMap.get(submission.department) as any[]) || [],
+        noUpdateThisMonth: submission.no_update_this_month || false,
+      }));
 
-        await exportNewsletterToWord(
-          submission.title,
-          submission.department,
-          profileMap.get(submission.contributor_id) || 'Unknown',
-          sectionsData,
-          departmentSections,
-          submission.no_update_this_month,
-          i === 0 ? cycleName : undefined // Only use cycle name for first export
-        );
-      }
+      // Export all submissions as one document
+      await exportCycleToWord(cycleName, cycleSubmissions);
 
-      toast.success('All submissions exported to Word documents');
+      toast.success('Cycle exported to Word document');
     } catch (error) {
       console.error('Export error:', error);
-      toast.error('Failed to export cycle submissions');
+      toast.error('Failed to export cycle');
     }
   };
 

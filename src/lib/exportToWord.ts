@@ -113,8 +113,7 @@ export async function exportNewsletterToWord(
   contributorName: string,
   sectionsData: SectionData[],
   departmentSections: DepartmentSection[],
-  noUpdateThisMonth: boolean = false,
-  cycleName?: string
+  noUpdateThisMonth: boolean = false
 ) {
   try {
     const sections: Paragraph[] = [];
@@ -208,6 +207,127 @@ export async function exportNewsletterToWord(
     return true;
   } catch (error) {
     console.error('Error exporting to Word:', error);
+    throw error;
+  }
+}
+
+export interface CycleSubmission {
+  title: string;
+  department: string;
+  contributorName: string;
+  sectionsData: SectionData[];
+  departmentSections: DepartmentSection[];
+  noUpdateThisMonth: boolean;
+}
+
+export async function exportCycleToWord(
+  cycleName: string,
+  submissions: CycleSubmission[]
+) {
+  try {
+    const allParagraphs: Paragraph[] = [];
+    
+    // Cycle title
+    allParagraphs.push(
+      new Paragraph({
+        text: cycleName,
+        heading: HeadingLevel.TITLE,
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 600 },
+      })
+    );
+    
+    // Generated date
+    allParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: 'Generated: ', bold: true }),
+          new TextRun({ 
+            text: new Date().toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })
+          }),
+        ],
+        spacing: { after: 600 },
+      })
+    );
+    
+    // Add each submission as a section
+    submissions.forEach((submission, index) => {
+      // Department heading
+      allParagraphs.push(
+        new Paragraph({
+          text: submission.department,
+          heading: HeadingLevel.HEADING_1,
+          spacing: { before: index > 0 ? 800 : 400, after: 240 },
+        })
+      );
+      
+      // Submission title
+      allParagraphs.push(
+        new Paragraph({
+          text: submission.title,
+          heading: HeadingLevel.HEADING_2,
+          spacing: { after: 200 },
+        })
+      );
+      
+      // Contributor
+      allParagraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: 'Contributor: ', bold: true }),
+            new TextRun({ text: submission.contributorName }),
+          ],
+          spacing: { after: 300 },
+        })
+      );
+      
+      if (submission.noUpdateThisMonth) {
+        allParagraphs.push(
+          new Paragraph({
+            children: [new TextRun({ text: 'No updates for this month', italics: true })],
+            spacing: { before: 200, after: 400 },
+          })
+        );
+      } else {
+        // Add each section with its content
+        submission.sectionsData.forEach(sectionData => {
+          const section = submission.departmentSections.find(s => s.key === sectionData.section);
+          if (section && sectionData.content) {
+            // Section title
+            allParagraphs.push(
+              new Paragraph({
+                text: section.name,
+                heading: HeadingLevel.HEADING_3,
+                spacing: { before: 300, after: 150 },
+              })
+            );
+            
+            // Section content
+            const contentParagraphs = parseHtmlToDocxParagraphs(sectionData.content);
+            allParagraphs.push(...contentParagraphs);
+          }
+        });
+      }
+    });
+    
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: allParagraphs,
+      }],
+    });
+    
+    const blob = await Packer.toBlob(doc);
+    const fileName = `${cycleName.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.docx`;
+    saveAs(blob, fileName);
+    
+    return true;
+  } catch (error) {
+    console.error('Error exporting cycle to Word:', error);
     throw error;
   }
 }
