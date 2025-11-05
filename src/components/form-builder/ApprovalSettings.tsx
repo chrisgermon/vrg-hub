@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { UserCheck } from 'lucide-react';
+import { UserCheck, Check, ChevronsUpDown } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 interface Profile {
   id: string;
@@ -25,6 +28,7 @@ export function ApprovalSettings({
   onApproverIdChange,
 }: ApprovalSettingsProps) {
   const [approvers, setApprovers] = useState<Profile[]>([]);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     loadApprovers();
@@ -88,27 +92,69 @@ export function ApprovalSettings({
 
       {requireApproval && (
         <div className="space-y-2">
-          <Label htmlFor="approver" className="text-sm font-medium">
+          <Label className="text-sm font-medium">
             Default Approver
           </Label>
-          <Select 
-            value={approverId || 'auto'} 
-            onValueChange={(value) => onApproverIdChange(value === 'auto' ? null : value)}
-          >
-            <SelectTrigger id="approver">
-              <SelectValue placeholder="Select an approver" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="auto">
-                Auto-assign based on location/brand
-              </SelectItem>
-              {approvers.map(approver => (
-                <SelectItem key={approver.id} value={approver.id}>
-                  {approver.full_name || approver.email}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                className="w-full justify-between"
+              >
+                {approverId
+                  ? approvers.find((approver) => approver.id === approverId)?.full_name || 
+                    approvers.find((approver) => approver.id === approverId)?.email
+                  : "Auto-assign based on location/brand"}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search by name or email..." />
+                <CommandEmpty>No approver found.</CommandEmpty>
+                <CommandGroup className="max-h-[200px] overflow-auto">
+                  <CommandItem
+                    value="auto"
+                    onSelect={() => {
+                      onApproverIdChange(null);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        !approverId ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    Auto-assign based on location/brand
+                  </CommandItem>
+                  {approvers.map((approver) => (
+                    <CommandItem
+                      key={approver.id}
+                      value={`${approver.full_name} ${approver.email}`}
+                      onSelect={() => {
+                        onApproverIdChange(approver.id);
+                        setOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          approverId === approver.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-medium">{approver.full_name}</span>
+                        <span className="text-xs text-muted-foreground">{approver.email}</span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <p className="text-xs text-muted-foreground">
             {approverId 
               ? 'All requests will be sent to the selected approver'

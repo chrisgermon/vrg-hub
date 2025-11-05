@@ -5,13 +5,10 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ReassignDialogProps {
   open: boolean;
@@ -34,6 +31,7 @@ export function ReassignDialog({
   const [users, setUsers] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -191,19 +189,53 @@ export function ReassignDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="assignee">Assign To</Label>
-            <Select value={assignee} onValueChange={setAssignee} disabled={loading}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a user..." />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.full_name} ({user.email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Assign To</Label>
+            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={popoverOpen}
+                  disabled={loading}
+                  className="w-full justify-between"
+                >
+                  {assignee
+                    ? users.find((user) => user.id === assignee)?.full_name || 
+                      users.find((user) => user.id === assignee)?.email
+                    : "Select a user..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search by name or email..." />
+                  <CommandEmpty>No user found.</CommandEmpty>
+                  <CommandGroup className="max-h-[200px] overflow-auto">
+                    {users.map((user) => (
+                      <CommandItem
+                        key={user.id}
+                        value={`${user.full_name} ${user.email}`}
+                        onSelect={() => {
+                          setAssignee(user.id);
+                          setPopoverOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            assignee === user.id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{user.full_name}</span>
+                          <span className="text-xs text-muted-foreground">{user.email}</span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
         <DialogFooter>
