@@ -77,15 +77,15 @@ export function RequestForm() {
 
       if (error || !data) throw error;
 
-      // Send notification email
-      await supabase.functions.invoke('notify-ticket-event', {
+      // Send notification email in background (non-blocking)
+      supabase.functions.invoke('notify-ticket-event', {
         body: {
           requestId: data.id,
           requestType: 'hardware',
           eventType: 'created',
           actorId: user.id,
         },
-      });
+      }).catch(err => console.error('Email notification error:', err));
 
       toast({
         title: 'Success',

@@ -73,13 +73,13 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
           .eq('id', requestId);
       }
 
-      // Send email notification via edge function
-      await supabase.functions.invoke('notify-comment', {
+      // Send email notification in background (non-blocking)
+      supabase.functions.invoke('notify-comment', {
         body: {
           requestId,
           commentId: data.id,
         },
-      });
+      }).catch(err => console.error('Email notification error:', err));
 
       return data;
     },
