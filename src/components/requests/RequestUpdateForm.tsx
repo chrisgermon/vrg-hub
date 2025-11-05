@@ -5,10 +5,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, Send, Paperclip } from 'lucide-react';
-import { RichTextEditorWithMentions } from '@/components/ui/rich-text-editor-with-mentions';
+import { Loader2, Send, Paperclip, AtSign } from 'lucide-react';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { FileDropzone, FileList } from '@/components/ui/file-dropzone';
-import { UserSearchResult } from '@/hooks/useUserSearch';
+import { MentionPicker } from '@/components/ui/mention-picker';
 
 interface RequestUpdateFormProps {
   requestId: string;
@@ -21,7 +21,8 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [showAttachments, setShowAttachments] = useState(false);
-  const [mentionedUsers, setMentionedUsers] = useState<UserSearchResult[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionedEmails, setMentionedEmails] = useState<string[]>([]);
 
   // Add comment mutation
   const addComment = useMutation({
@@ -77,9 +78,8 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
         }
 
         // Add mentioned users to CC
-        if (mentionedUsers.length > 0) {
+        if (mentionedEmails.length > 0) {
           const currentCcEmails = ticket.cc_emails || [];
-          const mentionedEmails = mentionedUsers.map(u => u.email);
           const newCcEmails = [...new Set([...currentCcEmails, ...mentionedEmails])];
           updates.cc_emails = newCcEmails;
         }
@@ -108,7 +108,8 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
       setContent('');
       setAttachments([]);
       setShowAttachments(false);
-      setMentionedUsers([]);
+      setMentionedEmails([]);
+      setShowMentions(false);
       toast.success('Update added successfully');
     },
     onError: (error: any) => {
@@ -140,13 +141,19 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <RichTextEditorWithMentions
-            value={content}
-            onChange={setContent}
-            onMentionedUsersChange={setMentionedUsers}
-            placeholder="Add a comment or update... Type @ to mention someone"
-            className="min-h-[200px]"
-          />
+          <div className="space-y-2">
+            <RichTextEditor
+              value={content}
+              onChange={setContent}
+              placeholder="Add a comment or update..."
+              className="min-h-[200px]"
+            />
+            {mentionedEmails.length > 0 && (
+              <div className="text-sm text-muted-foreground">
+                Will notify: {mentionedEmails.join(', ')}
+              </div>
+            )}
+          </div>
           
           {showAttachments && (
             <div className="space-y-2">
@@ -161,17 +168,39 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
             </div>
           )}
           
+          {showMentions && (
+            <MentionPicker
+              onSelect={(email) => {
+                setMentionedEmails(prev => [...new Set([...prev, email])]);
+                setShowMentions(false);
+              }}
+              onClose={() => setShowMentions(false)}
+            />
+          )}
+          
           <div className="flex justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAttachments(!showAttachments)}
-              className="gap-2"
-            >
-              <Paperclip className="h-4 w-4" />
-              {showAttachments ? 'Hide' : 'Add'} Attachments
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMentions(!showMentions)}
+                className="gap-2"
+              >
+                <AtSign className="h-4 w-4" />
+                Mention
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAttachments(!showAttachments)}
+                className="gap-2"
+              >
+                <Paperclip className="h-4 w-4" />
+                {showAttachments ? 'Hide' : 'Add'} Attachments
+              </Button>
+            </div>
             
             <Button
               type="submit"
