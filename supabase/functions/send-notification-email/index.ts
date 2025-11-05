@@ -430,40 +430,195 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
         text: `New Update on Your Request\n\nHello ${data.requesterName},\n\nThere's a new update on your request: ${data.requestTitle}\n\nFrom: ${data.commenterName}\nMessage:\n${data.commentText}\n\nView and reply: ${data.requestUrl || appUrl + '/requests?request=' + data.requestId}\n\nReference: ${data.requestNumber || data.requestId}`
       };
 
-    case 'request_reassigned':
+    case 'request_created':
+      return {
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            ${emailHeader}
+            <h2 style="color: #2563eb;">New Request Created 📝</h2>
+            <p>Hello,</p>
+            <p>A new request has been created and may require your attention:</p>
+            
+            <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+              <h3>${data.requestTitle}</h3>
+              <p><strong>Submitted by:</strong> ${data.requesterName}</p>
+              <p><strong>Request Number:</strong> ${data.requestNumber}</p>
+            </div>
+            
+            <p style="text-align: center; margin-top: 30px;">
+              <a href="${data.requestUrl}" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Request</a>
+            </p>
+            
+            ${emailFooter(data.requestId, data.requestNumber)}
+          </div>
+        `,
+        text: `New Request Created\n\nHello,\n\nA new request has been created:\n\nTitle: ${data.requestTitle}\nSubmitted by: ${data.requesterName}\nRequest Number: ${data.requestNumber}\n\nView details: ${data.requestUrl}\n\nReference: ${data.requestNumber}`
+      };
+
+    case 'request_assigned':
       return {
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             ${emailHeader}
             <h2 style="color: #2563eb;">Request Assigned to You 📋</h2>
-            <p>Hello ${data.assigneeName},</p>
-            <p>A request has been reassigned to you and requires your attention:</p>
+            <p>Hello,</p>
+            <p>A request has been assigned to you:</p>
             
             <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
               <h3>${data.requestTitle}</h3>
-              <p><strong>Originally Submitted by:</strong> ${data.requesterName}</p>
-              ${data.reassignedBy ? `<p><strong>Reassigned by:</strong> ${data.reassignedBy}</p>` : ''}
-              ${data.requestType ? `<p><strong>Request Type:</strong> ${data.requestType}</p>` : ''}
-              ${data.priority ? `<p><strong>Priority:</strong> <span style="text-transform: uppercase; color: ${data.priority === 'urgent' ? '#dc2626' : data.priority === 'high' ? '#f59e0b' : '#2563eb'};">${data.priority}</span></p>` : ''}
-              ${data.status ? `<p><strong>Status:</strong> ${data.status}</p>` : ''}
+              <p><strong>Submitted by:</strong> ${data.requesterName}</p>
+              <p><strong>Request Number:</strong> ${data.requestNumber}</p>
+              <p><strong>Assigned by:</strong> ${data.actorName}</p>
             </div>
             
-            ${data.description ? `
-              <div style="margin: 20px 0;">
-                <h4>Description:</h4>
-                <p style="background-color: #f8fafc; padding: 15px; border-radius: 4px;">${data.description.substring(0, 300)}${data.description.length > 300 ? '...' : ''}</p>
+            <p style="text-align: center; margin-top: 30px;">
+              <a href="${data.requestUrl}" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Request</a>
+            </p>
+            
+            ${emailFooter(data.requestId, data.requestNumber)}
+          </div>
+        `,
+        text: `Request Assigned to You\n\nHello,\n\nA request has been assigned to you:\n\nTitle: ${data.requestTitle}\nSubmitted by: ${data.requesterName}\nRequest Number: ${data.requestNumber}\nAssigned by: ${data.actorName}\n\nView details: ${data.requestUrl}\n\nReference: ${data.requestNumber}`
+      };
+
+    case 'request_reassigned':
+      return {
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            ${emailHeader}
+            <h2 style="color: #2563eb;">Request Reassigned 🔄</h2>
+            <p>Hello,</p>
+            <p>A request has been reassigned:</p>
+            
+            <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+              <h3>${data.requestTitle}</h3>
+              <p><strong>Submitted by:</strong> ${data.requesterName}</p>
+              <p><strong>Request Number:</strong> ${data.requestNumber}</p>
+              <p><strong>Reassigned by:</strong> ${data.actorName}</p>
+              ${data.oldAssignee ? `<p><strong>Previous Assignee:</strong> ${data.oldAssignee}</p>` : ''}
+              ${data.newAssignee ? `<p><strong>New Assignee:</strong> ${data.newAssignee}</p>` : ''}
+            </div>
+            
+            <p style="text-align: center; margin-top: 30px;">
+              <a href="${data.requestUrl}" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Request</a>
+            </p>
+            
+            ${emailFooter(data.requestId, data.requestNumber)}
+          </div>
+        `,
+        text: `Request Reassigned\n\nHello,\n\nA request has been reassigned:\n\nTitle: ${data.requestTitle}\nSubmitted by: ${data.requesterName}\nRequest Number: ${data.requestNumber}\nReassigned by: ${data.actorName}${data.oldAssignee ? `\nPrevious Assignee: ${data.oldAssignee}` : ''}${data.newAssignee ? `\nNew Assignee: ${data.newAssignee}` : ''}\n\nView details: ${data.requestUrl}\n\nReference: ${data.requestNumber}`
+      };
+
+    case 'request_status_changed':
+      return {
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            ${emailHeader}
+            <h2 style="color: #2563eb;">Request Status Updated 📊</h2>
+            <p>Hello,</p>
+            <p>The status of a request has been updated:</p>
+            
+            <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+              <h3>${data.requestTitle}</h3>
+              <p><strong>Submitted by:</strong> ${data.requesterName}</p>
+              <p><strong>Request Number:</strong> ${data.requestNumber}</p>
+              <p><strong>Updated by:</strong> ${data.actorName}</p>
+              ${data.oldStatus ? `<p><strong>Previous Status:</strong> <span style="text-transform: uppercase;">${data.oldStatus}</span></p>` : ''}
+              ${data.newStatus ? `<p><strong>New Status:</strong> <span style="text-transform: uppercase; color: #16a34a; font-weight: bold;">${data.newStatus}</span></p>` : ''}
+            </div>
+            
+            <p style="text-align: center; margin-top: 30px;">
+              <a href="${data.requestUrl}" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Request</a>
+            </p>
+            
+            ${emailFooter(data.requestId, data.requestNumber)}
+          </div>
+        `,
+        text: `Request Status Updated\n\nHello,\n\nThe status of a request has been updated:\n\nTitle: ${data.requestTitle}\nSubmitted by: ${data.requesterName}\nRequest Number: ${data.requestNumber}\nUpdated by: ${data.actorName}${data.oldStatus ? `\nPrevious Status: ${data.oldStatus}` : ''}${data.newStatus ? `\nNew Status: ${data.newStatus}` : ''}\n\nView details: ${data.requestUrl}\n\nReference: ${data.requestNumber}`
+      };
+
+    case 'request_comment_added':
+      return {
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            ${emailHeader}
+            <h2 style="color: #2563eb;">New Comment Added 💬</h2>
+            <p>Hello,</p>
+            <p>A new comment has been added to a request:</p>
+            
+            <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+              <h3>${data.requestTitle}</h3>
+              <p><strong>Submitted by:</strong> ${data.requesterName}</p>
+              <p><strong>Request Number:</strong> ${data.requestNumber}</p>
+              <p><strong>Commented by:</strong> ${data.actorName}</p>
+            </div>
+            
+            ${data.commentText ? `
+              <div style="background-color: #f8fafc; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                <p style="margin: 0; white-space: pre-wrap;">${data.commentText}</p>
               </div>
             ` : ''}
             
             <p style="text-align: center; margin-top: 30px;">
-              <a href="${appUrl}/requests/${data.requestId}" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Request Details</a>
+              <a href="${data.requestUrl}" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Request & Reply</a>
             </p>
             
-            <p style="color: #666; font-size: 14px; margin-top: 20px; text-align: center;">Please review this request and provide an update on the status.</p>
             ${emailFooter(data.requestId, data.requestNumber)}
           </div>
         `,
-        text: `Request Assigned to You\n\nHello ${data.assigneeName},\n\nA request has been reassigned to you:\n\nTitle: ${data.requestTitle}\nSubmitted by: ${data.requesterName}${data.reassignedBy ? `\nReassigned by: ${data.reassignedBy}` : ''}${data.requestType ? `\nRequest Type: ${data.requestType}` : ''}${data.priority ? `\nPriority: ${data.priority}` : ''}\n\nView details: ${appUrl}/requests/${data.requestId}\n\nReference: ${data.requestNumber || data.requestId}`
+        text: `New Comment Added\n\nHello,\n\nA new comment has been added to a request:\n\nTitle: ${data.requestTitle}\nSubmitted by: ${data.requesterName}\nRequest Number: ${data.requestNumber}\nCommented by: ${data.actorName}${data.commentText ? `\n\nComment:\n${data.commentText}` : ''}\n\nView details: ${data.requestUrl}\n\nReference: ${data.requestNumber}`
+      };
+
+    case 'request_resolved':
+      return {
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            ${emailHeader}
+            <h2 style="color: #16a34a;">Request Completed ✅</h2>
+            <p>Hello,</p>
+            <p>A request has been marked as completed:</p>
+            
+            <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
+              <h3>${data.requestTitle}</h3>
+              <p><strong>Submitted by:</strong> ${data.requesterName}</p>
+              <p><strong>Request Number:</strong> ${data.requestNumber}</p>
+              <p><strong>Completed by:</strong> ${data.actorName}</p>
+            </div>
+            
+            <p style="text-align: center; margin-top: 30px;">
+              <a href="${data.requestUrl}" style="background-color: #16a34a; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Request</a>
+            </p>
+            
+            ${emailFooter(data.requestId, data.requestNumber)}
+          </div>
+        `,
+        text: `Request Completed\n\nHello,\n\nA request has been marked as completed:\n\nTitle: ${data.requestTitle}\nSubmitted by: ${data.requesterName}\nRequest Number: ${data.requestNumber}\nCompleted by: ${data.actorName}\n\nView details: ${data.requestUrl}\n\nReference: ${data.requestNumber}`
+      };
+
+    case 'request_escalated':
+      return {
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            ${emailHeader}
+            <h2 style="color: #dc2626;">⚠️ Request Escalated ⚠️</h2>
+            <p>Hello,</p>
+            <p><strong>URGENT:</strong> A request has been escalated and requires immediate attention:</p>
+            
+            <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+              <h3>${data.requestTitle}</h3>
+              <p><strong>Submitted by:</strong> ${data.requesterName}</p>
+              <p><strong>Request Number:</strong> ${data.requestNumber}</p>
+              <p><strong>Escalated by:</strong> ${data.actorName}</p>
+            </div>
+            
+            <p style="text-align: center; margin-top: 30px;">
+              <a href="${data.requestUrl}" style="background-color: #dc2626; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">View Request Now</a>
+            </p>
+            
+            ${emailFooter(data.requestId, data.requestNumber)}
+          </div>
+        `,
+        text: `⚠️ REQUEST ESCALATED ⚠️\n\nHello,\n\nURGENT: A request has been escalated and requires immediate attention:\n\nTitle: ${data.requestTitle}\nSubmitted by: ${data.requesterName}\nRequest Number: ${data.requestNumber}\nEscalated by: ${data.actorName}\n\nView details: ${data.requestUrl}\n\nReference: ${data.requestNumber}`
       };
 
     default:
