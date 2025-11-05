@@ -178,7 +178,7 @@ export function DynamicDepartmentRequestForm({
           user_id: user.id,
           brand_id: brandId || null,
           location_id: locationId || null,
-          status: 'submitted',
+          status: 'open',
           priority: formData.priority || formData.urgency || 'medium',
           currency: 'AUD',
         })

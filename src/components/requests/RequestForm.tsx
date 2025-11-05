@@ -69,7 +69,7 @@ export function RequestForm() {
           priority: formData.priority,
           brand_id: formData.brandId || null,
           location_id: formData.locationId || null,
-          status: 'submitted',
+          status: 'open',
           currency: 'USD',
         })
         .select()

@@ -93,7 +93,7 @@ export function TonerRequestForm() {
           urgency: values.urgency,
           site: values.site || null,
           description: values.description || null,
-          status: 'submitted',
+          status: 'open',
           priority: values.urgency === 'urgent' ? 'high' : values.urgency === 'high' ? 'medium' : 'low',
         })
         .select()

@@ -64,7 +64,7 @@ export function TemplatedDepartmentRequestForm({
           user_id: user.id,
           brand_id: brandId || null,
           location_id: locationId || null,
-          status: 'submitted',
+          status: 'open',
           priority: 'medium',
           currency: 'USD',
         })
