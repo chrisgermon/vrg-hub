@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2, Send, Paperclip } from 'lucide-react';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { RichTextEditorWithMentions } from '@/components/ui/rich-text-editor-with-mentions';
 import { FileDropzone, FileList } from '@/components/ui/file-dropzone';
+import { UserSearchResult } from '@/hooks/useUserSearch';
 
 interface RequestUpdateFormProps {
   requestId: string;
@@ -20,6 +21,7 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [showAttachments, setShowAttachments] = useState(false);
+  const [mentionedUsers, setMentionedUsers] = useState<UserSearchResult[]>([]);
 
   // Add comment mutation
   const addComment = useMutation({
@@ -59,18 +61,35 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
 
       if (error) throw error;
 
-      // Update ticket status to "in progress" if it's currently "new" or "open"
+      // Update ticket status and add mentioned users to CC
       const { data: ticket } = await supabase
         .from('tickets')
-        .select('status')
+        .select('status, cc_emails')
         .eq('id', requestId)
         .single();
 
-      if (ticket && (ticket.status === 'new' || ticket.status === 'open')) {
-        await supabase
-          .from('tickets')
-          .update({ status: 'in_progress' })
-          .eq('id', requestId);
+      if (ticket) {
+        const updates: any = {};
+        
+        // Update status if needed
+        if (ticket.status === 'new' || ticket.status === 'open') {
+          updates.status = 'in_progress';
+        }
+
+        // Add mentioned users to CC
+        if (mentionedUsers.length > 0) {
+          const currentCcEmails = ticket.cc_emails || [];
+          const mentionedEmails = mentionedUsers.map(u => u.email);
+          const newCcEmails = [...new Set([...currentCcEmails, ...mentionedEmails])];
+          updates.cc_emails = newCcEmails;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await supabase
+            .from('tickets')
+            .update(updates)
+            .eq('id', requestId);
+        }
       }
 
       // Send email notification in background (non-blocking)
@@ -85,9 +104,11 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['request-comments', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
       setContent('');
       setAttachments([]);
       setShowAttachments(false);
+      setMentionedUsers([]);
       toast.success('Update added successfully');
     },
     onError: (error: any) => {
@@ -119,10 +140,11 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <RichTextEditor
+          <RichTextEditorWithMentions
             value={content}
             onChange={setContent}
-            placeholder="Add a comment or update..."
+            onMentionedUsersChange={setMentionedUsers}
+            placeholder="Add a comment or update... Type @ to mention someone"
             className="min-h-[200px]"
           />
           
