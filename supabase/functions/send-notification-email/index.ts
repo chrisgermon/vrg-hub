@@ -286,6 +286,52 @@ const getEmailTemplate = (template: string, data: any): { html: string; text: st
         text: `New User Account Request\n\nName: ${data.firstName} ${data.lastName}\nEmail: ${data.email}\nDepartment: ${data.department || 'N/A'}\nJob Title: ${data.jobTitle || 'N/A'}\n\nRequested by: ${data.requesterName}\n\nView in admin panel: ${appUrl}/admin\n\nReference: ${data.requestNumber || data.requestId}`
       };
 
+    case 'welcome_email':
+      return {
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            ${emailHeader}
+            <h2 style="color: #2563eb;">Welcome to Vision Radiology Hub! 🎉</h2>
+            <p>Hello ${data.userName},</p>
+            <p>Welcome to Vision Radiology's internal hub! We're excited to have you on board.</p>
+            
+            <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+              <h3>Getting Started</h3>
+              <p>Here's what you can do with the hub:</p>
+            </div>
+
+            <div style="margin: 20px 0;">
+              <h4 style="color: #2563eb;">📋 Submit Requests</h4>
+              <p style="margin-left: 20px;">Request hardware, software, marketing materials, and more. Track your requests in real-time and receive email updates on their status.</p>
+              
+              <h4 style="color: #2563eb; margin-top: 20px;">📧 Marketing Campaigns</h4>
+              <p style="margin-left: 20px;">Create and manage email and fax campaigns. Use our drag-and-drop editor to design professional newsletters and announcements.</p>
+              
+              <h4 style="color: #2563eb; margin-top: 20px;">📚 Knowledge Base</h4>
+              <p style="margin-left: 20px;">Access company documents, policies, and training materials all in one place.</p>
+              
+              <h4 style="color: #2563eb; margin-top: 20px;">🔔 Real-time Notifications</h4>
+              <p style="margin-left: 20px;">Stay updated with instant notifications for request updates, approvals, and important announcements.</p>
+              
+              <h4 style="color: #2563eb; margin-top: 20px;">👥 Collaboration</h4>
+              <p style="margin-left: 20px;">Work together with your team using comments, assignments, and shared workflows.</p>
+            </div>
+
+            <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
+              <h4>Need Help?</h4>
+              <p>If you have any questions or need assistance, please don't hesitate to reach out to the IT team or your manager.</p>
+            </div>
+            
+            <p style="text-align: center; margin-top: 30px;">
+              <a href="${appUrl}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Access the Hub</a>
+            </p>
+            
+            ${emailFooter()}
+          </div>
+        `,
+        text: `Welcome to Vision Radiology Hub!\n\nHello ${data.userName},\n\nWelcome to Vision Radiology's internal hub!\n\nKey Features:\n- Submit Requests: Hardware, software, marketing materials\n- Marketing Campaigns: Email and fax campaigns\n- Knowledge Base: Company documents and policies\n- Real-time Notifications: Stay updated on everything\n- Collaboration: Work together with your team\n\nAccess the hub: ${appUrl}\n\nNeed help? Contact IT or your manager.`
+      };
+
     case 'marketing_request_submitted':
       return {
         html: `

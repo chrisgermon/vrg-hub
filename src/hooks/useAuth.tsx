@@ -101,6 +101,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             supabase.functions.invoke('log-login').catch((logError) => {
               console.error('Error logging login:', logError);
             });
+            
+            // Send welcome email on first login
+            supabase.functions.invoke('send-welcome-email').catch((welcomeError) => {
+              console.error('Error sending welcome email:', welcomeError);
+            });
           }, 0);
         }
         
