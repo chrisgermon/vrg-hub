@@ -485,7 +485,8 @@ export default function RequestDetail() {
                     </div>
                   )}
 
-                  {!isDepartmentRequest && (
+                  {/* Show company and location for all request types */}
+                  {(request.brands?.display_name || request.locations?.name) && (
                     <div className="flex gap-4 text-sm">
                       {request.brands?.display_name && (
                         <div>
