@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { formatRequestId, formatRequestIdShort, getDescriptionText } from '@/lib/requestUtils';
+import { formatRequestId, getDescriptionText } from '@/lib/requestUtils';
 
 export default function Requests() {
   const navigate = useNavigate();
@@ -202,7 +202,7 @@ export default function Requests() {
                 onClick={() => {
                   const num = (selectedRequest as any)?.request_number;
                   if (num) {
-                    navigate(`/request/${formatRequestIdShort(num).toLowerCase()}`);
+                    navigate(`/request/${formatRequestId(num).toLowerCase()}`);
                   } else {
                     navigate(`/requests/${selectedRequestId}`);
                   }

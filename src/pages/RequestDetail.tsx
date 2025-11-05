@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2, Mail, X, UserCog, Edit, Reply } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { formatRequestId, formatRequestIdShort, getDescriptionText } from '@/lib/requestUtils';
+import { formatRequestId, getDescriptionText } from '@/lib/requestUtils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -192,7 +192,7 @@ export default function RequestDetail() {
     const hasNum = (request as any).request_number;
     const isUuidPath = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestParam);
     if (hasNum && isUuidPath) {
-      const pretty = `/request/${formatRequestIdShort((request as any).request_number).toLowerCase()}`;
+      const pretty = `/request/${formatRequestId((request as any).request_number).toLowerCase()}`;
       navigate(pretty, { replace: true });
     }
   }, [request, requestParam, navigate]);

@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Loader2, Eye, Clock, CheckCircle, XCircle, Package, Search, ArrowUpDown, RefreshCw, Inbox } from 'lucide-react';
 import { formatAUDate } from '@/lib/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
-import { formatRequestIdShort, formatRequestId } from '@/lib/requestUtils';
+import { formatRequestId } from '@/lib/requestUtils';
 
 interface UnifiedRequest {
   id: string;
@@ -280,7 +280,7 @@ export function UnifiedRequestsList({ filterType = 'all' }: UnifiedRequestsListP
                       onClick={() => navigate(`/request/${requestNum}`)}
                     >
                       <TableCell className="font-mono text-xs">
-                        {request.request_number ? formatRequestIdShort(request.request_number) : 'N/A'}
+                        {request.request_number ? formatRequestId(request.request_number) : 'N/A'}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="capitalize">

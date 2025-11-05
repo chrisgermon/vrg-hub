@@ -14,7 +14,7 @@ import { formatAUDate } from '@/lib/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { useRequestDelete } from '@/hooks/useRequestDelete';
 import { RequestStatus } from '@/types/request';
-import { formatRequestIdShort, formatRequestId } from '@/lib/requestUtils';
+import { formatRequestId } from '@/lib/requestUtils';
 
 interface Request {
   id: string;
@@ -286,7 +286,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
               <TableBody>
                 {filteredAndSortedRequests.map((request) => {
                   const requestNum = request.request_number 
-                    ? formatRequestIdShort(request.request_number).toLowerCase()
+                    ? formatRequestId(request.request_number).toLowerCase()
                     : request.id;
                   return (
                     <TableRow 
@@ -312,7 +312,7 @@ export function RequestsList({ onRequestSelect, selectedRequestId, filterType = 
                           }
                         }}
                       >
-                        {request.request_number ? formatRequestIdShort(request.request_number) : 'N/A'}
+                        {request.request_number ? formatRequestId(request.request_number) : 'N/A'}
                       </TableCell>
                     <TableCell 
                       className="font-medium cursor-pointer"
