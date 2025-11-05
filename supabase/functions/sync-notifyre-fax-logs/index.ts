@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
       const stats = {
         delivered: campaignFaxes.filter(f => ['delivered', 'sent', 'successful'].includes((f.status || '').toLowerCase())).length,
         failed: campaignFaxes.filter(f => ['failed', 'error'].includes((f.status || '').toLowerCase())).length,
-        pending: campaignFaxes.filter(f => ['pending', 'processing', 'queued'].includes((f.status || '').toLowerCase())).length,
+        pending: campaignFaxes.filter(f => ['pending', 'processing', 'queued', 'scheduled'].includes((f.status || '').toLowerCase())).length,
       };
 
       // Extract client reference and message reference from the first fax in the campaign
