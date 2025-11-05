@@ -59,6 +59,20 @@ export function RequestUpdateForm({ requestId }: RequestUpdateFormProps) {
 
       if (error) throw error;
 
+      // Update ticket status to "in progress" if it's currently "new" or "open"
+      const { data: ticket } = await supabase
+        .from('tickets')
+        .select('status')
+        .eq('id', requestId)
+        .single();
+
+      if (ticket && (ticket.status === 'new' || ticket.status === 'open')) {
+        await supabase
+          .from('tickets')
+          .update({ status: 'in_progress' })
+          .eq('id', requestId);
+      }
+
       // Send email notification via edge function
       await supabase.functions.invoke('notify-comment', {
         body: {
