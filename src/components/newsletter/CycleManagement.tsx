@@ -10,9 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { exportNewsletterToWord } from '@/lib/exportToWord';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -151,6 +152,68 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
       toast.error('Failed to delete cycle');
     },
   });
+
+  const handleExportCycle = async (cycleId: string) => {
+    try {
+      // Fetch all submissions for this cycle
+      const { data: submissions, error: submissionsError } = await supabase
+        .from('newsletter_submissions')
+        .select('*')
+        .eq('cycle_id', cycleId)
+        .order('department');
+
+      if (submissionsError) throw submissionsError;
+
+      if (!submissions || submissions.length === 0) {
+        toast.error('No submissions found for this cycle');
+        return;
+      }
+
+      // Fetch all contributor profiles
+      const contributorIds = [...new Set(submissions.map(s => s.contributor_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', contributorIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+
+      // Fetch all department templates
+      const departments = [...new Set(submissions.map(s => s.department))];
+      const { data: templates } = await supabase
+        .from('department_section_templates')
+        .select('*')
+        .in('department_name', departments);
+
+      const templateMap = new Map(templates?.map(t => [t.department_name, t.sections]) || []);
+
+      // Get cycle info
+      const cycle = cycles.find(c => c.id === cycleId);
+      const cycleName = cycle?.name || 'Newsletter';
+
+      // Combine all submissions into one document
+      for (let i = 0; i < submissions.length; i++) {
+        const submission = submissions[i];
+        const sectionsData = (submission.sections_data || []) as any[];
+        const departmentSections = (templateMap.get(submission.department) as any[]) || [];
+
+        await exportNewsletterToWord(
+          submission.title,
+          submission.department,
+          profileMap.get(submission.contributor_id) || 'Unknown',
+          sectionsData,
+          departmentSections,
+          submission.no_update_this_month,
+          i === 0 ? cycleName : undefined // Only use cycle name for first export
+        );
+      }
+
+      toast.success('All submissions exported to Word documents');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export cycle submissions');
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -303,6 +366,14 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleExportCycle(cycle.id)}
+                        title="Export all submissions to Word"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"

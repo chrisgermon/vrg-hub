@@ -113,7 +113,8 @@ export async function exportNewsletterToWord(
   contributorName: string,
   sectionsData: SectionData[],
   departmentSections: DepartmentSection[],
-  noUpdateThisMonth: boolean = false
+  noUpdateThisMonth: boolean = false,
+  cycleName?: string
 ) {
   try {
     const sections: Paragraph[] = [];
