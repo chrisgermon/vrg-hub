@@ -36,18 +36,28 @@ const handler = async (req: Request): Promise<Response> => {
     
     const { data: ticketData } = await supabase
       .from('tickets')
-      .select('*, profiles!user_id(email, full_name)')
+      .select('*')
       .eq('id', requestId)
       .maybeSingle();
 
     if (ticketData) {
-      request = ticketData;
+      // Fetch the user's profile separately
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', ticketData.user_id)
+        .maybeSingle();
+      
+      request = {
+        ...ticketData,
+        profiles: userProfile
+      };
       ccEmails = ticketData.cc_emails || [];
     } else {
       const tableName = requestType === 'hardware' ? 'hardware_requests' : 'department_requests';
       const { data: requestData, error: requestError } = await supabase
         .from(tableName)
-        .select('*, profiles!user_id(email, full_name)')
+        .select('*')
         .eq('id', requestId)
         .single();
 
@@ -55,7 +65,17 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error(`Request not found: ${requestError?.message}`);
       }
       
-      request = requestData;
+      // Fetch the user's profile separately
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', requestData.user_id)
+        .maybeSingle();
+      
+      request = {
+        ...requestData,
+        profiles: userProfile
+      };
       ccEmails = requestData.cc_emails || [];
     }
 
@@ -94,16 +114,23 @@ const handler = async (req: Request): Promise<Response> => {
     // Notify watchers (except the actor)
     const { data: watchers } = await supabase
       .from('ticket_watchers')
-      .select('user_id, profiles:user_id(email)')
-      .eq('request_id', requestId)
-      .eq('request_type', requestType);
+      .select('user_id')
+      .eq('ticket_id', requestId);
 
     if (watchers) {
-      watchers.forEach((watcher: any) => {
-        if (watcher.user_id !== actorId && watcher.profiles?.email) {
-          recipients.add(watcher.profiles.email);
+      for (const watcher of watchers) {
+        if (watcher.user_id !== actorId) {
+          const { data: watcherProfile } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', watcher.user_id)
+            .maybeSingle();
+          
+          if (watcherProfile?.email) {
+            recipients.add(watcherProfile.email);
+          }
         }
-      });
+      }
     }
     
     // Add CC emails to recipients
@@ -118,21 +145,33 @@ const handler = async (req: Request): Promise<Response> => {
     // Notify users assigned via request_notification_assignments
     const { data: notificationAssignments } = await supabase
       .from('request_notification_assignments')
-      .select('user_id, notification_level, profiles:user_id(email)')
-      .eq('request_type_id', request.request_type_id);
+      .select('assignee_ids, notification_level')
+      .eq('request_type', requestType);
 
-    if (notificationAssignments) {
-      notificationAssignments.forEach((assignment: any) => {
+    if (notificationAssignments && notificationAssignments.length > 0) {
+      for (const assignment of notificationAssignments) {
         // Check notification level
         const shouldNotify = 
           assignment.notification_level === 'all' ||
           (assignment.notification_level === 'new_only' && eventType === 'created') ||
           (assignment.notification_level === 'updates_only' && eventType !== 'created');
 
-        if (shouldNotify && assignment.user_id !== actorId && assignment.profiles?.email) {
-          recipients.add(assignment.profiles.email);
+        if (shouldNotify && assignment.assignee_ids && Array.isArray(assignment.assignee_ids)) {
+          for (const userId of assignment.assignee_ids) {
+            if (userId !== actorId) {
+              const { data: assigneeProfile } = await supabase
+                .from('profiles')
+                .select('email')
+                .eq('id', userId)
+                .maybeSingle();
+              
+              if (assigneeProfile?.email) {
+                recipients.add(assigneeProfile.email);
+              }
+            }
+          }
         }
-      });
+      }
     }
 
     if (recipients.size === 0) {
