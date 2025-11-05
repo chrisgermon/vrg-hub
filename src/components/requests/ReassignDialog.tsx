@@ -135,19 +135,22 @@ export function ReassignDialog({
           await supabase.functions.invoke('send-notification-email', {
             body: {
               to: assignedUser.email,
-              subject: `Request Assigned: ${requestData.title}`,
+              subject: `Request Reassigned: ${requestData.title}`,
               template: 'request_reassigned',
               data: {
                 assigneeName: assignedUser.full_name,
+                newAssignee: assignedUser.full_name,
+                oldAssignee: users.find(u => u.id === currentAssignee)?.full_name,
+                actorName: profile?.full_name || 'System',
                 requestTitle: requestData.title,
                 requesterName: requesterProfile?.full_name || 'Unknown',
-                reassignedBy: profile?.full_name || 'System',
                 requestType: (requestData as any).request_types?.name,
                 priority: requestData.priority,
                 status: requestData.status,
                 description: requestData.description,
                 requestId: requestId,
                 requestNumber: `VRG-${requestData.request_number}`,
+                requestUrl: `${window.location.origin}/requests/${requestId}`,
               },
             },
           });
