@@ -14,11 +14,13 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useCompanyFeatures } from '@/hooks/useCompanyFeatures';
+import { useAccessControl } from '@/hooks/useAccessControl';
 import { APP_VERSION } from '@/lib/version';
 
 const Help = () => {
   const [showIndex, setShowIndex] = useState(true);
   const { isFeatureEnabled } = useCompanyFeatures();
+  const { hasPermission, hasAnyPermission, isSuperAdmin } = useAccessControl();
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -27,25 +29,67 @@ const Help = () => {
     }
   };
 
-  // Map sections to their required features
+  // Map sections to their required features and permissions
   const sectionFeatureMap: Record<string, string | null> = {
-    'getting-started': null, // Always show
-    'request-types': null, // Always show (parent section)
-    'request-workflow': null, // Always show
-    'approvals': null, // Always show
-    'directory': null, // Always show
-    'news': null, // Always show
+    'getting-started': null,
+    'request-types': null,
+    'request-workflow': null,
+    'approvals': null,
+    'directory': null,
+    'news': null,
     'newsletter': 'monthly_newsletter',
-    'knowledge-base': null, // Always show
+    'knowledge-base': null,
     'modality': 'modality_management',
-    'documentation': null, // Always show
+    'documentation': null,
     'fax': 'fax_campaigns',
-    'catalog': null, // Always show
-    'permissions': null, // Always show
-    'notifications': null, // Always show
-    'settings': null, // Always show
-    'admin': null, // Always show
-    'faq': null, // Always show
+    'catalog': null,
+    'permissions': null,
+    'notifications': null,
+    'settings': null,
+    'admin': null,
+    'faq': null,
+  };
+
+  // Map sections to required permissions
+  const sectionPermissionMap: Record<string, string[] | null> = {
+    'getting-started': null, // Everyone
+    'request-types': null, // Everyone (filtered by request type permissions)
+    'request-workflow': null, // Everyone
+    'approvals': ['approve_hardware_requests', 'approve_user_account_requests', 'approve_marketing_requests', 'approve_newsletter_submissions'], // Any approval permission
+    'directory': null, // Everyone
+    'news': ['view_news', 'create_news', 'edit_news'], // Anyone who can view or manage news
+    'newsletter': ['submit_newsletter', 'manage_newsletter_cycle'], // Newsletter participants
+    'knowledge-base': null, // Everyone
+    'modality': ['view_modality_details'], // Modality viewers
+    'documentation': ['view_sharepoint_documents'], // SharePoint access
+    'fax': ['view_fax_campaigns'], // Fax campaign viewers
+    'catalog': null, // Everyone
+    'permissions': ['manage_company_users', 'manage_role_permissions'], // User/role managers
+    'notifications': null, // Everyone
+    'settings': ['configure_company_settings', 'manage_company_features', 'manage_office365_integration'], // Settings managers
+    'admin': null, // Checked separately by role
+    'faq': null, // Everyone
+  };
+
+  // Check if user has permission for a section
+  const hasAccessToSection = (sectionId: string): boolean => {
+    // Check feature flag first
+    const requiredFeature = sectionFeatureMap[sectionId];
+    if (requiredFeature && !isFeatureEnabled(requiredFeature as any)) {
+      return false;
+    }
+
+    // Check permissions
+    const requiredPermissions = sectionPermissionMap[sectionId];
+    if (!requiredPermissions) return true; // No permission required
+
+    // Special case for admin section - only super admins
+    if (sectionId === 'admin') {
+      return isSuperAdmin;
+    }
+
+    // User needs at least one of the required permissions
+    return hasAnyPermission(requiredPermissions);
   };
 
   const allIndexSections = [
@@ -68,19 +112,20 @@ const Help = () => {
     { id: 'faq', label: 'Frequently Asked Questions', icon: HelpCircle },
   ];
 
-  // Filter sections based on enabled features
+  // Filter sections based on enabled features and permissions
   const indexSections = useMemo(() => {
-    return allIndexSections.filter(section => {
-      const requiredFeature = sectionFeatureMap[section.id];
-      if (!requiredFeature) return true; // Always show if no feature required
-      return isFeatureEnabled(requiredFeature as any);
-    });
-  }, [isFeatureEnabled]);
+    return allIndexSections.filter(section => hasAccessToSection(section.id));
+  }, [isFeatureEnabled, hasAnyPermission, isSuperAdmin]);
 
   // Helper to check if a request type should be shown
-  const shouldShowRequestType = (featureKey: string | null) => {
-    if (!featureKey) return true;
-    return isFeatureEnabled(featureKey as any);
+  const shouldShowRequestType = (featureKey: string | null, createPermission?: string) => {
+    // Check feature flag
+    if (featureKey && !isFeatureEnabled(featureKey as any)) return false;
+    
+    // Check create permission if specified
+    if (createPermission && !hasPermission(createPermission)) return false;
+    
+    return true;
   };
 
   return (
@@ -168,7 +213,7 @@ const Help = () => {
               </CardHeader>
               <CardContent>
                 <Accordion type="single" collapsible className="w-full">
-                  {shouldShowRequestType('hardware_requests') && (
+                  {shouldShowRequestType('hardware_requests', 'create_hardware_request') && (
                     <AccordionItem value="hardware">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -190,7 +235,7 @@ const Help = () => {
                     </AccordionItem>
                   )}
 
-                  {shouldShowRequestType('user_accounts') && (
+                  {shouldShowRequestType('user_accounts', 'create_user_account_request') && (
                     <AccordionItem value="user-accounts">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -213,7 +258,7 @@ const Help = () => {
                     </AccordionItem>
                   )}
 
-                  {shouldShowRequestType('user_accounts') && (
+                  {shouldShowRequestType('user_accounts', 'create_user_offboarding_request') && (
                     <AccordionItem value="offboarding">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -236,7 +281,7 @@ const Help = () => {
                     </AccordionItem>
                   )}
 
-                  {shouldShowRequestType('marketing_requests') && (
+                  {shouldShowRequestType('marketing_requests', 'create_marketing_request') && (
                     <AccordionItem value="marketing">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -264,7 +309,7 @@ const Help = () => {
                     </AccordionItem>
                   )}
 
-                  {shouldShowRequestType('print_ordering') && (
+                  {shouldShowRequestType('print_ordering', 'create_toner_request') && (
                     <AccordionItem value="print-orders">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -286,7 +331,7 @@ const Help = () => {
                     </AccordionItem>
                   )}
 
-                  {shouldShowRequestType('department_requests') && (
+                  {shouldShowRequestType('department_requests', 'create_facility_services_request') && (
                     <AccordionItem value="facility-services">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -308,7 +353,7 @@ const Help = () => {
                     </AccordionItem>
                   )}
 
-                  {shouldShowRequestType('department_requests') && (
+                  {shouldShowRequestType('department_requests', 'create_office_services_request') && (
                     <AccordionItem value="office-services">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -330,7 +375,7 @@ const Help = () => {
                     </AccordionItem>
                   )}
 
-                  {shouldShowRequestType('department_requests') && (
+                  {shouldShowRequestType('department_requests', 'create_accounts_payable_request') && (
                     <AccordionItem value="accounts-payable">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -352,7 +397,7 @@ const Help = () => {
                     </AccordionItem>
                   )}
 
-                  {shouldShowRequestType('department_requests') && (
+                  {shouldShowRequestType('department_requests', 'create_finance_request') && (
                     <AccordionItem value="finance">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -374,7 +419,7 @@ const Help = () => {
                     </AccordionItem>
                   )}
 
-                  {shouldShowRequestType('department_requests') && (
+                  {shouldShowRequestType('department_requests', 'create_technology_training_request') && (
                     <AccordionItem value="tech-training">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -396,7 +441,7 @@ const Help = () => {
                     </AccordionItem>
                   )}
 
-                  {shouldShowRequestType('department_requests') && (
+                  {shouldShowRequestType('department_requests', 'create_it_service_desk_request') && (
                     <AccordionItem value="it-service-desk">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -419,7 +464,7 @@ const Help = () => {
                     </AccordionItem>
                   )}
 
-                  {shouldShowRequestType('department_requests') && (
+                  {shouldShowRequestType('department_requests', 'create_hr_request') && (
                     <AccordionItem value="hr">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -531,6 +576,7 @@ const Help = () => {
           </section>
 
           {/* Approvals & Management */}
+          {hasAccessToSection('approvals') && (
           <section id="approvals">
             <Card>
               <CardHeader>
@@ -591,6 +637,7 @@ const Help = () => {
               </CardContent>
             </Card>
           </section>
+          )}
 
           {/* Company Directory */}
           <section id="directory">
@@ -638,6 +685,7 @@ const Help = () => {
           </section>
 
           {/* News Management */}
+          {hasAccessToSection('news') && (
           <section id="news">
             <Card>
               <CardHeader>
@@ -681,9 +729,10 @@ const Help = () => {
               </CardContent>
             </Card>
           </section>
+          )}
 
           {/* Newsletter */}
-          {shouldShowRequestType('monthly_newsletter') && (
+          {hasAccessToSection('newsletter') && (
             <section id="newsletter">
               <Card>
                 <CardHeader>
@@ -809,7 +858,7 @@ const Help = () => {
           </section>
 
           {/* Modality Management */}
-          {shouldShowRequestType('modality_management') && (
+          {hasAccessToSection('modality') && (
             <section id="modality">
               <Card>
                 <CardHeader>
@@ -835,21 +884,6 @@ const Help = () => {
                       </AccordionContent>
                     </AccordionItem>
 
-                    <AccordionItem value="modality-ai">
-                      <AccordionTrigger>AI Import</AccordionTrigger>
-                      <AccordionContent className="space-y-3">
-                        <p className="text-muted-foreground">
-                          Import configurations using AI-powered parsing.
-                        </p>
-                        <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                          <li>Paste data from Excel or text files</li>
-                          <li>AI automatically parses structure</li>
-                          <li>Review and confirm before saving</li>
-                          <li>Bulk import multiple clinics at once</li>
-                        </ul>
-                      </AccordionContent>
-                    </AccordionItem>
-
                     <AccordionItem value="modality-share">
                       <AccordionTrigger>Shareable Links</AccordionTrigger>
                       <AccordionContent className="space-y-3">
@@ -871,6 +905,7 @@ const Help = () => {
           )}
 
           {/* Documentation & SharePoint */}
+          {hasAccessToSection('documentation') && (
           <section id="documentation">
             <Card>
               <CardHeader>
@@ -913,9 +948,10 @@ const Help = () => {
               </CardContent>
             </Card>
           </section>
+          )}
 
           {/* Fax Campaigns */}
-          {shouldShowRequestType('fax_campaigns') && (
+          {hasAccessToSection('fax') && (
             <section id="fax">
               <Card>
                 <CardHeader>
@@ -948,6 +984,7 @@ const Help = () => {
           )}
 
           {/* Permissions */}
+          {hasAccessToSection('permissions') && (
           <section id="permissions">
             <Card>
               <CardHeader>
@@ -1007,6 +1044,7 @@ const Help = () => {
               </CardContent>
             </Card>
           </section>
+          )}
 
           {/* Notifications */}
           <section id="notifications">
@@ -1071,6 +1109,7 @@ const Help = () => {
           </section>
 
           {/* Settings */}
+          {hasAccessToSection('settings') && (
           <section id="settings">
             <Card>
               <CardHeader>
@@ -1162,8 +1201,10 @@ const Help = () => {
               </CardContent>
             </Card>
           </section>
+          )}
 
           {/* Platform Admin */}
+          {hasAccessToSection('admin') && (
           <section id="admin">
             <Card>
               <CardHeader>
@@ -1256,6 +1297,7 @@ const Help = () => {
               </CardContent>
             </Card>
           </section>
+          )}
 
           {/* FAQ */}
           <section id="faq">
@@ -1307,15 +1349,6 @@ const Help = () => {
                     <AccordionContent>
                       Go to "My Requests", click on any request, and look for the "Email Notifications" or "Email Logs" 
                       section. This shows all emails sent for that request, including recipients, timestamps, and delivery status.
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="faq-7">
-                    <AccordionTrigger>How do I use the AI Import feature in Modality Management?</AccordionTrigger>
-                    <AccordionContent>
-                      In Modality Management, click "Import with AI", select your company, then paste configuration data 
-                      from Excel or text files. The AI will automatically parse and structure the data into clinic configs, 
-                      DICOM servers, and modalities. Review the results before saving.
                     </AccordionContent>
                   </AccordionItem>
 
