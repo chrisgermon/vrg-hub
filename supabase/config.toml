@@ -3,6 +3,9 @@ project_id = "qnavtvxemndvrutnavvm"
 [functions.send-welcome-email]
 verify_jwt = true
 
+[functions.sync-campaigns-scheduled]
+verify_jwt = false
+
 [functions.azure-login-initiate]
 verify_jwt = false
 
