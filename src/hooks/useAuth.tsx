@@ -102,10 +102,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.error('Error logging login:', logError);
             });
             
-            // Send welcome email on first login
-            supabase.functions.invoke('send-welcome-email').catch((welcomeError) => {
-              console.error('Error sending welcome email:', welcomeError);
-            });
+            // Send welcome email on first login - ensure token is attached explicitly
+            (async () => {
+              try {
+                const { data: { session: currentSession } } = await supabase.auth.getSession();
+                const token = currentSession?.access_token;
+                if (!token) return;
+                await supabase.functions.invoke('send-welcome-email', {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+              } catch (welcomeError) {
+                console.error('Error sending welcome email:', welcomeError);
+              }
+            })();
           }, 0);
         }
         

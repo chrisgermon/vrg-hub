@@ -26,7 +26,7 @@ serve(async (req) => {
       });
     }
 
-    // Extract JWT token and decode it to get user ID
+    // Extract JWT token and decode it to get user ID (handle base64url)
     const jwt = authHeader.replace('Bearer ', '');
     const parts = jwt.split('.');
     if (parts.length !== 3) {
@@ -37,8 +37,11 @@ serve(async (req) => {
       });
     }
 
-    const payload = JSON.parse(atob(parts[1]));
-    const userId = payload.sub;
+    const b64url = parts[1];
+    const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+    const payload = JSON.parse(atob(padded));
+    const userId = payload.sub as string;
 
     if (!userId) {
       console.error('[send-welcome-email] No user ID in JWT');
