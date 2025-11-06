@@ -5,6 +5,7 @@ import { Mail, FileText, FileBarChart } from "lucide-react";
 import { MailchimpCampaignsTab } from "@/components/marketing/MailchimpCampaignsTab";
 import { NotifyreFaxCampaigns } from "@/components/notifyre/NotifyreFaxCampaigns";
 import { CampaignReportGenerator } from "@/components/marketing/CampaignReportGenerator";
+import { ScheduledReportsManager } from "@/components/marketing/ScheduledReportsManager";
 
 const MarketingCampaigns = () => {
   const [reportDialogOpen, setReportDialogOpen] = React.useState(false);
@@ -24,7 +25,9 @@ const MarketingCampaigns = () => {
         </Button>
       </div>
 
-      <Tabs defaultValue="email" className="w-full">
+      <ScheduledReportsManager />
+
+      <Tabs defaultValue="email" className="w-full mt-6">
         <TabsList>
           <TabsTrigger value="email" className="gap-2">
             <Mail className="h-4 w-4" />
