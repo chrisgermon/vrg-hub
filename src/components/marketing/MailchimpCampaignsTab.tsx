@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatAUDateTimeZoned, formatAUDateZoned, formatAUTimeZoned } from "@/lib/dateUtils";
 import { CampaignBrandLocationSelect } from "./CampaignBrandLocationSelect";
+import { sanitizeRichHtml } from "@/lib/sanitizer";
 
 interface Campaign {
   id: string;
@@ -371,7 +372,7 @@ export const MailchimpCampaignsTab = () => {
             ) : (
               <div 
                 className="border rounded-lg bg-background p-4"
-                dangerouslySetInnerHTML={{ __html: campaignHtml }}
+                dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(campaignHtml) }}
               />
             )}
           </div>
