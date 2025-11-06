@@ -10,6 +10,7 @@ import { X, CheckCircle, XCircle, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDepartmentSections } from '@/lib/newsletterDepartments';
 import { exportNewsletterToWord } from '@/lib/exportToWord';
+import { sanitizeRichHtml } from '@/lib/sanitizer';
 
 interface SectionData {
   section: string;
@@ -182,7 +183,7 @@ export function SubmissionPreview({
                   </h3>
                   <div 
                     className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg"
-                    dangerouslySetInnerHTML={{ __html: sectionData.content }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(sectionData.content) }}
                   />
                 </div>
               );

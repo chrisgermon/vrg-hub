@@ -12,6 +12,21 @@ serve(async (req) => {
   }
 
   try {
+    // Validate secret header for cron job authentication
+    const authHeader = req.headers.get('x-cron-secret');
+    const expectedSecret = Deno.env.get('CRON_SECRET');
+    
+    if (!authHeader || authHeader !== expectedSecret) {
+      console.error('[sync-campaigns-scheduled] Unauthorized access attempt');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     console.log('[sync-campaigns-scheduled] Starting automated campaign sync');
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -145,7 +160,7 @@ serve(async (req) => {
     console.error('[sync-campaigns-scheduled] Fatal error:', error);
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Campaign sync failed',
         timestamp: new Date().toISOString(),
       }),
       {

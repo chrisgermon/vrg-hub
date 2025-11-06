@@ -79,7 +79,11 @@ async function handleNewRequest(supabase: any, emailData: Partial<IncomingEmail>
   try {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+      console.error('[handle-incoming-email] LOVABLE_API_KEY not configured');
+      return new Response(
+        JSON.stringify({ error: 'Service configuration error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     const senderEmail = emailData.sender?.toLowerCase() || '';
