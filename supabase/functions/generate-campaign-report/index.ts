@@ -54,30 +54,36 @@ interface FaxCampaign {
 }
 
 const getDateRange = (timeframe: string) => {
+  // Use Melbourne timezone for consistent date calculations
+  const melbourneOffset = 11 * 60; // UTC+11 in minutes
   const now = new Date();
-  const startDate = new Date();
-  const endDate = new Date();
+  
+  // Convert current time to Melbourne time
+  const melbourneNow = new Date(now.getTime() + (melbourneOffset * 60 * 1000) + (now.getTimezoneOffset() * 60 * 1000));
+  
+  let startDate = new Date(melbourneNow);
+  let endDate = new Date(melbourneNow);
 
   switch (timeframe) {
     case 'this_week':
-      // Start of this week (Monday)
-      const dayOfWeek = now.getDay();
+      // Start of this week (Monday) in Melbourne time
+      const dayOfWeek = melbourneNow.getDay();
       const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      startDate.setDate(now.getDate() + diffToMonday);
+      startDate.setDate(melbourneNow.getDate() + diffToMonday);
       startDate.setHours(0, 0, 0, 0);
       endDate.setHours(23, 59, 59, 999);
       break;
 
     case 'last_week':
-      // Start of last week (Monday)
-      const lastWeekStart = new Date(now);
-      const daysToLastMonday = (now.getDay() === 0 ? 7 : now.getDay()) + 6;
-      lastWeekStart.setDate(now.getDate() - daysToLastMonday);
+      // Start of last week (Monday) in Melbourne time
+      const lastWeekStart = new Date(melbourneNow);
+      const daysToLastMonday = (melbourneNow.getDay() === 0 ? 7 : melbourneNow.getDay()) + 6;
+      lastWeekStart.setDate(melbourneNow.getDate() - daysToLastMonday);
       lastWeekStart.setHours(0, 0, 0, 0);
-      startDate.setTime(lastWeekStart.getTime());
+      startDate = new Date(lastWeekStart);
       
       // End of last week (Sunday)
-      endDate.setTime(lastWeekStart.getTime());
+      endDate = new Date(lastWeekStart);
       endDate.setDate(lastWeekStart.getDate() + 6);
       endDate.setHours(23, 59, 59, 999);
       break;
@@ -89,20 +95,24 @@ const getDateRange = (timeframe: string) => {
       break;
 
     case 'last_month':
-      startDate.setMonth(now.getMonth() - 1);
+      startDate.setMonth(melbourneNow.getMonth() - 1);
       startDate.setDate(1);
       startDate.setHours(0, 0, 0, 0);
-      endDate.setMonth(now.getMonth());
+      endDate.setMonth(melbourneNow.getMonth());
       endDate.setDate(0);
       endDate.setHours(23, 59, 59, 999);
       break;
 
     default:
-      startDate.setDate(now.getDate() - 7);
+      startDate.setDate(melbourneNow.getDate() - 7);
       startDate.setHours(0, 0, 0, 0);
   }
 
-  return { startDate: startDate.toISOString(), endDate: endDate.toISOString() };
+  // Convert back to UTC for database queries
+  const utcStartDate = new Date(startDate.getTime() - (melbourneOffset * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
+  const utcEndDate = new Date(endDate.getTime() - (melbourneOffset * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
+
+  return { startDate: utcStartDate.toISOString(), endDate: utcEndDate.toISOString() };
 };
 
 const formatDate = (dateStr: string) => {
