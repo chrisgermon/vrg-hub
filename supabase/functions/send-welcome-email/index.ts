@@ -16,29 +16,45 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get the authorization header from the request
-    const authHeader = req.headers.get('Authorization')!;
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    // Get the authenticated user
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
-      console.error('[send-welcome-email] Auth error:', userError);
+    // Get the authorization header and extract user ID from JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('[send-welcome-email] No authorization header');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('[send-welcome-email] Processing for user:', user.email);
+    // Extract JWT token and decode it to get user ID
+    const jwt = authHeader.replace('Bearer ', '');
+    const parts = jwt.split('.');
+    if (parts.length !== 3) {
+      console.error('[send-welcome-email] Invalid JWT format');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const payload = JSON.parse(atob(parts[1]));
+    const userId = payload.sub;
+
+    if (!userId) {
+      console.error('[send-welcome-email] No user ID in JWT');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('[send-welcome-email] Processing for user ID:', userId);
 
     // Check if this is the user's first login
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('last_login, full_name, email')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
 
     if (profileError) {
@@ -79,7 +95,7 @@ serve(async (req) => {
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ last_login: new Date().toISOString() })
-      .eq('id', user.id);
+      .eq('id', userId);
 
     if (updateError) {
       console.error('[send-welcome-email] Error updating last_login:', updateError);
