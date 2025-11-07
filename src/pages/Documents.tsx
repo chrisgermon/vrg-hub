@@ -34,6 +34,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Eye,
 } from "lucide-react";
 import {
   Card,
@@ -77,6 +78,8 @@ export default function Documents() {
   const [sortBy, setSortBy] = useState<"name" | "date" | "size">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [filterType, setFilterType] = useState<string>("all");
+  const [previewFile, setPreviewFile] = useState<DocumentFile | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
 
   useEffect(() => {
     if (user) {
@@ -186,6 +189,41 @@ export default function Documents() {
         variant: "destructive",
       });
     }
+  };
+
+  const isPreviewable = (filename: string, mimetype?: string) => {
+    const ext = getFileExtension(filename).toLowerCase();
+    const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp", "svg"];
+    const isPdf = ext === "pdf";
+    const isImage = imageExtensions.includes(ext) || mimetype?.startsWith("image/");
+    return isPdf || isImage;
+  };
+
+  const handlePreview = async (file: DocumentFile) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase.storage
+        .from("documents")
+        .createSignedUrl(`${user.id}/${file.name}`, 3600); // 1 hour expiry
+
+      if (error) throw error;
+
+      setPreviewUrl(data.signedUrl);
+      setPreviewFile(file);
+    } catch (error: any) {
+      console.error("Error previewing file:", error);
+      toast({
+        title: "Error",
+        description: "Failed to preview document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const closePreview = () => {
+    setPreviewFile(null);
+    setPreviewUrl("");
   };
 
   const handleDownload = async (file: DocumentFile) => {
@@ -495,6 +533,16 @@ export default function Documents() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
+                          {isPreviewable(file.name, file.metadata?.mimetype) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handlePreview(file)}
+                              title="Preview"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="ghost"
@@ -522,6 +570,36 @@ export default function Documents() {
           </Card>
         )}
       </div>
+
+      <Dialog open={!!previewFile} onOpenChange={closePreview}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{previewFile?.name}</DialogTitle>
+            <DialogDescription>
+              Document preview - {formatFileSize(previewFile?.metadata?.size || 0)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto">
+            {previewFile && previewUrl && (
+              <>
+                {getFileExtension(previewFile.name).toLowerCase() === "pdf" ? (
+                  <iframe
+                    src={previewUrl}
+                    className="w-full h-[70vh] border-0"
+                    title="PDF Preview"
+                  />
+                ) : (
+                  <img
+                    src={previewUrl}
+                    alt={previewFile.name}
+                    className="w-full h-auto object-contain"
+                  />
+                )}
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!deleteFile} onOpenChange={() => setDeleteFile(null)}>
         <AlertDialogContent>
