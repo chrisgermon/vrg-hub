@@ -32,6 +32,8 @@ import {
   Loader2,
   Search,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import {
   Card,
@@ -295,6 +297,24 @@ export default function Documents() {
     });
   };
 
+  const handleSort = (column: "name" | "date" | "size") => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortOrder("asc");
+    }
+  };
+
+  const getSortIcon = (column: "name" | "date" | "size") => {
+    if (sortBy !== column) return <ArrowUpDown className="h-4 w-4 opacity-50" />;
+    return sortOrder === "asc" ? (
+      <ArrowUp className="h-4 w-4" />
+    ) : (
+      <ArrowDown className="h-4 w-4" />
+    );
+  };
+
   const filteredAndSortedFiles = useMemo(() => {
     let filtered = files.filter((file) => {
       const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -418,10 +438,34 @@ export default function Documents() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[50px]"></TableHead>
-                    <TableHead>Name</TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleSort("name")}
+                        className="hover:bg-transparent p-0 h-auto font-semibold"
+                      >
+                        Name {getSortIcon("name")}
+                      </Button>
+                    </TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Size</TableHead>
-                    <TableHead>Uploaded</TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleSort("size")}
+                        className="hover:bg-transparent p-0 h-auto font-semibold"
+                      >
+                        Size {getSortIcon("size")}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleSort("date")}
+                        className="hover:bg-transparent p-0 h-auto font-semibold"
+                      >
+                        Uploaded {getSortIcon("date")}
+                      </Button>
+                    </TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
