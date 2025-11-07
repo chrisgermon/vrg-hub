@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { FileDropzone } from "@/components/ui/file-dropzone";
+import { DndContext, DragEndEvent } from '@dnd-kit/core';
+import { DroppableFolderRow } from "@/components/documents/DroppableFolderRow";
+import { DraggableFileRow } from "@/components/documents/DraggableFileRow";
 import {
   Dialog,
   DialogContent,
@@ -323,6 +326,47 @@ export default function Documents() {
     if (parts.length > 1) {
       parts.pop();
       setCurrentPath(parts.join("/") + "/");
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || !user) return;
+    
+    // Check if we're dropping a file on a folder
+    const fileId = active.id as string;
+    const folderId = over.id as string;
+    
+    // Find the file and folder
+    const file = files.find(f => f.id === fileId);
+    const folder = folders.find(f => f.id === folderId);
+    
+    if (!file || !folder) return;
+    
+    try {
+      const oldPath = `${currentPath}${file.name}`;
+      const newPath = `${currentPath}${folder.name}/${file.name}`;
+      
+      const { error } = await supabase.storage
+        .from("documents")
+        .move(oldPath, newPath);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: `Moved ${file.name} to ${folder.name}`,
+      });
+      
+      loadFiles();
+    } catch (error: any) {
+      console.error("Error moving file:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to move file",
+        variant: "destructive",
+      });
     }
   };
 
@@ -950,7 +994,8 @@ export default function Documents() {
         ) : (
           <Card>
             <CardContent className="p-0">
-              <Table>
+              <DndContext onDragEnd={handleDragEnd}>
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[50px]">
@@ -994,137 +1039,38 @@ export default function Documents() {
                 <TableBody>
                   {/* Folders first */}
                   {folders.map((folder) => (
-                    <TableRow 
+                    <DroppableFolderRow 
                       key={folder.id} 
-                      className="group cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigateToFolder(folder.name)}
-                    >
-                      <TableCell className="py-3">
-                        {/* Empty cell for checkbox column */}
-                      </TableCell>
-                      <TableCell className="py-3">
-                        <Folder className="h-5 w-5 text-primary" />
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        <span className="hover:text-primary transition-colors">
-                          {folder.name}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        Folder
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        -
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(folder.created_at)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div 
-                          className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openRenameFolderDialog(folder);
-                            }}
-                            title="Rename folder"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteFolder(folder);
-                            }}
-                            title="Delete folder"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                      folder={folder}
+                      onNavigate={() => navigateToFolder(folder.name)}
+                      onDelete={() => setDeleteFolder(folder)}
+                      onRename={() => openRenameFolderDialog(folder)}
+                      formatDate={formatDate}
+                    />
                   ))}
                   
-                  {/* Then files */}
+                  {/* Files */}
                   {filteredAndSortedFiles.map((file) => (
-                    <TableRow key={file.id} className="group">
-                      <TableCell className="py-3">
-                        <Checkbox
-                          checked={selectedFiles.has(file.id)}
-                          onCheckedChange={() => toggleFileSelection(file.id)}
-                        />
-                      </TableCell>
-                      <TableCell className="py-3">
-                        {getFileIcon(file.name, file.metadata?.mimetype)}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        <button
-                          onClick={() => handleOpenFile(file)}
-                          className="text-left hover:text-primary transition-colors hover:underline"
-                          title={file.name}
-                        >
-                          {file.name}
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {getFileExtension(file.name)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatFileSize(file.metadata?.size || 0)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(file.created_at)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-                          {isPreviewable(file.name, file.metadata?.mimetype) && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handlePreview(file)}
-                              title="Preview"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => openRenameDialog(file)}
-                            title="Rename"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDownload(file)}
-                            title="Download"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setDeleteFile(file)}
-                            title="Delete"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <DraggableFileRow
+                      key={file.id}
+                      file={file}
+                      selected={selectedFiles.has(file.id)}
+                      onToggleSelect={() => toggleFileSelection(file.id)}
+                      onPreview={() => handlePreview(file)}
+                      onDownload={() => handleDownload(file)}
+                      onRename={() => openRenameDialog(file)}
+                      onDelete={() => setDeleteFile(file)}
+                      onOpenFile={() => handleOpenFile(file)}
+                      isPreviewable={isPreviewable(file.name, file.metadata?.mimetype)}
+                      getFileIcon={getFileIcon}
+                      getFileExtension={getFileExtension}
+                      formatFileSize={formatFileSize}
+                      formatDate={formatDate}
+                    />
                   ))}
                 </TableBody>
               </Table>
+              </DndContext>
             </CardContent>
           </Card>
         )}
