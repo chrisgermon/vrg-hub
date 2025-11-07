@@ -286,7 +286,7 @@ export default function Documents() {
       const folderPath = `${currentPath}${newFolderName}/.keep`;
       const { error } = await supabase.storage
         .from("documents")
-        .upload(folderPath, new Blob([""]), {
+        .upload(folderPath, new Blob([""], { type: "text/plain" }), {
           upsert: false,
         });
 
