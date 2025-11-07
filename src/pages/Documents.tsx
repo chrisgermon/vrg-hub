@@ -135,6 +135,27 @@ export default function Documents() {
     }
   };
 
+  const handleOpenFile = async (file: DocumentFile) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase.storage
+        .from("documents")
+        .createSignedUrl(`${user.id}/${file.name}`, 3600); // 1 hour expiry
+
+      if (error) throw error;
+
+      window.open(data.signedUrl, '_blank');
+    } catch (error: any) {
+      console.error("Error opening file:", error);
+      toast({
+        title: "Error",
+        description: "Failed to open document",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDownload = async (file: DocumentFile) => {
     if (!user) return;
 
@@ -271,7 +292,11 @@ export default function Documents() {
                     <div className="flex items-center gap-3">
                       {getFileIcon(file.metadata?.mimetype)}
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base truncate" title={file.name}>
+                        <CardTitle 
+                          className="text-base truncate cursor-pointer hover:text-primary transition-colors" 
+                          title={file.name}
+                          onClick={() => handleOpenFile(file)}
+                        >
                           {file.name}
                         </CardTitle>
                         <CardDescription className="text-xs">
