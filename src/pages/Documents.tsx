@@ -2,10 +2,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { FileDropzone } from "@/components/ui/file-dropzone";
 import {
-  Upload,
   Download,
   Trash2,
   File,
@@ -80,15 +79,15 @@ export default function Documents() {
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !user) return;
+  const handleFileUpload = async (files: File[]) => {
+    if (!user || files.length === 0) return;
 
-    // Validate file size (20MB limit)
-    if (file.size > 20 * 1024 * 1024) {
+    // Validate file sizes (20MB limit)
+    const invalidFiles = files.filter(file => file.size > 20 * 1024 * 1024);
+    if (invalidFiles.length > 0) {
       toast({
-        title: "File too large",
-        description: "Maximum file size is 20MB",
+        title: "Files too large",
+        description: `${invalidFiles.length} file(s) exceed the 20MB limit`,
         variant: "destructive",
       });
       return;
@@ -96,32 +95,43 @@ export default function Documents() {
 
     try {
       setUploading(true);
-      const filePath = `${user.id}/${file.name}`;
+      let successCount = 0;
+      let errorCount = 0;
 
-      const { error: uploadError } = await supabase.storage
-        .from("documents")
-        .upload(filePath, file, {
-          upsert: false,
+      for (const file of files) {
+        try {
+          const filePath = `${user.id}/${file.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from("documents")
+            .upload(filePath, file, {
+              upsert: false,
+            });
+
+          if (uploadError) throw uploadError;
+          successCount++;
+        } catch (error: any) {
+          console.error("Error uploading file:", file.name, error);
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast({
+          title: "Success",
+          description: `${successCount} document(s) uploaded successfully`,
         });
+        loadFiles();
+      }
 
-      if (uploadError) throw uploadError;
-
-      toast({
-        title: "Success",
-        description: "Document uploaded successfully",
-      });
-
-      loadFiles();
-    } catch (error: any) {
-      console.error("Error uploading file:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to upload document",
-        variant: "destructive",
-      });
+      if (errorCount > 0) {
+        toast({
+          title: "Warning",
+          description: `${errorCount} document(s) failed to upload`,
+          variant: "destructive",
+        });
+      }
     } finally {
       setUploading(false);
-      event.target.value = "";
     }
   };
 
@@ -222,37 +232,19 @@ export default function Documents() {
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold">My Documents</h1>
-            <p className="text-lg text-muted-foreground mt-1">
-              Upload and manage your personal documents
-            </p>
-          </div>
-          <div>
-            <Input
-              type="file"
-              id="file-upload"
-              className="hidden"
-              onChange={handleFileUpload}
-              disabled={uploading}
+        <div>
+          <h1 className="text-4xl font-bold mb-1">My Documents</h1>
+          <p className="text-lg text-muted-foreground mb-6">
+            Upload and manage your personal documents
+          </p>
+          <div className={uploading ? "pointer-events-none opacity-50" : ""}>
+            <FileDropzone
+              onFilesSelected={handleFileUpload}
+              multiple
+              maxSize={20 * 1024 * 1024}
+              label={uploading ? "Uploading..." : "Drag files here or click to upload"}
+              description="Upload multiple documents at once (max 20MB each)"
             />
-            <Button
-              onClick={() => document.getElementById("file-upload")?.click()}
-              disabled={uploading}
-            >
-              {uploading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload Document
-                </>
-              )}
-            </Button>
           </div>
         </div>
 
@@ -265,16 +257,9 @@ export default function Documents() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <File className="h-16 w-16 text-muted-foreground mb-4" />
               <p className="text-lg font-medium">No documents yet</p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Upload your first document to get started
+              <p className="text-sm text-muted-foreground">
+                Use the upload area above to get started
               </p>
-              <Button
-                onClick={() => document.getElementById("file-upload")?.click()}
-                variant="outline"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Document
-              </Button>
             </CardContent>
           </Card>
         ) : (
