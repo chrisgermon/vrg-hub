@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Upload, X } from 'lucide-react';
+import { Loader2, Upload, X, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
@@ -31,6 +31,7 @@ export default function ArticleEditor({ articleId: propArticleId, onSave }: Arti
   const [isPublished, setIsPublished] = useState(false);
   const [featuredImageUrl, setFeaturedImageUrl] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -121,6 +122,53 @@ export default function ArticleEditor({ articleId: propArticleId, onSave }: Arti
 
   const handleRemoveFeaturedImage = () => {
     setFeaturedImageUrl('');
+  };
+
+  const handleGenerateImage = async () => {
+    if (!title.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a title first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setGeneratingImage(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-article-image', {
+        body: { title }
+      });
+
+      if (error) throw error;
+
+      if (data?.imageUrl) {
+        setFeaturedImageUrl(data.imageUrl);
+        toast({
+          title: 'Success',
+          description: 'Stock image generated successfully!',
+        });
+      } else {
+        throw new Error('No image URL returned');
+      }
+    } catch (error: any) {
+      console.error('Error generating image:', error);
+      
+      let errorMessage = 'Failed to generate image';
+      if (error.message?.includes('Rate limit')) {
+        errorMessage = 'Rate limit exceeded. Please try again in a moment.';
+      } else if (error.message?.includes('Payment required')) {
+        errorMessage = 'Please add credits to your workspace to generate images.';
+      }
+      
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingImage(false);
+    }
   };
 
   const generateSlug = (text: string): string => {
@@ -284,20 +332,41 @@ export default function ArticleEditor({ articleId: propArticleId, onSave }: Arti
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <Input
-                  id="featured-image-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFeaturedImageUpload}
-                  disabled={uploadingImage}
-                  className="flex-1"
-                />
-                {uploadingImage && <Loader2 className="h-4 w-4 animate-spin" />}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="featured-image-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFeaturedImageUpload}
+                    disabled={uploadingImage || generatingImage}
+                    className="flex-1"
+                  />
+                  {uploadingImage && <Loader2 className="h-4 w-4 animate-spin" />}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleGenerateImage}
+                  disabled={generatingImage || uploadingImage || !title.trim()}
+                  className="w-full"
+                >
+                  {generatingImage ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating Image...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Generate Stock Image with AI
+                    </>
+                  )}
+                </Button>
               </div>
             )}
             <p className="text-sm text-muted-foreground">
-              Upload a featured image or leave empty
+              Upload an image, generate one with AI, or leave empty
             </p>
           </div>
 
