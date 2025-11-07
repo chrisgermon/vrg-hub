@@ -35,6 +35,7 @@ import {
   ArrowUp,
   ArrowDown,
   Eye,
+  Edit,
 } from "lucide-react";
 import {
   Card,
@@ -48,6 +49,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -80,6 +82,9 @@ export default function Documents() {
   const [filterType, setFilterType] = useState<string>("all");
   const [previewFile, setPreviewFile] = useState<DocumentFile | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [renameFile, setRenameFile] = useState<DocumentFile | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -194,9 +199,11 @@ export default function Documents() {
   const isPreviewable = (filename: string, mimetype?: string) => {
     const ext = getFileExtension(filename).toLowerCase();
     const imageExtensions = ["jpg", "jpeg", "png", "gif", "webp", "svg"];
+    const documentExtensions = ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx"];
     const isPdf = ext === "pdf";
     const isImage = imageExtensions.includes(ext) || mimetype?.startsWith("image/");
-    return isPdf || isImage;
+    const isDocument = documentExtensions.includes(ext);
+    return isPdf || isImage || isDocument;
   };
 
   const handlePreview = async (file: DocumentFile) => {
@@ -224,6 +231,117 @@ export default function Documents() {
   const closePreview = () => {
     setPreviewFile(null);
     setPreviewUrl("");
+  };
+
+  const toggleFileSelection = (fileId: string) => {
+    const newSelected = new Set(selectedFiles);
+    if (newSelected.has(fileId)) {
+      newSelected.delete(fileId);
+    } else {
+      newSelected.add(fileId);
+    }
+    setSelectedFiles(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedFiles.size === filteredAndSortedFiles.length) {
+      setSelectedFiles(new Set());
+    } else {
+      setSelectedFiles(new Set(filteredAndSortedFiles.map(f => f.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!user || selectedFiles.size === 0) return;
+
+    try {
+      const filesToDelete = files.filter(f => selectedFiles.has(f.id));
+      const paths = filesToDelete.map(f => `${user.id}/${f.name}`);
+
+      const { error } = await supabase.storage
+        .from("documents")
+        .remove(paths);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `${selectedFiles.size} document(s) deleted`,
+      });
+
+      setSelectedFiles(new Set());
+      loadFiles();
+    } catch (error: any) {
+      console.error("Error deleting files:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete documents",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkDownload = async () => {
+    if (!user || selectedFiles.size === 0) return;
+
+    const filesToDownload = files.filter(f => selectedFiles.has(f.id));
+    
+    for (const file of filesToDownload) {
+      await handleDownload(file);
+      // Small delay between downloads
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+  };
+
+  const handleRename = async () => {
+    if (!user || !renameFile || !renameValue.trim()) return;
+
+    try {
+      const oldPath = `${user.id}/${renameFile.name}`;
+      const newPath = `${user.id}/${renameValue}`;
+
+      // Download the file
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from("documents")
+        .download(oldPath);
+
+      if (downloadError) throw downloadError;
+
+      // Upload with new name
+      const { error: uploadError } = await supabase.storage
+        .from("documents")
+        .upload(newPath, fileData, { upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      // Delete old file
+      const { error: deleteError } = await supabase.storage
+        .from("documents")
+        .remove([oldPath]);
+
+      if (deleteError) throw deleteError;
+
+      toast({
+        title: "Success",
+        description: "Document renamed successfully",
+      });
+
+      setRenameFile(null);
+      setRenameValue("");
+      loadFiles();
+    } catch (error: any) {
+      console.error("Error renaming file:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to rename document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openRenameDialog = (file: DocumentFile) => {
+    setRenameFile(file);
+    setRenameValue(file.name);
   };
 
   const handleDownload = async (file: DocumentFile) => {
@@ -410,6 +528,37 @@ export default function Documents() {
           </Dialog>
         </div>
 
+        {selectedFiles.size > 0 && (
+          <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
+            <span className="text-sm font-medium">
+              {selectedFiles.size} document(s) selected
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkDownload}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download Selected
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Selected
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedFiles(new Set())}
+            >
+              Clear Selection
+            </Button>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -475,6 +624,12 @@ export default function Documents() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={selectedFiles.size === filteredAndSortedFiles.length && filteredAndSortedFiles.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                     <TableHead>
                       <Button
@@ -511,6 +666,12 @@ export default function Documents() {
                   {filteredAndSortedFiles.map((file) => (
                     <TableRow key={file.id} className="group">
                       <TableCell className="py-3">
+                        <Checkbox
+                          checked={selectedFiles.has(file.id)}
+                          onCheckedChange={() => toggleFileSelection(file.id)}
+                        />
+                      </TableCell>
+                      <TableCell className="py-3">
                         {getFileIcon(file.name, file.metadata?.mimetype)}
                       </TableCell>
                       <TableCell className="font-medium">
@@ -543,6 +704,14 @@ export default function Documents() {
                               <Eye className="h-4 w-4" />
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openRenameDialog(file)}
+                            title="Rename"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
                           <Button
                             size="sm"
                             variant="ghost"
@@ -588,6 +757,14 @@ export default function Documents() {
                     className="w-full h-[70vh] border-0"
                     title="PDF Preview"
                   />
+                ) : ["doc", "docx", "xls", "xlsx", "ppt", "pptx"].includes(
+                    getFileExtension(previewFile.name).toLowerCase()
+                  ) ? (
+                  <iframe
+                    src={`https://docs.google.com/viewer?url=${encodeURIComponent(previewUrl)}&embedded=true`}
+                    className="w-full h-[70vh] border-0"
+                    title="Document Preview"
+                  />
                 ) : (
                   <img
                     src={previewUrl}
@@ -597,6 +774,40 @@ export default function Documents() {
                 )}
               </>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!renameFile} onOpenChange={() => setRenameFile(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Document</DialogTitle>
+            <DialogDescription>
+              Enter a new name for the document
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              placeholder="Document name"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleRename();
+                }
+              }}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setRenameFile(null)}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleRename}>
+                Rename
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
