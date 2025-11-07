@@ -99,7 +99,7 @@ export default function Documents() {
       setLoading(true);
       const { data, error } = await supabase.storage
         .from("documents")
-        .list(`${user.id}/`, {
+        .list("shared/", {
           sortBy: { column: "created_at", order: "desc" },
         });
 
@@ -139,7 +139,7 @@ export default function Documents() {
 
       for (const file of files) {
         try {
-          const filePath = `${user.id}/${file.name}`;
+          const filePath = `shared/${file.name}`;
           const { error: uploadError } = await supabase.storage
             .from("documents")
             .upload(filePath, file, {
@@ -181,7 +181,7 @@ export default function Documents() {
     try {
       const { data, error } = await supabase.storage
         .from("documents")
-        .createSignedUrl(`${user.id}/${file.name}`, 3600); // 1 hour expiry
+        .createSignedUrl(`shared/${file.name}`, 3600); // 1 hour expiry
 
       if (error) throw error;
 
@@ -212,7 +212,7 @@ export default function Documents() {
     try {
       const { data, error } = await supabase.storage
         .from("documents")
-        .createSignedUrl(`${user.id}/${file.name}`, 3600); // 1 hour expiry
+        .createSignedUrl(`shared/${file.name}`, 3600); // 1 hour expiry
 
       if (error) throw error;
 
@@ -256,7 +256,7 @@ export default function Documents() {
 
     try {
       const filesToDelete = files.filter(f => selectedFiles.has(f.id));
-      const paths = filesToDelete.map(f => `${user.id}/${f.name}`);
+      const paths = filesToDelete.map(f => `shared/${f.name}`);
 
       const { error } = await supabase.storage
         .from("documents")
@@ -297,8 +297,8 @@ export default function Documents() {
     if (!user || !renameFile || !renameValue.trim()) return;
 
     try {
-      const oldPath = `${user.id}/${renameFile.name}`;
-      const newPath = `${user.id}/${renameValue}`;
+      const oldPath = `shared/${renameFile.name}`;
+      const newPath = `shared/${renameValue}`;
 
       // Download the file
       const { data: fileData, error: downloadError } = await supabase.storage
@@ -350,7 +350,7 @@ export default function Documents() {
     try {
       const { data, error } = await supabase.storage
         .from("documents")
-        .download(`${user.id}/${file.name}`);
+        .download(`shared/${file.name}`);
 
       if (error) throw error;
 
@@ -383,7 +383,7 @@ export default function Documents() {
     try {
       const { error } = await supabase.storage
         .from("documents")
-        .remove([`${user.id}/${deleteFile.name}`]);
+        .remove([`shared/${deleteFile.name}`]);
 
       if (error) throw error;
 
