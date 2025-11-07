@@ -36,6 +36,10 @@ import {
   ArrowDown,
   Eye,
   Edit,
+  FolderPlus,
+  Folder,
+  ChevronRight,
+  Home,
 } from "lucide-react";
 import {
   Card,
@@ -68,14 +72,24 @@ interface DocumentFile {
   metadata: Record<string, any>;
 }
 
+interface FolderItem {
+  name: string;
+  id: string;
+  created_at: string;
+}
+
 export default function Documents() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [files, setFiles] = useState<DocumentFile[]>([]);
+  const [folders, setFolders] = useState<FolderItem[]>([]);
+  const [currentPath, setCurrentPath] = useState("shared/");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [deleteFile, setDeleteFile] = useState<DocumentFile | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "date" | "size">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -90,56 +104,108 @@ export default function Documents() {
     if (user) {
       loadFiles();
     }
-  }, [user]);
+  }, [user, currentPath]);
 
   const loadFiles = async () => {
     if (!user) return;
 
     try {
       setLoading(true);
-      // First, try loading from the shared library
-      let { data, error } = await supabase.storage
-        .from("documents")
-        .list("shared/", {
-          sortBy: { column: "created_at", order: "desc" },
-        });
-
-      if (error) throw error;
-
-      // If shared is empty, migrate any existing user-specific documents to shared
-      if ((data?.length || 0) === 0) {
-        const { data: userData, error: userListError } = await supabase.storage
+      
+      // If on root, do one-time migration
+      if (currentPath === "shared/") {
+        let { data, error } = await supabase.storage
           .from("documents")
-          .list(`${user.id}/`, {
+          .list(currentPath, {
             sortBy: { column: "created_at", order: "desc" },
           });
 
-        if (userListError) throw userListError;
+        if (error) throw error;
 
-        if ((userData?.length || 0) > 0) {
-          // Move each file into the shared folder (one-time migration)
-          for (const file of userData!) {
-            const fromPath = `${user.id}/${file.name}`;
-            const toPath = `shared/${file.name}`;
-            const { error: moveError } = await supabase.storage
-              .from("documents")
-              .move(fromPath, toPath);
-
-            // If a file already exists in shared, skip it
-            if (moveError && !/already exists|exists/i.test(moveError.message || "")) {
-              console.warn("Move failed for", fromPath, "->", toPath, moveError.message);
-            }
-          }
-
-          // Reload shared list after migration
-          const res = await supabase.storage
+        // If shared is empty, migrate any existing user-specific documents to shared
+        if ((data?.length || 0) === 0) {
+          const { data: userData, error: userListError } = await supabase.storage
             .from("documents")
-            .list("shared/", { sortBy: { column: "created_at", order: "desc" } });
-          data = res.data;
-        }
-      }
+            .list(`${user.id}/`, {
+              sortBy: { column: "created_at", order: "desc" },
+            });
 
-      setFiles(data || []);
+          if (userListError) throw userListError;
+
+          if ((userData?.length || 0) > 0) {
+            // Move each file into the shared folder (one-time migration)
+            for (const file of userData!) {
+              const fromPath = `${user.id}/${file.name}`;
+              const toPath = `shared/${file.name}`;
+              const { error: moveError } = await supabase.storage
+                .from("documents")
+                .move(fromPath, toPath);
+
+              // If a file already exists in shared, skip it
+              if (moveError && !/already exists|exists/i.test(moveError.message || "")) {
+                console.warn("Move failed for", fromPath, "->", toPath, moveError.message);
+              }
+            }
+
+            // Reload shared list after migration
+            const res = await supabase.storage
+              .from("documents")
+              .list(currentPath, { sortBy: { column: "created_at", order: "desc" } });
+            data = res.data;
+          }
+        }
+
+        // Separate folders from files
+        const folderItems: FolderItem[] = [];
+        const fileItems: DocumentFile[] = [];
+        
+        (data || []).forEach((item) => {
+          if (item.id === null) {
+            // It's a folder
+            folderItems.push({
+              name: item.name,
+              id: item.name,
+              created_at: item.created_at || new Date().toISOString(),
+            });
+          } else {
+            // It's a file
+            fileItems.push(item as DocumentFile);
+          }
+        });
+
+        setFolders(folderItems);
+        setFiles(fileItems);
+      } else {
+        // Load from current path
+        const { data, error } = await supabase.storage
+          .from("documents")
+          .list(currentPath, {
+            sortBy: { column: "created_at", order: "desc" },
+          });
+
+        if (error) throw error;
+
+        // Separate folders from files
+        const folderItems: FolderItem[] = [];
+        const fileItems: DocumentFile[] = [];
+        
+        (data || []).forEach((item) => {
+          if (item.id === null) {
+            // It's a folder
+            folderItems.push({
+              name: item.name,
+              id: item.name,
+              created_at: item.created_at || new Date().toISOString(),
+            });
+          } else {
+            // It's a file
+            fileItems.push(item as DocumentFile);
+          }
+        });
+
+        setFolders(folderItems);
+        setFiles(fileItems);
+      }
     } catch (error: any) {
       console.error("Error loading files:", error);
       toast({
@@ -173,7 +239,7 @@ export default function Documents() {
 
       for (const file of files) {
         try {
-          const filePath = `shared/${file.name}`;
+          const filePath = `${currentPath}${file.name}`;
           const { error: uploadError } = await supabase.storage
             .from("documents")
             .upload(filePath, file, {
@@ -209,13 +275,69 @@ export default function Documents() {
     }
   };
 
+  const handleCreateFolder = async () => {
+    if (!user || !newFolderName.trim()) return;
+
+    try {
+      // Create a placeholder file in the folder to make it exist
+      const folderPath = `${currentPath}${newFolderName}/.keep`;
+      const { error } = await supabase.storage
+        .from("documents")
+        .upload(folderPath, new Blob([""]), {
+          upsert: false,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Folder created successfully",
+      });
+
+      setNewFolderName("");
+      setCreateFolderOpen(false);
+      loadFiles();
+    } catch (error: any) {
+      console.error("Error creating folder:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create folder",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const navigateToFolder = (folderName: string) => {
+    setCurrentPath(`${currentPath}${folderName}/`);
+  };
+
+  const navigateToRoot = () => {
+    setCurrentPath("shared/");
+  };
+
+  const navigateUp = () => {
+    const parts = currentPath.split("/").filter(Boolean);
+    if (parts.length > 1) {
+      parts.pop();
+      setCurrentPath(parts.join("/") + "/");
+    }
+  };
+
+  const getBreadcrumbs = () => {
+    const parts = currentPath.split("/").filter(Boolean);
+    return parts.map((part, index) => ({
+      name: part === "shared" ? "Home" : part,
+      path: parts.slice(0, index + 1).join("/") + "/",
+    }));
+  };
+
   const handleOpenFile = async (file: DocumentFile) => {
     if (!user) return;
 
     try {
       const { data, error } = await supabase.storage
         .from("documents")
-        .createSignedUrl(`shared/${file.name}`, 3600); // 1 hour expiry
+        .createSignedUrl(`${currentPath}${file.name}`, 3600); // 1 hour expiry
 
       if (error) throw error;
 
@@ -246,7 +368,7 @@ export default function Documents() {
     try {
       const { data, error } = await supabase.storage
         .from("documents")
-        .createSignedUrl(`shared/${file.name}`, 3600); // 1 hour expiry
+        .createSignedUrl(`${currentPath}${file.name}`, 3600); // 1 hour expiry
 
       if (error) throw error;
 
@@ -290,7 +412,7 @@ export default function Documents() {
 
     try {
       const filesToDelete = files.filter(f => selectedFiles.has(f.id));
-      const paths = filesToDelete.map(f => `shared/${f.name}`);
+      const paths = filesToDelete.map(f => `${currentPath}${f.name}`);
 
       const { error } = await supabase.storage
         .from("documents")
@@ -331,8 +453,8 @@ export default function Documents() {
     if (!user || !renameFile || !renameValue.trim()) return;
 
     try {
-      const oldPath = `shared/${renameFile.name}`;
-      const newPath = `shared/${renameValue}`;
+      const oldPath = `${currentPath}${renameFile.name}`;
+      const newPath = `${currentPath}${renameValue}`;
 
       // Download the file
       const { data: fileData, error: downloadError } = await supabase.storage
@@ -384,7 +506,7 @@ export default function Documents() {
     try {
       const { data, error } = await supabase.storage
         .from("documents")
-        .download(`shared/${file.name}`);
+        .download(`${currentPath}${file.name}`);
 
       if (error) throw error;
 
@@ -417,7 +539,7 @@ export default function Documents() {
     try {
       const { error } = await supabase.storage
         .from("documents")
-        .remove([`shared/${deleteFile.name}`]);
+        .remove([`${currentPath}${deleteFile.name}`]);
 
       if (error) throw error;
 
@@ -538,28 +660,97 @@ export default function Documents() {
               Upload and manage your personal documents
             </p>
           </div>
-          <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Documents
+          <div className="flex gap-2">
+            <Dialog open={createFolderOpen} onOpenChange={setCreateFolderOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <FolderPlus className="mr-2 h-4 w-4" />
+                  New Folder
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create Folder</DialogTitle>
+                  <DialogDescription>
+                    Enter a name for the new folder
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <Input
+                    placeholder="Folder name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleCreateFolder();
+                      }
+                    }}
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setCreateFolderOpen(false);
+                        setNewFolderName("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
+                      Create Folder
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Documents
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Upload Documents</DialogTitle>
+                  <DialogDescription>
+                    Select one or multiple files to upload (max 20MB each)
+                  </DialogDescription>
+                </DialogHeader>
+                <FileDropzone
+                  onFilesSelected={handleFileUpload}
+                  multiple
+                  maxSize={20 * 1024 * 1024}
+                  label={uploading ? "Uploading..." : "Drag files here or click to upload"}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
+        {/* Breadcrumbs */}
+        <div className="flex items-center gap-2 text-sm">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={navigateToRoot}
+            className="h-8 px-2"
+          >
+            <Home className="h-4 w-4" />
+          </Button>
+          {getBreadcrumbs().map((crumb, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCurrentPath(crumb.path)}
+                className="h-8 px-2"
+              >
+                {crumb.name}
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Upload Documents</DialogTitle>
-                <DialogDescription>
-                  Select one or multiple files to upload (max 20MB each)
-                </DialogDescription>
-              </DialogHeader>
-              <FileDropzone
-                onFilesSelected={handleFileUpload}
-                multiple
-                maxSize={20 * 1024 * 1024}
-                label={uploading ? "Uploading..." : "Drag files here or click to upload"}
-              />
-            </DialogContent>
-          </Dialog>
+            </div>
+          ))}
         </div>
 
         {selectedFiles.size > 0 && (
@@ -638,7 +829,7 @@ export default function Documents() {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : filteredAndSortedFiles.length === 0 ? (
+        ) : folders.length === 0 && filteredAndSortedFiles.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <File className="h-16 w-16 text-muted-foreground mb-4" />
@@ -697,6 +888,42 @@ export default function Documents() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {/* Folders first */}
+                  {folders.map((folder) => (
+                    <TableRow 
+                      key={folder.id} 
+                      className="group cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigateToFolder(folder.name)}
+                    >
+                      <TableCell className="py-3">
+                        {/* Empty cell for checkbox column */}
+                      </TableCell>
+                      <TableCell className="py-3">
+                        <Folder className="h-5 w-5 text-primary" />
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        <span className="hover:text-primary transition-colors">
+                          {folder.name}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        Folder
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        -
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(folder.created_at)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                          {/* Future: Add folder actions here */}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  
+                  {/* Then files */}
                   {filteredAndSortedFiles.map((file) => (
                     <TableRow key={file.id} className="group">
                       <TableCell className="py-3">
