@@ -99,6 +99,9 @@ export default function Documents() {
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [renameFile, setRenameFile] = useState<DocumentFile | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [deleteFolder, setDeleteFolder] = useState<FolderItem | null>(null);
+  const [renameFolder, setRenameFolder] = useState<FolderItem | null>(null);
+  const [renameFolderValue, setRenameFolderValue] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -329,6 +332,107 @@ export default function Documents() {
       name: part === "shared" ? "Home" : part,
       path: parts.slice(0, index + 1).join("/") + "/",
     }));
+  };
+
+  const handleDeleteFolder = async () => {
+    if (!user || !deleteFolder) return;
+
+    try {
+      // List all files in the folder recursively
+      const folderPath = `${currentPath}${deleteFolder.name}/`;
+      const { data, error: listError } = await supabase.storage
+        .from("documents")
+        .list(folderPath, {
+          limit: 1000,
+          sortBy: { column: "name", order: "asc" },
+        });
+
+      if (listError) throw listError;
+
+      // Delete all files in the folder
+      if (data && data.length > 0) {
+        const filePaths = data.map((file) => `${folderPath}${file.name}`);
+        const { error: deleteError } = await supabase.storage
+          .from("documents")
+          .remove(filePaths);
+
+        if (deleteError) throw deleteError;
+      }
+
+      // Also delete the .keep file if it exists
+      await supabase.storage
+        .from("documents")
+        .remove([`${folderPath}.keep`]);
+
+      toast({
+        title: "Success",
+        description: "Folder deleted successfully",
+      });
+
+      setDeleteFolder(null);
+      loadFiles();
+    } catch (error: any) {
+      console.error("Error deleting folder:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete folder",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openRenameFolderDialog = (folder: FolderItem) => {
+    setRenameFolder(folder);
+    setRenameFolderValue(folder.name);
+  };
+
+  const handleRenameFolder = async () => {
+    if (!user || !renameFolder || !renameFolderValue.trim()) return;
+
+    try {
+      const oldFolderPath = `${currentPath}${renameFolder.name}/`;
+      const newFolderPath = `${currentPath}${renameFolderValue}/`;
+
+      // List all files in the old folder
+      const { data, error: listError } = await supabase.storage
+        .from("documents")
+        .list(oldFolderPath, {
+          limit: 1000,
+          sortBy: { column: "name", order: "asc" },
+        });
+
+      if (listError) throw listError;
+
+      // Move each file to the new folder
+      if (data && data.length > 0) {
+        for (const file of data) {
+          const oldPath = `${oldFolderPath}${file.name}`;
+          const newPath = `${newFolderPath}${file.name}`;
+          
+          const { error: moveError } = await supabase.storage
+            .from("documents")
+            .move(oldPath, newPath);
+
+          if (moveError) throw moveError;
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: "Folder renamed successfully",
+      });
+
+      setRenameFolder(null);
+      setRenameFolderValue("");
+      loadFiles();
+    } catch (error: any) {
+      console.error("Error renaming folder:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to rename folder",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleOpenFile = async (file: DocumentFile) => {
@@ -916,8 +1020,33 @@ export default function Documents() {
                         {formatDate(folder.created_at)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                          {/* Future: Add folder actions here */}
+                        <div 
+                          className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openRenameFolderDialog(folder);
+                            }}
+                            title="Rename folder"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteFolder(folder);
+                            }}
+                            title="Delete folder"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1085,6 +1214,62 @@ export default function Documents() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Folder Rename Dialog */}
+      <Dialog open={!!renameFolder} onOpenChange={() => setRenameFolder(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Folder</DialogTitle>
+            <DialogDescription>
+              Enter a new name for the folder
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              value={renameFolderValue}
+              onChange={(e) => setRenameFolderValue(e.target.value)}
+              placeholder="Folder name"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleRenameFolder();
+                }
+              }}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRenameFolder(null);
+                  setRenameFolderValue("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleRenameFolder} disabled={!renameFolderValue.trim()}>
+                Rename
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Folder Delete Dialog */}
+      <AlertDialog open={!!deleteFolder} onOpenChange={() => setDeleteFolder(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Folder</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the folder "{deleteFolder?.name}" and all its contents? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteFolder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
