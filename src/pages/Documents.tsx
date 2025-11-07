@@ -17,10 +17,15 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -218,18 +223,33 @@ export default function Documents() {
   };
 
   const getFileIcon = (mimetype?: string) => {
-    if (!mimetype) return <File className="h-8 w-8 text-muted-foreground" />;
-    if (mimetype.startsWith("image/")) return <ImageIcon className="h-8 w-8 text-primary" />;
-    if (mimetype.includes("pdf")) return <FileText className="h-8 w-8 text-red-500" />;
+    if (!mimetype) return <File className="h-5 w-5 text-muted-foreground" />;
+    if (mimetype.startsWith("image/")) return <ImageIcon className="h-5 w-5 text-primary" />;
+    if (mimetype.includes("pdf")) return <FileText className="h-5 w-5 text-red-500" />;
     if (mimetype.includes("zip") || mimetype.includes("rar"))
-      return <Archive className="h-8 w-8 text-yellow-500" />;
+      return <Archive className="h-5 w-5 text-yellow-500" />;
     if (
       mimetype.includes("javascript") ||
       mimetype.includes("json") ||
       mimetype.includes("xml")
     )
-      return <FileCode className="h-8 w-8 text-green-500" />;
-    return <File className="h-8 w-8 text-muted-foreground" />;
+      return <FileCode className="h-5 w-5 text-green-500" />;
+    return <File className="h-5 w-5 text-muted-foreground" />;
+  };
+
+  const getFileType = (mimetype?: string) => {
+    if (!mimetype) return "Unknown";
+    if (mimetype.startsWith("image/")) return "Image";
+    if (mimetype.includes("pdf")) return "PDF";
+    if (mimetype.includes("zip") || mimetype.includes("rar")) return "Archive";
+    if (mimetype.includes("javascript")) return "JavaScript";
+    if (mimetype.includes("json")) return "JSON";
+    if (mimetype.includes("xml")) return "XML";
+    if (mimetype.includes("document") || mimetype.includes("word")) return "Document";
+    if (mimetype.includes("spreadsheet") || mimetype.includes("excel")) return "Spreadsheet";
+    if (mimetype.includes("presentation") || mimetype.includes("powerpoint")) return "Presentation";
+    if (mimetype.includes("text")) return "Text";
+    return mimetype.split("/")[0] || "File";
   };
 
   const formatFileSize = (bytes: number) => {
@@ -241,12 +261,18 @@ export default function Documents() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays} days ago`;
+    
+    return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
   };
 
@@ -284,54 +310,70 @@ export default function Documents() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {files.map((file) => (
-              <Card key={file.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      {getFileIcon(file.metadata?.mimetype)}
-                      <div className="flex-1 min-w-0">
-                        <CardTitle 
-                          className="text-base truncate cursor-pointer hover:text-primary transition-colors" 
-                          title={file.name}
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Size</TableHead>
+                    <TableHead>Uploaded</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {files.map((file) => (
+                    <TableRow key={file.id} className="group">
+                      <TableCell className="py-3">
+                        {getFileIcon(file.metadata?.mimetype)}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        <button
                           onClick={() => handleOpenFile(file)}
+                          className="text-left hover:text-primary transition-colors hover:underline"
+                          title={file.name}
                         >
                           {file.name}
-                        </CardTitle>
-                        <CardDescription className="text-xs">
-                          {formatFileSize(file.metadata?.size || 0)}
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-xs text-muted-foreground">
-                    {formatDate(file.created_at)}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDownload(file)}
-                      className="flex-1"
-                    >
-                      <Download className="mr-1 h-3 w-3" />
-                      Download
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => setDeleteFile(file)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {getFileType(file.metadata?.mimetype)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatFileSize(file.metadata?.size || 0)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(file.created_at)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDownload(file)}
+                            title="Download"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setDeleteFile(file)}
+                            title="Delete"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         )}
       </div>
 
