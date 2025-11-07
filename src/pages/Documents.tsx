@@ -1,10 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { FileDropzone } from "@/components/ui/file-dropzone";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Upload,
   Download,
   Trash2,
   File,
@@ -13,6 +30,8 @@ import {
   FileCode,
   Archive,
   Loader2,
+  Search,
+  ArrowUpDown,
 } from "lucide-react";
 import {
   Card,
@@ -51,6 +70,11 @@ export default function Documents() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [deleteFile, setDeleteFile] = useState<DocumentFile | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "date" | "size">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [filterType, setFilterType] = useState<string>("all");
 
   useEffect(() => {
     if (user) {
@@ -137,6 +161,7 @@ export default function Documents() {
       }
     } finally {
       setUploading(false);
+      setUploadOpen(false);
     }
   };
 
@@ -222,34 +247,28 @@ export default function Documents() {
     }
   };
 
-  const getFileIcon = (mimetype?: string) => {
-    if (!mimetype) return <File className="h-5 w-5 text-muted-foreground" />;
-    if (mimetype.startsWith("image/")) return <ImageIcon className="h-5 w-5 text-primary" />;
-    if (mimetype.includes("pdf")) return <FileText className="h-5 w-5 text-red-500" />;
-    if (mimetype.includes("zip") || mimetype.includes("rar"))
-      return <Archive className="h-5 w-5 text-yellow-500" />;
-    if (
-      mimetype.includes("javascript") ||
-      mimetype.includes("json") ||
-      mimetype.includes("xml")
-    )
-      return <FileCode className="h-5 w-5 text-green-500" />;
-    return <File className="h-5 w-5 text-muted-foreground" />;
+  const getFileExtension = (filename: string) => {
+    const parts = filename.split(".");
+    return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : "FILE";
   };
 
-  const getFileType = (mimetype?: string) => {
-    if (!mimetype) return "Unknown";
-    if (mimetype.startsWith("image/")) return "Image";
-    if (mimetype.includes("pdf")) return "PDF";
-    if (mimetype.includes("zip") || mimetype.includes("rar")) return "Archive";
-    if (mimetype.includes("javascript")) return "JavaScript";
-    if (mimetype.includes("json")) return "JSON";
-    if (mimetype.includes("xml")) return "XML";
-    if (mimetype.includes("document") || mimetype.includes("word")) return "Document";
-    if (mimetype.includes("spreadsheet") || mimetype.includes("excel")) return "Spreadsheet";
-    if (mimetype.includes("presentation") || mimetype.includes("powerpoint")) return "Presentation";
-    if (mimetype.includes("text")) return "Text";
-    return mimetype.split("/")[0] || "File";
+  const getFileIcon = (filename: string, mimetype?: string) => {
+    const ext = getFileExtension(filename).toLowerCase();
+    
+    if (mimetype?.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext))
+      return <ImageIcon className="h-5 w-5 text-primary" />;
+    if (ext === "pdf") return <FileText className="h-5 w-5 text-red-500" />;
+    if (["zip", "rar", "7z", "tar", "gz"].includes(ext))
+      return <Archive className="h-5 w-5 text-yellow-500" />;
+    if (["js", "jsx", "ts", "tsx", "json", "xml", "html", "css"].includes(ext))
+      return <FileCode className="h-5 w-5 text-green-500" />;
+    if (["doc", "docx"].includes(ext))
+      return <FileText className="h-5 w-5 text-blue-500" />;
+    if (["xls", "xlsx"].includes(ext))
+      return <FileText className="h-5 w-5 text-green-600" />;
+    if (["ppt", "pptx"].includes(ext))
+      return <FileText className="h-5 w-5 text-orange-500" />;
+    return <File className="h-5 w-5 text-muted-foreground" />;
   };
 
   const formatFileSize = (bytes: number) => {
@@ -276,36 +295,119 @@ export default function Documents() {
     });
   };
 
+  const filteredAndSortedFiles = useMemo(() => {
+    let filtered = files.filter((file) => {
+      const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const fileExt = getFileExtension(file.name).toLowerCase();
+      const matchesFilter = filterType === "all" || fileExt === filterType.toLowerCase();
+      return matchesSearch && matchesFilter;
+    });
+
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === "name") {
+        comparison = a.name.localeCompare(b.name);
+      } else if (sortBy === "date") {
+        comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      } else if (sortBy === "size") {
+        comparison = (a.metadata?.size || 0) - (b.metadata?.size || 0);
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+
+    return filtered;
+  }, [files, searchQuery, filterType, sortBy, sortOrder]);
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-4xl font-bold mb-1">My Documents</h1>
-          <p className="text-lg text-muted-foreground mb-6">
-            Upload and manage your personal documents
-          </p>
-          <div className={uploading ? "pointer-events-none opacity-50" : ""}>
-            <FileDropzone
-              onFilesSelected={handleFileUpload}
-              multiple
-              maxSize={20 * 1024 * 1024}
-              label={uploading ? "Uploading..." : "Drag files here or click to upload"}
-              description="Upload multiple documents at once (max 20MB each)"
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold">Documents</h1>
+            <p className="text-lg text-muted-foreground">
+              Upload and manage your personal documents
+            </p>
+          </div>
+          <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload Documents
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Upload Documents</DialogTitle>
+                <DialogDescription>
+                  Select one or multiple files to upload (max 20MB each)
+                </DialogDescription>
+              </DialogHeader>
+              <FileDropzone
+                onFilesSelected={handleFileUpload}
+                multiple
+                maxSize={20 * 1024 * 1024}
+                label={uploading ? "Uploading..." : "Drag files here or click to upload"}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search documents..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
             />
           </div>
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="pdf">PDF</SelectItem>
+              <SelectItem value="docx">DOCX</SelectItem>
+              <SelectItem value="xlsx">XLSX</SelectItem>
+              <SelectItem value="jpg">Images</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date">Date</SelectItem>
+              <SelectItem value="name">Name</SelectItem>
+              <SelectItem value="size">Size</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+          >
+            <ArrowUpDown className="h-4 w-4" />
+          </Button>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : files.length === 0 ? (
+        ) : filteredAndSortedFiles.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <File className="h-16 w-16 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium">No documents yet</p>
+              <p className="text-lg font-medium">
+                {files.length === 0 ? "No documents yet" : "No documents found"}
+              </p>
               <p className="text-sm text-muted-foreground">
-                Use the upload area above to get started
+                {files.length === 0
+                  ? "Click the upload button to get started"
+                  : "Try adjusting your search or filters"}
               </p>
             </CardContent>
           </Card>
@@ -324,10 +426,10 @@ export default function Documents() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {files.map((file) => (
+                  {filteredAndSortedFiles.map((file) => (
                     <TableRow key={file.id} className="group">
                       <TableCell className="py-3">
-                        {getFileIcon(file.metadata?.mimetype)}
+                        {getFileIcon(file.name, file.metadata?.mimetype)}
                       </TableCell>
                       <TableCell className="font-medium">
                         <button
@@ -339,7 +441,7 @@ export default function Documents() {
                         </button>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {getFileType(file.metadata?.mimetype)}
+                        {getFileExtension(file.name)}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {formatFileSize(file.metadata?.size || 0)}
