@@ -424,7 +424,6 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               paths: ["/marketing"]
             },
           ].filter(cat => cat.items.length > 0), // Remove empty categories
-          companyDocuments: { title: "Company Documents", url: "/documents", icon: FolderOpen },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
             : null,
@@ -460,7 +459,6 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               paths: ["/marketing"]
             },
           ].filter(cat => cat.items.length > 0),
-          companyDocuments: { title: "Company Documents", url: "/documents", icon: FolderOpen },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
             : null,
@@ -493,7 +491,6 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               paths: ["/requests", "/toner"]
             },
           ].filter(cat => cat.items.length > 0),
-          companyDocuments: { title: "Company Documents", url: "/documents", icon: FolderOpen },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
             : null,
@@ -527,7 +524,6 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               paths: ["/approvals", "/requests", "/toner"]
             },
           ].filter(cat => cat.items.length > 0),
-          companyDocuments: { title: "Company Documents", url: "/documents", icon: FolderOpen },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
             : null,
@@ -929,48 +925,6 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                     <SidebarMenuButton asChild>
                       <NavLink 
                         to={menuConfig.newsletter.url}
-                        onClick={handleMenuItemClick}
-                        className={({ isActive }) => 
-                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
-                            isActive 
-                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
-                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
-                          }`
-                        }
-                      >
-                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
-                        {!collapsed && <span className="text-sm">{customLabel}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-
-                return canEditMenu ? (
-                  <ContextMenu>
-                    <ContextMenuTrigger>
-                      {menuItem}
-                    </ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem onClick={() => handleEditMenuItem(itemKey, customLabel, menuCustomizations[itemKey]?.icon)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit Menu Item
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
-                ) : menuItem;
-              })()}
-
-              {/* Company Documents */}
-              {menuConfig.companyDocuments && (() => {
-                const itemKey = getMenuItemKey(menuConfig.companyDocuments.title, menuConfig.companyDocuments.url);
-                const CustomIcon = getCustomIcon(itemKey, menuConfig.companyDocuments.icon);
-                const customLabel = getCustomLabel(itemKey, menuConfig.companyDocuments.title);
-                
-                const menuItem = (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <NavLink 
-                        to={menuConfig.companyDocuments.url}
                         onClick={handleMenuItemClick}
                         className={({ isActive }) => 
                           `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
