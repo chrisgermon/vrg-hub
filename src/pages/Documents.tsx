@@ -97,13 +97,47 @@ export default function Documents() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase.storage
+      // First, try loading from the shared library
+      let { data, error } = await supabase.storage
         .from("documents")
         .list("shared/", {
           sortBy: { column: "created_at", order: "desc" },
         });
 
       if (error) throw error;
+
+      // If shared is empty, migrate any existing user-specific documents to shared
+      if ((data?.length || 0) === 0) {
+        const { data: userData, error: userListError } = await supabase.storage
+          .from("documents")
+          .list(`${user.id}/`, {
+            sortBy: { column: "created_at", order: "desc" },
+          });
+
+        if (userListError) throw userListError;
+
+        if ((userData?.length || 0) > 0) {
+          // Move each file into the shared folder (one-time migration)
+          for (const file of userData!) {
+            const fromPath = `${user.id}/${file.name}`;
+            const toPath = `shared/${file.name}`;
+            const { error: moveError } = await supabase.storage
+              .from("documents")
+              .move(fromPath, toPath);
+
+            // If a file already exists in shared, skip it
+            if (moveError && !/already exists|exists/i.test(moveError.message || "")) {
+              console.warn("Move failed for", fromPath, "->", toPath, moveError.message);
+            }
+          }
+
+          // Reload shared list after migration
+          const res = await supabase.storage
+            .from("documents")
+            .list("shared/", { sortBy: { column: "created_at", order: "desc" } });
+          data = res.data;
+        }
+      }
 
       setFiles(data || []);
     } catch (error: any) {
