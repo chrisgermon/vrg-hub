@@ -50,55 +50,38 @@ serve(async (req) => {
 
     const now = new Date();
     
-    // Get all open cycles
+    // Get all active cycles
     const { data: cycles, error: cyclesError } = await supabase
       .from('newsletter_cycles')
       .select('*')
-      .in('status', ['open', 'due_soon', 'past_due']);
+      .in('status', ['planning', 'active']);
 
     if (cyclesError) throw cyclesError;
 
     for (const cycle of cycles || []) {
-      const dueDate = new Date(cycle.due_at);
+      const dueDate = new Date(cycle.due_date);
       const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-      console.log(`Cycle ${cycle.month}: ${daysUntilDue} days until due`);
+      console.log(`Cycle ${cycle.name}: ${daysUntilDue} days until due`);
 
       let reminderType: string | null = null;
 
       // Determine reminder type based on days until due
-      // Weekly reminders (every 7 days until due date)
-      if (daysUntilDue > 0 && daysUntilDue % 7 === 0) {
-        reminderType = `weekly_${daysUntilDue}`;
+      if (daysUntilDue === 7) {
+        reminderType = 'weekly_7';
+      } else if (daysUntilDue === 3) {
+        reminderType = 'weekly_3';
       } else if (daysUntilDue === 1) {
-        // Day before reminder
         reminderType = 'day_before';
-      } else if (daysUntilDue === 0 && now.getHours() >= 23) {
-        // End of due date
-        reminderType = 'past_due';
-        await supabase
-          .from('newsletter_cycles')
-          .update({ status: 'past_due' })
-          .eq('id', cycle.id);
+      } else if (daysUntilDue === 0) {
+        reminderType = 'due_today';
       } else if (daysUntilDue < 0) {
-        // Overdue reminders
         reminderType = 'overdue';
-      }
-
-      // Check if it's the opening day
-      const openDate = new Date(cycle.open_at);
-      if (
-        openDate.getDate() === now.getDate() &&
-        openDate.getMonth() === now.getMonth() &&
-        openDate.getFullYear() === now.getFullYear() &&
-        now.getHours() === 9 // Send at 9 AM
-      ) {
-        reminderType = 'opening';
       }
 
       // Send reminders if needed
       if (reminderType) {
-        console.log(`Sending ${reminderType} reminders for cycle ${cycle.month}`);
+        console.log(`Sending ${reminderType} reminders for cycle ${cycle.name}`);
         
         // Get departments that haven't submitted
         const { data: assignments } = await supabase
@@ -127,30 +110,63 @@ serve(async (req) => {
           for (const profile of profiles || []) {
             console.log(`Sending ${reminderType} reminder to ${profile.email} - ${dept.department}`);
             
-            const dueDate = new Date(cycle.due_at).toLocaleDateString();
+            const dueDateFormatted = new Date(cycle.due_date).toLocaleDateString();
             let emailSubject = '';
             let emailBody = '';
             
+            const emailHeader = `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="text-align: center; padding: 20px 0;">
+                  <img src="https://hub.visionradiology.com.au/vision-radiology-email-logo.png" alt="Vision Radiology" style="max-width: 250px; height: auto;" />
+                </div>
+            `;
+            
+            const emailFooter = `
+                <br>
+                <p style="color: #666; font-size: 0.9em;">This is an automated reminder from the Newsletter System.</p>
+              </div>
+            `;
+            
             if (reminderType.startsWith('weekly_')) {
-              emailSubject = `Newsletter Reminder: ${cycle.month} - ${daysUntilDue} days remaining`;
-              emailBody = `
-                <h2>Newsletter Submission Reminder</h2>
+              emailSubject = `Newsletter Reminder: ${cycle.name} - ${daysUntilDue} days remaining`;
+              emailBody = emailHeader + `
+                <h2 style="color: #333;">Newsletter Submission Reminder</h2>
                 <p>Hello ${profile.name},</p>
-                <p>This is a reminder that the newsletter submission for <strong>${cycle.month}</strong> is due in <strong>${daysUntilDue} days</strong> (${dueDate}).</p>
+                <p>This is a reminder that the newsletter submission for <strong>${cycle.name}</strong> is due in <strong>${daysUntilDue} days</strong> (${dueDateFormatted}).</p>
                 <p>Department: <strong>${dept.department}</strong></p>
                 <p>Please submit your content before the due date.</p>
-                <p><a href="${Deno.env.get('SUPABASE_URL')}/newsletter-submit">Submit your content here</a></p>
-              `;
+                <p><a href="https://hub.visionradiology.com.au/newsletter" style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Submit Your Content</a></p>
+              ` + emailFooter;
             } else if (reminderType === 'day_before') {
-              emailSubject = `URGENT: Newsletter Due Tomorrow - ${cycle.month}`;
-              emailBody = `
-                <h2>⚠️ Newsletter Due Tomorrow</h2>
+              emailSubject = `URGENT: Newsletter Due Tomorrow - ${cycle.name}`;
+              emailBody = emailHeader + `
+                <h2 style="color: #DC2626;">⚠️ Newsletter Due Tomorrow</h2>
                 <p>Hello ${profile.name},</p>
-                <p>This is an urgent reminder that the newsletter submission for <strong>${cycle.month}</strong> is due <strong>tomorrow</strong> (${dueDate}).</p>
+                <p>This is an urgent reminder that the newsletter submission for <strong>${cycle.name}</strong> is due <strong>tomorrow</strong> (${dueDateFormatted}).</p>
                 <p>Department: <strong>${dept.department}</strong></p>
                 <p>Please submit your content as soon as possible.</p>
-                <p><a href="${Deno.env.get('SUPABASE_URL')}/newsletter-submit">Submit your content here</a></p>
-              `;
+                <p><a href="https://hub.visionradiology.com.au/newsletter" style="display: inline-block; padding: 12px 24px; background-color: #DC2626; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Submit Your Content Now</a></p>
+              ` + emailFooter;
+            } else if (reminderType === 'due_today') {
+              emailSubject = `URGENT: Newsletter Due Today - ${cycle.name}`;
+              emailBody = emailHeader + `
+                <h2 style="color: #DC2626;">🚨 Newsletter Due Today</h2>
+                <p>Hello ${profile.name},</p>
+                <p>This is an urgent reminder that the newsletter submission for <strong>${cycle.name}</strong> is due <strong>today</strong> (${dueDateFormatted}).</p>
+                <p>Department: <strong>${dept.department}</strong></p>
+                <p>Please submit your content immediately.</p>
+                <p><a href="https://hub.visionradiology.com.au/newsletter" style="display: inline-block; padding: 12px 24px; background-color: #DC2626; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Submit Your Content Now</a></p>
+              ` + emailFooter;
+            } else if (reminderType === 'overdue') {
+              emailSubject = `OVERDUE: Newsletter Submission - ${cycle.name}`;
+              emailBody = emailHeader + `
+                <h2 style="color: #991B1B;">❌ Newsletter Submission Overdue</h2>
+                <p>Hello ${profile.name},</p>
+                <p>The newsletter submission for <strong>${cycle.name}</strong> was due on <strong>${dueDateFormatted}</strong> and is now overdue.</p>
+                <p>Department: <strong>${dept.department}</strong></p>
+                <p>Please submit your content urgently.</p>
+                <p><a href="https://hub.visionradiology.com.au/newsletter" style="display: inline-block; padding: 12px 24px; background-color: #991B1B; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Submit Your Content Now</a></p>
+              ` + emailFooter;
             }
             
             try {
@@ -163,8 +179,8 @@ serve(async (req) => {
                 channel: 'email',
                 type: reminderType,
                 metadata: {
-                  cycle_month: cycle.month,
-                  due_date: cycle.due_at,
+                  cycle_name: cycle.name,
+                  due_date: cycle.due_date,
                   days_until_due: daysUntilDue,
                   email_sent: true,
                 },
@@ -178,8 +194,8 @@ serve(async (req) => {
                 channel: 'email',
                 type: reminderType,
                 metadata: {
-                  cycle_month: cycle.month,
-                  due_date: cycle.due_at,
+                  cycle_name: cycle.name,
+                  due_date: cycle.due_date,
                   days_until_due: daysUntilDue,
                   email_sent: false,
                   error: err.message,
@@ -189,37 +205,6 @@ serve(async (req) => {
           }
         }
 
-        // For escalation, also notify editors/managers
-        if (reminderType === 'escalation') {
-          console.log(`Sending escalation for cycle ${cycle.month} with ${departmentsToRemind.length} pending departments`);
-          
-          // Get managers/admins
-          const { data: managers } = await supabase
-            .from('user_roles')
-            .select('user_id')
-            .in('role', ['manager', 'tenant_admin', 'super_admin']);
-
-          const managerIds = managers?.map(m => m.user_id) || [];
-
-          const { data: managerProfiles } = await supabase
-            .from('profiles')
-            .select('user_id, email')
-            .in('user_id', managerIds);
-
-          for (const profile of managerProfiles || []) {
-            await supabase.from('newsletter_reminder_logs').insert({
-              cycle_id: cycle.id,
-              department: 'all',
-              user_id: profile.user_id,
-              channel: 'email',
-              type: 'escalation',
-              metadata: {
-                cycle_month: cycle.month,
-                pending_departments: departmentsToRemind.map(d => d.department),
-              },
-            });
-          }
-        }
       }
     }
 
