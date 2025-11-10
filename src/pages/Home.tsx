@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompanyFeatures } from "@/hooks/useCompanyFeatures";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
   const { user, company } = useAuth();
@@ -28,7 +29,7 @@ export default function Home() {
   const { hasPermission } = usePermissions();
 
   // Dashboard stats
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: isLoadingStats } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
       const [hardwareReq, marketingReq, kbPages, profiles] = await Promise.all([
@@ -72,22 +73,22 @@ export default function Home() {
   ];
 
   return (
-    <div className="flex-1 space-y-6 md:space-y-8 p-4 md:p-6 lg:p-8 mb-16 sm:mb-20 md:mb-24 max-w-7xl mx-auto">
+    <div className="flex-1 space-y-4 md:space-y-6 p-4 md:p-6 max-w-7xl mx-auto">
       {/* Hero Section with Quick Action */}
-      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-primary via-primary/95 to-primary/85 p-8 md:p-12 text-white shadow-xl">
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-primary via-primary/95 to-primary/85 p-6 md:p-8 text-white shadow-xl">
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex-1">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">
               Welcome back, {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
             </h1>
-            <p className="text-base md:text-lg text-white/90 max-w-2xl mb-6 md:mb-0">
+            <p className="text-sm md:text-base text-white/90 max-w-2xl mb-4 md:mb-0">
               {company?.name || 'CrowdHub'} - Your central hub for all requests and services
             </p>
           </div>
           <Button
             size="lg"
             variant="secondary"
-            className="shadow-lg hover:shadow-xl transition-all duration-200 bg-white text-primary hover:bg-white/90 font-semibold px-8 py-6 text-lg"
+            className="shadow-lg hover:shadow-xl transition-all duration-200 bg-white text-primary hover:bg-white/90 font-semibold"
             onClick={() => navigate('/requests/new')}
           >
             <FileText className="mr-2 h-5 w-5" />
@@ -98,10 +99,76 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 w-48 h-48 md:w-64 md:h-64 bg-white/5 rounded-full -ml-16 md:-ml-20 -mb-16 md:-mb-20 blur-3xl" />
       </div>
 
+      {/* Stats Overview */}
+      {isLoadingStats ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-8 w-16 mb-2" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : stats && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Package className="h-8 w-8 text-primary/70 flex-shrink-0" />
+                <div>
+                  <p className="text-2xl font-bold">{stats.hardwareRequests}</p>
+                  <p className="text-xs text-muted-foreground">Hardware Requests</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Megaphone className="h-8 w-8 text-primary/70 flex-shrink-0" />
+                <div>
+                  <p className="text-2xl font-bold">{stats.marketingRequests}</p>
+                  <p className="text-xs text-muted-foreground">Marketing Requests</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <FileText className="h-8 w-8 text-primary/70 flex-shrink-0" />
+                <div>
+                  <p className="text-2xl font-bold">{stats.kbPages}</p>
+                  <p className="text-xs text-muted-foreground">KB Articles</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Users className="h-8 w-8 text-primary/70 flex-shrink-0" />
+                <div>
+                  <p className="text-2xl font-bold">{stats.users}</p>
+                  <p className="text-xs text-muted-foreground">Team Members</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* News Feed - Takes 2 columns on large screens */}
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+        {/* News Feed - Takes 2 columns on large screens, 3 on XL */}
+        <div className="lg:col-span-2 xl:col-span-3">
           <NewsFeedModule title="Latest News" maxItems={5} />
         </div>
 

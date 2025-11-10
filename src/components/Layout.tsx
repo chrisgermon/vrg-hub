@@ -106,13 +106,15 @@ export function Layout({ children }: LayoutProps) {
           <AppSidebar userRole={userRole as any} />
         
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-auto min-h-16 border-b bg-card shadow-sm flex flex-col md:flex-row items-start md:items-center px-3 md:px-6 py-3 md:py-0 gap-2 md:gap-4">
-            <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
+          <header className="h-14 md:h-16 border-b bg-card shadow-sm flex items-center px-3 md:px-4 lg:px-6 gap-2 md:gap-3">
+            <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
               <SidebarTrigger />
-              <img 
-                src={logoUrl} 
-                alt="Company Logo" 
-                className="h-10 md:h-12 object-contain" 
+              <img
+                src={logoUrl}
+                alt="Company Logo"
+                className="h-8 md:h-10 object-contain"
+                loading="lazy"
+                decoding="async"
               />
               
               <NavigationMenu className="hidden lg:flex">
@@ -161,8 +163,8 @@ export function Layout({ children }: LayoutProps) {
               
               <NotificationsDropdown />
             </div>
-            
-            <div className="ml-auto flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
+
+            <div className="ml-auto flex items-center gap-2 flex-shrink-0">
               {/* Don't show company selector or role impersonation for super admin */}
               {userRole !== 'super_admin' && (
                 <>
@@ -197,7 +199,7 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </header>
           
-          <main className="flex-1 p-3 md:p-6 pb-32 md:pb-40">
+          <main className="flex-1 p-3 md:p-6 pb-20">
             <NewsletterBanner />
             <SystemBanners />
             <Suspense fallback={<RouteLoading />}>

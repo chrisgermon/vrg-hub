@@ -2,8 +2,8 @@ import { SharePointBrowser } from "@/components/documentation/SharePointBrowser"
 
 export default function Documentation() {
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="space-y-6">
+    <div className="container mx-auto py-4 md:py-6 px-3 md:px-4 max-w-7xl">
+      <div className="space-y-4 md:space-y-6">
         <div>
           <h1 className="text-4xl font-bold">Company Documents</h1>
           <p className="text-lg text-muted-foreground mt-1">

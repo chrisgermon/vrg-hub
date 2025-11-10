@@ -87,12 +87,12 @@ export default function CompanyDirectory() {
   const defaultTab = categories.length > 0 ? categories[0].id : '';
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="mb-8 space-y-6">
+    <div className="container mx-auto py-4 md:py-6 px-3 md:px-4">
+      <div className="mb-4 md:mb-6 space-y-4 md:space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold mb-4">Phone Directory</h1>
-            <p className="text-muted-foreground">Select a brand to view their contact directory</p>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">Phone Directory</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Select a brand to view their contact directory</p>
           </div>
           {isAdmin && (
             <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
