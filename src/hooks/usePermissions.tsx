@@ -84,7 +84,7 @@ export function usePermissions(options: UsePermissionsOptions = {}) {
 
   const canViewMenuItem = (menuKey: string): boolean => {
     // Keep public menus visible to all users
-    const publicMenus = ["home", "requests", "help", "settings"];
+    const publicMenus = ["home", "requests", "help", "settings", "hr-assistance"];
     if (publicMenus.includes(menuKey)) return true;
 
     // Simple rule: admins can see everything

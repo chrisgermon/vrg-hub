@@ -398,6 +398,9 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
         if (item.url?.includes('/documents')) {
           return true; // All authenticated users can access file manager
         }
+        if (item.url?.includes('/hr-assistance')) {
+          return true; // All authenticated users can access HR & Employee Assistance
+        }
         if (item.url?.includes('/print-orders')) {
           return isFeatureEnabled('print_ordering');
         }

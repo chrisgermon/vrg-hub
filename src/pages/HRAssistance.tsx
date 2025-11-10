@@ -17,11 +17,14 @@ import {
   BookOpen,
   ClipboardList,
   UserCheck,
-  Loader2
+  Loader2,
+  LockKeyhole
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface DocumentFile {
   name: string;
@@ -33,8 +36,17 @@ interface DocumentFile {
 export default function HRAssistance() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [hrFiles, setHrFiles] = useState<DocumentFile[]>([]);
+
+  // Check permissions
+  const canViewHRDocs = hasPermission("view_hr_documents");
+  const canAccessEAP = hasPermission("access_eap_program");
+  const canViewEmployeeAssistance = hasPermission("view_employee_assistance");
+
+  // By default, all users should have access
+  const hasAccess = canViewHRDocs || canAccessEAP || canViewEmployeeAssistance;
   // Load HR documents from storage
   useEffect(() => {
     if (user) {
@@ -173,6 +185,16 @@ export default function HRAssistance() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
+      {!hasAccess && (
+        <Alert className="mb-6 border-destructive/50">
+          <LockKeyhole className="h-4 w-4" />
+          <AlertDescription>
+            You don't have permission to access HR & Employee Assistance resources. 
+            Please contact your administrator if you need access.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-hero p-8 md:p-12 mb-8 text-white">
         <div className="relative z-10">

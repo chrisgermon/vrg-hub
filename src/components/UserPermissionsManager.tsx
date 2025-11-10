@@ -129,6 +129,16 @@ const PERMISSION_CATEGORIES = {
       { key: 'manage_kb_templates', label: 'Manage KB Templates', description: 'Can create and manage page templates' },
     ]
   },
+  hrAndEAP: {
+    title: 'HR & Employee Assistance',
+    permissions: [
+      { key: 'view_hr_documents', label: 'View HR Documents', description: 'Can access HR policies and forms' },
+      { key: 'access_eap_program', label: 'Access EAP Program', description: 'Can access Employee Assistance Program information' },
+      { key: 'view_employee_assistance', label: 'View Employee Assistance', description: 'Can view employee assistance resources' },
+      { key: 'manage_hr_documents', label: 'Manage HR Documents', description: 'Can upload and manage HR documents' },
+      { key: 'report_workplace_incident', label: 'Report Workplace Incident', description: 'Can report workplace incidents' },
+    ]
+  },
 };
 
 const PERMISSIONS = Object.values(PERMISSION_CATEGORIES).flatMap(cat => cat.permissions);

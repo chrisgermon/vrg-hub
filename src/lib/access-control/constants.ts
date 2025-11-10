@@ -166,6 +166,9 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       "manage_knowledge_base",
       "edit_knowledge_base",
       "delete_knowledge_base",
+      "view_hr_documents",
+      "access_eap_program",
+      "view_employee_assistance",
     ],
   },
   {
