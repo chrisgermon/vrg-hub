@@ -33,7 +33,6 @@ export function NewsletterSubmissionForm({
 }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [title, setTitle] = useState('');
   const [sectionsData, setSectionsData] = useState<SectionData[]>([]);
   const [noUpdateThisMonth, setNoUpdateThisMonth] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -82,7 +81,6 @@ export function NewsletterSubmissionForm({
 
   useEffect(() => {
     if (existingSubmission) {
-      setTitle(existingSubmission.title || '');
       setNoUpdateThisMonth(existingSubmission.no_update_this_month || false);
       
       if (existingSubmission.sections_data) {
@@ -93,12 +91,17 @@ export function NewsletterSubmissionForm({
 
   const saveSubmission = useMutation({
     mutationFn: async ({ status }: { status: string }) => {
+      // Generate default title from department and cycle
+      const defaultTitle = assignment?.cycle?.name 
+        ? `${department} - ${assignment.cycle.name}`
+        : `${department} Submission`;
+
       const submissionData = {
         assignment_id: assignmentId,
         cycle_id: cycleId,
         contributor_id: user?.id,
         department,
-        title,
+        title: defaultTitle,
         content: '', // Keep for backward compatibility
         sections_data: sectionsData as any,
         no_update_this_month: noUpdateThisMonth,
@@ -154,19 +157,10 @@ export function NewsletterSubmissionForm({
   };
 
   const handleSaveDraft = () => {
-    if (!title.trim()) {
-      toast.error('Please enter a title');
-      return;
-    }
     saveSubmission.mutate({ status: 'draft' });
   };
 
   const handleSubmit = () => {
-    if (!title.trim()) {
-      toast.error('Please enter a title');
-      return;
-    }
-
     const requiredSections = sectionsData.filter(s => s.isRequired);
     const missingRequired = requiredSections.filter(s => !s.content.trim());
     
@@ -240,17 +234,6 @@ export function NewsletterSubmissionForm({
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="title">Newsletter Title *</Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., January 2024 IT Updates"
-              disabled={existingSubmission?.status === 'submitted'}
-            />
-          </div>
-
           <div className="flex items-center space-x-2">
             <Checkbox
               id="no-update"
