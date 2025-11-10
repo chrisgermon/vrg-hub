@@ -191,13 +191,13 @@ export default function Settings() {
   const defaultTab = sections[0]?.value ?? 'general';
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="mb-8">
+    <div className="container mx-auto p-3 md:p-6 max-w-7xl">
+      <div className="mb-4 md:mb-6">
         <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground mt-2">Manage your application preferences and configuration</p>
+        <p className="text-sm md:text-base text-muted-foreground mt-1">Manage your application preferences and configuration</p>
       </div>
 
-      <Tabs defaultValue={defaultTab} className="space-y-6">
+      <Tabs defaultValue={defaultTab} className="space-y-4 md:space-y-6">
         <TabsList className="flex flex-wrap gap-2">
           {sections.map((section) => (
             <TabsTrigger key={section.value} value={section.value} className="whitespace-nowrap">
@@ -207,7 +207,7 @@ export default function Settings() {
         </TabsList>
 
         {sections.map((section) => (
-          <TabsContent key={section.value} value={section.value} className="space-y-6">
+          <TabsContent key={section.value} value={section.value} className="space-y-4 md:space-y-6">
             {section.content}
           </TabsContent>
         ))}

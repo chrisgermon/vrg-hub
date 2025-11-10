@@ -95,12 +95,12 @@ export default function Requests() {
   };
 
   return (
-    <div className="flex gap-0 -m-3 md:-m-6">
+    <div className="flex gap-0 -m-3 md:-m-6 max-w-screen-2xl mx-auto">
       <div className="flex-1 min-w-0 p-3 md:p-6">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="text-3xl font-bold">Requests</h1>
-            <p className="text-muted-foreground mt-2">
+            <p className="text-muted-foreground mt-1">
               View and manage all hardware and equipment requests
             </p>
           </div>
@@ -115,23 +115,23 @@ export default function Requests() {
           </div>
         </div>
 
-        <Tabs defaultValue="all" className="space-y-6">
+        <Tabs defaultValue="all" className="space-y-4">
           <TabsList>
             <TabsTrigger value="all">All Requests</TabsTrigger>
             <TabsTrigger value="my-requests">My Requests</TabsTrigger>
             {isManagerOrAdmin && <TabsTrigger value="pending">Pending Approval</TabsTrigger>}
           </TabsList>
 
-          <TabsContent value="all" className="space-y-6">
+          <TabsContent value="all" className="space-y-4">
             <RequestsList onRequestSelect={handleRequestSelect} selectedRequestId={selectedRequestId} filterType="all" />
           </TabsContent>
 
-          <TabsContent value="my-requests" className="space-y-6">
+          <TabsContent value="my-requests" className="space-y-4">
             <RequestsList onRequestSelect={handleRequestSelect} selectedRequestId={selectedRequestId} filterType="my-requests" />
           </TabsContent>
 
           {isManagerOrAdmin && (
-            <TabsContent value="pending" className="space-y-6">
+            <TabsContent value="pending" className="space-y-4">
               <RequestsList onRequestSelect={handleRequestSelect} selectedRequestId={selectedRequestId} filterType="pending" />
             </TabsContent>
           )}
