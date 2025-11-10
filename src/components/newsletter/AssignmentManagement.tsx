@@ -66,10 +66,31 @@ export function AssignmentManagement() {
           });
         if (error) throw error;
       }
+
+      // Send assignment notification email
+      try {
+        const { error: notifyError } = await supabase.functions.invoke(
+          'notify-newsletter-assignment',
+          { 
+            body: { 
+              userId,
+              department,
+            } 
+          }
+        );
+        
+        if (notifyError) {
+          console.error('Failed to send assignment notification:', notifyError);
+          // Don't throw error - assignment succeeded even if email failed
+        }
+      } catch (err) {
+        console.error('Failed to invoke notification function:', err);
+        // Don't throw error - assignment succeeded even if email failed
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['department-assignments'] });
-      toast.success('Assignee added');
+      toast.success('Assignee added and notified via email');
       setDialogOpen(false);
       setSelectedDepartment('');
     },

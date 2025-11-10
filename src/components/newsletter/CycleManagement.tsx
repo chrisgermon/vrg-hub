@@ -94,6 +94,31 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
             
             if (assignError) {
               console.error('Failed to create newsletter assignments:', assignError);
+            } else {
+              // Send individual assignment notifications for any new assignments
+              // Group by user to send one email per user with all their departments
+              const userDepartments = new Map<string, string[]>();
+              for (const assignment of newsletterAssignments) {
+                const userId = assignment.contributor_id;
+                const dept = assignment.department;
+                if (!userDepartments.has(userId)) {
+                  userDepartments.set(userId, []);
+                }
+                userDepartments.get(userId)!.push(dept);
+              }
+
+              // Send notification for each user
+              for (const [userId, departments] of userDepartments.entries()) {
+                for (const department of departments) {
+                  try {
+                    await supabase.functions.invoke('notify-newsletter-assignment', {
+                      body: { userId, department }
+                    });
+                  } catch (notifyErr) {
+                    console.error(`Failed to notify user ${userId} for ${department}:`, notifyErr);
+                  }
+                }
+              }
             }
           }
         }
