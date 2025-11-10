@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -15,10 +16,87 @@ import {
   Briefcase,
   BookOpen,
   ClipboardList,
-  UserCheck
+  UserCheck,
+  Loader2
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+
+interface DocumentFile {
+  name: string;
+  id: string;
+  created_at: string;
+  metadata?: Record<string, any>;
+}
 
 export default function HRAssistance() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [hrFiles, setHrFiles] = useState<DocumentFile[]>([]);
+  // Load HR documents from storage
+  useEffect(() => {
+    if (user) {
+      loadHRDocuments();
+    }
+  }, [user]);
+
+  const loadHRDocuments = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.storage
+        .from("documents")
+        .list("shared/HR/", {
+          sortBy: { column: "name", order: "asc" },
+        });
+
+      if (error) throw error;
+
+      // Filter out folders and only get files
+      const fileItems = (data || []).filter((item) => item.id !== null) as DocumentFile[];
+      setHrFiles(fileItems);
+    } catch (error: any) {
+      console.error("Error loading HR documents:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openDocument = async (fileName: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to access documents",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from("documents")
+        .createSignedUrl(`shared/HR/${fileName}`, 3600); // 1 hour expiry
+
+      if (error) throw error;
+
+      window.open(data.signedUrl, "_blank");
+    } catch (error: any) {
+      console.error("Error opening document:", error);
+      toast({
+        title: "Error",
+        description: "Failed to open document. Please ensure the file exists.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const findDocument = (searchName: string): DocumentFile | undefined => {
+    return hrFiles.find((file) =>
+      file.name.toLowerCase().includes(searchName.toLowerCase())
+    );
+  };
+
   // EAP Information
   const eapAccessCode = "0407086000";
   const companyName = "Vision Radiology Group";
@@ -55,29 +133,42 @@ export default function HRAssistance() {
     }
   ];
 
-  // HR Documents organized by category
+  // HR Documents organized by category - these will link to actual files
   const hrDocuments = {
     organisational: [
-      { name: "VR Group Organisational Support Centre Chart", icon: Building2 },
-      { name: "VR-Clinic-Workflow-Chart", icon: ClipboardList }
+      { name: "VR Group Organisational Support Centre Chart", icon: Building2, fileName: "VR-Group-Organisational-Support-Centre-Chart" },
+      { name: "VR-Clinic-Workflow-Chart", icon: ClipboardList, fileName: "VR-Clinic-Workflow-Chart" }
     ],
     forms: [
-      { name: "Vision-Radiology---Employee-Induction-V2", icon: UserCheck },
-      { name: "Employee-Led-Check-In", icon: ClipboardList },
-      { name: "Change of Bank Account Form", icon: FileText },
-      { name: "Maternity leave application letter", icon: FileText }
+      { name: "Vision-Radiology---Employee-Induction-V2", icon: UserCheck, fileName: "Vision-Radiology---Employee-Induction-V2" },
+      { name: "Employee-Led-Check-In", icon: ClipboardList, fileName: "Employee-Led-Check-In" },
+      { name: "Change of Bank Account Form", icon: FileText, fileName: "Change-of-Bank-Account-Form" },
+      { name: "Maternity leave application letter", icon: FileText, fileName: "Maternity-leave-application-letter" }
     ],
     policies: [
-      { name: "Responsibilities for incident management", icon: Shield },
-      { name: "VRG Workflow for Addressing Incidents", icon: AlertTriangle },
-      { name: "VRG-HR-Policy-Manual-V2", icon: BookOpen },
-      { name: "VRG_WHS Policy Statement", icon: Shield },
-      { name: "Respectful Workplace Training - VRG Group", icon: Users },
-      { name: "VRG Work Health Safety Management System Manual", icon: Shield },
-      { name: "Vision Radiology Saturday Urgent Reports Procedure", icon: ClipboardList },
-      { name: "Contrast Media Administration Policy", icon: FileText },
-      { name: "Managing Risk Of Potential Cross Infection", icon: Shield }
+      { name: "Responsibilities for incident management", icon: Shield, fileName: "Responsibilities-for-incident-management" },
+      { name: "VRG Workflow for Addressing Incidents", icon: AlertTriangle, fileName: "VRG-Workflow-for-Addressing-Incidents" },
+      { name: "VRG-HR-Policy-Manual-V2", icon: BookOpen, fileName: "VRG-HR-Policy-Manual-V2" },
+      { name: "VRG_WHS Policy Statement", icon: Shield, fileName: "VRG_WHS-Policy-Statement" },
+      { name: "Respectful Workplace Training - VRG Group", icon: Users, fileName: "Respectful-Workplace-Training-VRG-Group" },
+      { name: "VRG Work Health Safety Management System Manual", icon: Shield, fileName: "VRG-Work-Health-Safety-Management-System-Manual" },
+      { name: "Vision Radiology Saturday Urgent Reports Procedure", icon: ClipboardList, fileName: "Vision-Radiology-Saturday-Urgent-Reports-Procedure" },
+      { name: "Contrast Media Administration Policy", icon: FileText, fileName: "Contrast-Media-Administration-Policy" },
+      { name: "Managing Risk Of Potential Cross Infection", icon: Shield, fileName: "Managing-Risk-Of-Potential-Cross-Infection" }
     ]
+  };
+
+  const handleDocumentClick = (fileName: string) => {
+    const doc = findDocument(fileName);
+    if (doc) {
+      openDocument(doc.name);
+    } else {
+      toast({
+        title: "Document not found",
+        description: "This document hasn't been uploaded yet. Please contact HR.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -199,90 +290,100 @@ export default function HRAssistance() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-3 gap-6">
-                {/* Organisational Charts */}
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                    VR Organisational Chart
-                  </h3>
-                  <div className="space-y-2">
-                    {hrDocuments.organisational.map((doc, index) => (
-                      <Button
-                        key={index}
-                        variant="outline"
-                        className="w-full justify-start text-left h-auto py-3 px-3"
-                        onClick={() => console.log(`Open ${doc.name}`)}
-                      >
-                        <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
-                        <span className="text-sm line-clamp-2">{doc.name}</span>
-                      </Button>
-                    ))}
-                  </div>
-
-                  {/* Monthly Newsletter Forms */}
-                  <div className="mt-6 pt-6 border-t">
-                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
-                      Monthly Newsletter Forms
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="ml-2 text-muted-foreground">Loading HR documents...</span>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-3 gap-6">
+                  {/* Organisational Charts */}
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      VR Organisational Chart
                     </h3>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={() => console.log('Download newsletter forms')}
-                    >
-                      <Globe className="h-4 w-4 mr-2 text-primary" />
-                      Download these forms to edit
-                    </Button>
-                  </div>
-                </div>
+                    <div className="space-y-2">
+                      {hrDocuments.organisational.map((doc, index) => (
+                        <Button
+                          key={index}
+                          variant="outline"
+                          className="w-full justify-start text-left h-auto py-3 px-3"
+                          onClick={() => handleDocumentClick(doc.fileName)}
+                          disabled={!findDocument(doc.fileName)}
+                        >
+                          <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
+                          <span className="text-sm line-clamp-2">{doc.name}</span>
+                        </Button>
+                      ))}
+                    </div>
 
-                {/* HR Forms */}
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                    HR Forms
-                  </h3>
-                  <div className="space-y-2">
-                    {hrDocuments.forms.map((doc, index) => (
+                    {/* Monthly Newsletter Forms */}
+                    <div className="mt-6 pt-6 border-t">
+                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
+                        Monthly Newsletter Forms
+                      </h3>
                       <Button
-                        key={index}
                         variant="outline"
-                        className="w-full justify-start text-left h-auto py-3 px-3"
-                        onClick={() => console.log(`Open ${doc.name}`)}
+                        className="w-full justify-start"
+                        onClick={() => window.open('/newsletter', '_blank')}
                       >
-                        <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
-                        <span className="text-sm line-clamp-2">{doc.name}</span>
+                        <Globe className="h-4 w-4 mr-2 text-primary" />
+                        Access newsletter forms
                       </Button>
-                    ))}
-                    <Button
-                      variant="destructive"
-                      className="w-full justify-start"
-                      onClick={() => console.log('Report workplace incident')}
-                    >
-                      <AlertTriangle className="h-4 w-4 mr-2" />
-                      <span className="text-sm">Report workplace incident</span>
-                    </Button>
+                    </div>
                   </div>
-                </div>
 
-                {/* Policies & Procedures */}
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                    Policies | Procedures | Training
-                  </h3>
-                  <div className="space-y-2">
-                    {hrDocuments.policies.map((doc, index) => (
+                  {/* HR Forms */}
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      HR Forms
+                    </h3>
+                    <div className="space-y-2">
+                      {hrDocuments.forms.map((doc, index) => (
+                        <Button
+                          key={index}
+                          variant="outline"
+                          className="w-full justify-start text-left h-auto py-3 px-3"
+                          onClick={() => handleDocumentClick(doc.fileName)}
+                          disabled={!findDocument(doc.fileName)}
+                        >
+                          <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
+                          <span className="text-sm line-clamp-2">{doc.name}</span>
+                        </Button>
+                      ))}
                       <Button
-                        key={index}
-                        variant="outline"
-                        className="w-full justify-start text-left h-auto py-3 px-3"
-                        onClick={() => console.log(`Open ${doc.name}`)}
+                        variant="destructive"
+                        className="w-full justify-start"
+                        onClick={() => window.open('/requests/help', '_blank')}
                       >
-                        <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
-                        <span className="text-sm line-clamp-2">{doc.name}</span>
+                        <AlertTriangle className="h-4 w-4 mr-2" />
+                        <span className="text-sm">Report workplace incident</span>
                       </Button>
-                    ))}
+                    </div>
+                  </div>
+
+                  {/* Policies & Procedures */}
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Policies | Procedures | Training
+                    </h3>
+                    <div className="space-y-2">
+                      {hrDocuments.policies.map((doc, index) => (
+                        <Button
+                          key={index}
+                          variant="outline"
+                          className="w-full justify-start text-left h-auto py-3 px-3"
+                          onClick={() => handleDocumentClick(doc.fileName)}
+                          disabled={!findDocument(doc.fileName)}
+                        >
+                          <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
+                          <span className="text-sm line-clamp-2">{doc.name}</span>
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
