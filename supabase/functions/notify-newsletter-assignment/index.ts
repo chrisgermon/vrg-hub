@@ -96,27 +96,33 @@ serve(async (req) => {
 
     const emailSubject = `Newsletter Assignment: ${department}`;
     const emailBody = `
-      <h2>Newsletter Department Assignment</h2>
-      <p>Hello ${profile.full_name || 'there'},</p>
-      
-      <p>You have been assigned as a contributor for the <strong>${department}</strong> department in the Monthly Newsletter system.</p>
-      
-      <p>As a newsletter contributor, you will be responsible for:</p>
-      <ul>
-        <li>Submitting content updates for your department each month</li>
-        <li>Meeting the submission deadlines for each newsletter cycle</li>
-        <li>Keeping department information current and relevant</li>
-      </ul>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="text-align: center; padding: 20px 0;">
+          <img src="https://hub.visionradiology.com.au/vision-radiology-email-logo.png" alt="Vision Radiology" style="max-width: 250px; height: auto;" />
+        </div>
+        
+        <h2 style="color: #333;">Newsletter Department Assignment</h2>
+        <p>Hello ${profile.full_name || 'there'},</p>
+        
+        <p>You have been assigned as a contributor for the <strong>${department}</strong> department in the Monthly Newsletter system.</p>
+        
+        <p>As a newsletter contributor, you will be responsible for:</p>
+        <ul>
+          <li>Submitting content updates for your department each month</li>
+          <li>Meeting the submission deadlines for each newsletter cycle</li>
+          <li>Keeping department information current and relevant</li>
+        </ul>
 
-      ${cyclesInfo}
-      
-      <p>You can access the newsletter system and view your assignments here:</p>
-      <p><a href="${supabaseUrl}/newsletter" style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Access Newsletter Portal</a></p>
-      
-      <p>You will receive reminders as newsletter deadlines approach.</p>
-      
-      <br>
-      <p style="color: #666; font-size: 0.9em;">If you have questions about your newsletter assignment, please contact your administrator.</p>
+        ${cyclesInfo}
+        
+        <p>You can access the newsletter system and view your assignments here:</p>
+        <p><a href="https://hub.visionradiology.com.au/newsletter" style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Access Newsletter Portal</a></p>
+        
+        <p>You will receive reminders as newsletter deadlines approach.</p>
+        
+        <br>
+        <p style="color: #666; font-size: 0.9em;">If you have questions about your newsletter assignment, please contact your administrator.</p>
+      </div>
     `;
 
     try {
