@@ -31,7 +31,8 @@ import {
   Pencil,
   Plug,
   Mail,
-  Calendar
+  Calendar,
+  HeartHandshake
 } from "lucide-react";
 import * as Icons from "lucide-react";
 import { NavLink, useLocation, Link } from "react-router-dom";
@@ -425,6 +426,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             },
           ].filter(cat => cat.items.length > 0), // Remove empty categories
           documents: { title: "Documents", url: "/documents", icon: FolderOpen },
+          hrAssistance: { title: "HR & Employee Assistance", url: "/hr-assistance", icon: HeartHandshake },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
             : null,
@@ -461,6 +463,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             },
           ].filter(cat => cat.items.length > 0),
           documents: { title: "Documents", url: "/documents", icon: FolderOpen },
+          hrAssistance: { title: "HR & Employee Assistance", url: "/hr-assistance", icon: HeartHandshake },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
             : null,
@@ -494,6 +497,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             },
           ].filter(cat => cat.items.length > 0),
           documents: { title: "Documents", url: "/documents", icon: FolderOpen },
+          hrAssistance: { title: "HR & Employee Assistance", url: "/hr-assistance", icon: HeartHandshake },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
             : null,
@@ -528,6 +532,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             },
           ].filter(cat => cat.items.length > 0),
           documents: { title: "Documents", url: "/documents", icon: FolderOpen },
+          hrAssistance: { title: "HR & Employee Assistance", url: "/hr-assistance", icon: HeartHandshake },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
             : null,
@@ -971,6 +976,48 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                     <SidebarMenuButton asChild>
                       <NavLink 
                         to={menuConfig.documents.url}
+                        onClick={handleMenuItemClick}
+                        className={({ isActive }) => 
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
+                            isActive 
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+                          }`
+                        }
+                      >
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+
+                return canEditMenu ? (
+                  <ContextMenu>
+                    <ContextMenuTrigger>
+                      {menuItem}
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onClick={() => handleEditMenuItem(itemKey, customLabel, menuCustomizations[itemKey]?.icon)}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Menu Item
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                ) : menuItem;
+              })()}
+
+              {/* HR & Employee Assistance */}
+              {menuConfig.hrAssistance && (() => {
+                const itemKey = getMenuItemKey(menuConfig.hrAssistance.title, menuConfig.hrAssistance.url);
+                const CustomIcon = getCustomIcon(itemKey, menuConfig.hrAssistance.icon);
+                const customLabel = getCustomLabel(itemKey, menuConfig.hrAssistance.title);
+                
+                const menuItem = (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={menuConfig.hrAssistance.url}
                         onClick={handleMenuItemClick}
                         className={({ isActive }) => 
                           `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
