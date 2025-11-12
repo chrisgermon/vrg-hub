@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { 
   HeartHandshake, 
   FileText, 
@@ -60,6 +61,7 @@ export default function HRAssistance() {
   const [mappings, setMappings] = useState<Record<string, string>>({});
   const [editingDoc, setEditingDoc] = useState<{ key: string; category: string; currentPath?: string } | null>(null);
   const [selectedFile, setSelectedFile] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Check permissions
   const canViewHRDocs = hasPermission("view_hr_documents");
@@ -180,6 +182,7 @@ export default function HRAssistance() {
     const currentPath = mappings[docKey];
     setEditingDoc({ key: docKey, category, currentPath });
     setSelectedFile(currentPath || "");
+    setSearchQuery(""); // Reset search when opening dialog
   };
 
   const saveMapping = async () => {
@@ -206,6 +209,7 @@ export default function HRAssistance() {
       await loadMappings();
       setEditingDoc(null);
       setSelectedFile("");
+      setSearchQuery("");
     } catch (error: any) {
       console.error("Error saving mapping:", error);
       toast({
@@ -639,8 +643,11 @@ export default function HRAssistance() {
       </div>
 
       {/* Edit Mapping Dialog */}
-      <Dialog open={!!editingDoc} onOpenChange={() => setEditingDoc(null)}>
-        <DialogContent>
+      <Dialog open={!!editingDoc} onOpenChange={() => {
+        setEditingDoc(null);
+        setSearchQuery("");
+      }}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Link Document to File</DialogTitle>
             <DialogDescription>
@@ -652,24 +659,61 @@ export default function HRAssistance() {
               <label className="text-sm font-medium">Document:</label>
               <p className="text-sm text-muted-foreground">{editingDoc?.key}</p>
             </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Search Files:</label>
+              <Input
+                placeholder="Type to search files..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Select File:</label>
               <Select value={selectedFile} onValueChange={setSelectedFile}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a file..." />
                 </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {hrFiles.map((file) => (
-                    <SelectItem key={file.id} value={file.name}>
-                      {file.name}
-                    </SelectItem>
-                  ))}
+                <SelectContent className="max-h-[300px] bg-background z-50">
+                  {hrFiles
+                    .filter((file) => 
+                      searchQuery === "" || 
+                      file.name.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                    .map((file) => (
+                      <SelectItem key={file.id} value={file.name}>
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="truncate">{file.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  {hrFiles.filter((file) => 
+                    searchQuery === "" || 
+                    file.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).length === 0 && (
+                    <div className="py-6 text-center text-sm text-muted-foreground">
+                      No files found
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
+              {searchQuery && (
+                <p className="text-xs text-muted-foreground">
+                  Showing {hrFiles.filter((file) => 
+                    file.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).length} of {hrFiles.length} files
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingDoc(null)}>
+            <Button variant="outline" onClick={() => {
+              setEditingDoc(null);
+              setSearchQuery("");
+            }}>
               Cancel
             </Button>
             <Button onClick={saveMapping} disabled={!selectedFile}>
