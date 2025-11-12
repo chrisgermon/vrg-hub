@@ -13,7 +13,7 @@ interface NewsFeedModuleProps {
 }
 
 export function NewsFeedModule({ 
-  title = "Latest News", 
+  title = "Latest Industry News", 
   maxItems = 4
 }: NewsFeedModuleProps) {
   const { data: articles, isLoading, error } = useQuery({
