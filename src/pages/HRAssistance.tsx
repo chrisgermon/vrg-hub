@@ -296,15 +296,27 @@ export default function HRAssistance() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      {!hasAccess && (
-        <Alert className="mb-6 border-destructive/50">
-          <LockKeyhole className="h-4 w-4" />
-          <AlertDescription>
-            You don't have permission to access HR & Employee Assistance resources. 
-            Please contact your administrator if you need access.
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* Header with Report Incident Button */}
+      <div className="flex justify-between items-start mb-6 gap-4">
+        <div className="flex-1">
+          {!hasAccess && (
+            <Alert className="border-destructive/50">
+              <LockKeyhole className="h-4 w-4" />
+              <AlertDescription>
+                You don't have permission to access HR & Employee Assistance resources. 
+                Please contact your administrator if you need access.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+        <Button
+          onClick={() => window.open('/incident-form', '_blank')}
+          className="bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 px-6 py-6 text-base font-semibold whitespace-nowrap"
+        >
+          <AlertTriangle className="h-5 w-5" />
+          Report Workplace Incident
+        </Button>
+      </div>
 
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-hero p-8 md:p-12 mb-8 text-white">
@@ -497,14 +509,6 @@ export default function HRAssistance() {
                           )}
                         </div>
                       ))}
-                      <Button
-                        variant="destructive"
-                        className="w-full justify-start"
-                        onClick={() => window.open('/incident-form', '_blank')}
-                      >
-                        <AlertTriangle className="h-4 w-4 mr-2" />
-                        <span className="text-sm">Report workplace incident</span>
-                      </Button>
                     </div>
                   </div>
 
