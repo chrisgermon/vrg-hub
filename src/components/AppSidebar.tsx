@@ -420,14 +420,6 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           common: commonItems,
           news: newsMenuItem,
           categories: [
-            {
-              title: "Marketing",
-              icon: Megaphone,
-              items: filterByFeatures([
-                { title: "Print Ordering Forms", url: "/marketing/print-orders", icon: Printer },
-              ]),
-              paths: ["/marketing"]
-            },
           ].filter(cat => cat.items.length > 0), // Remove empty categories
           documents: { title: "Documents", url: "/documents", icon: FolderOpen },
           hrAssistance: { title: "HR & Employee Assistance", url: "/hr-assistance", icon: HeartHandshake },
@@ -457,14 +449,6 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           approvals: { title: "Pending Approvals", url: "/approvals", icon: Clock },
           news: newsMenuItem,
           categories: [
-            {
-              title: "Marketing",
-              icon: Megaphone,
-              items: filterByFeatures([
-                { title: "Print Ordering Forms", url: "/marketing/print-orders", icon: Printer },
-              ]),
-              paths: ["/marketing"]
-            },
           ].filter(cat => cat.items.length > 0),
           documents: { title: "Documents", url: "/documents", icon: FolderOpen },
           hrAssistance: { title: "HR & Employee Assistance", url: "/hr-assistance", icon: HeartHandshake },
