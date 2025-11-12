@@ -163,7 +163,7 @@ export default function Home() {
 
         {/* News Feed - Takes 3 columns (60% width) */}
         <div className="lg:col-span-3">
-          <NewsFeedModule title="Latest Industry News" maxItems={5} />
+          <NewsFeedModule title="News" maxItems={5} />
         </div>
       </div>
 

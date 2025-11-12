@@ -87,40 +87,50 @@ export function QuickLinksModule({
 
   return (
     <>
-      <Card className="rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200 h-full">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-2xl font-bold text-foreground">{title}</CardTitle>
+      <Card className="rounded-2xl shadow-lg border-2 border-border/50 hover:border-primary/30 transition-all duration-300 h-full bg-gradient-to-br from-background to-background/95">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6 border-b border-border/50">
+          <CardTitle className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <LinkIcon className="h-5 w-5 text-primary" />
+            </div>
+            {title}
+          </CardTitle>
           {isEditing && (
-            <Button onClick={handleAddLink} size="sm" variant="outline">
+            <Button onClick={handleAddLink} size="sm" className="shadow-md hover:shadow-lg transition-all">
               <Plus className="h-4 w-4 mr-1" />
               Add
             </Button>
           )}
         </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
+        <CardContent className="pt-6">
+          <div className="space-y-3">
             {currentLinks.map((link) => (
               <div 
                 key={link.id} 
-                className="flex items-center justify-between p-3 rounded-xl border hover:bg-accent/50 hover:border-accent transition-all duration-200 group"
+                className="relative flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-accent/30 to-accent/10 border-2 border-border/40 hover:border-primary/50 hover:shadow-md transition-all duration-200 group overflow-hidden"
               >
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                 <a
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 flex-1"
+                  className="flex items-center gap-3 flex-1 relative z-10"
                 >
-                  {link.icon && <span className="text-xl">{link.icon}</span>}
-                  <span className="text-sm font-medium">{link.title}</span>
-                  <ExternalLink className="h-4 w-4 ml-auto opacity-50 group-hover:opacity-100 transition-opacity" />
+                  {link.icon && (
+                    <div className="h-10 w-10 rounded-lg bg-background/80 flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform duration-200">
+                      {link.icon}
+                    </div>
+                  )}
+                  <span className="text-sm font-semibold group-hover:text-primary transition-colors">{link.title}</span>
+                  <ExternalLink className="h-4 w-4 ml-auto text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200" />
                 </a>
                 {isEditing && (
-                  <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity relative z-10">
                     <Button
                       onClick={() => handleEditLink(link)}
                       size="sm"
                       variant="ghost"
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-8 p-0 hover:bg-background/80"
                     >
                       <Pencil className="h-3 w-3" />
                     </Button>
@@ -128,7 +138,7 @@ export function QuickLinksModule({
                       onClick={() => handleDeleteLink(link.id)}
                       size="sm"
                       variant="ghost"
-                      className="h-8 w-8 p-0 text-destructive"
+                      className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -137,9 +147,14 @@ export function QuickLinksModule({
               </div>
             ))}
             {currentLinks.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                No links added yet
-              </p>
+              <div className="text-center py-12">
+                <div className="inline-flex h-16 w-16 rounded-full bg-accent/30 items-center justify-center mb-4">
+                  <LinkIcon className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  No links added yet
+                </p>
+              </div>
             )}
           </div>
         </CardContent>
