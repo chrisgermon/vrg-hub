@@ -91,6 +91,7 @@ export default function Documents() {
   const [uploading, setUploading] = useState(false);
   const [deleteFile, setDeleteFile] = useState<DocumentFile | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadFolderOpen, setUploadFolderOpen] = useState(false);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -245,7 +246,20 @@ export default function Documents() {
 
       for (const file of files) {
         try {
-          const filePath = `${currentPath}${file.name}`;
+          // Get the relative path from the file's webkitRelativePath if available (for folder uploads)
+          const relativePath = (file as any).webkitRelativePath || file.name;
+          
+          // If it's a folder upload, extract the path after the first folder name
+          let filePath: string;
+          if (relativePath.includes('/')) {
+            // Extract path after the root folder name (e.g., "MyFolder/subfolder/file.txt" -> "subfolder/file.txt")
+            const pathParts = relativePath.split('/');
+            pathParts.shift(); // Remove the root folder name
+            filePath = `${currentPath}${pathParts.join('/')}`;
+          } else {
+            filePath = `${currentPath}${file.name}`;
+          }
+
           const { error: uploadError } = await supabase.storage
             .from("documents")
             .upload(filePath, file, {
@@ -278,6 +292,7 @@ export default function Documents() {
     } finally {
       setUploading(false);
       setUploadOpen(false);
+      setUploadFolderOpen(false);
     }
   };
 
@@ -879,12 +894,12 @@ export default function Documents() {
               <DialogTrigger asChild>
                 <Button>
                   <Upload className="mr-2 h-4 w-4" />
-                  Upload Documents
+                  Upload Files
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Upload Documents</DialogTitle>
+                  <DialogTitle>Upload Files</DialogTitle>
                   <DialogDescription>
                     Select one or multiple files to upload (max 20MB each)
                   </DialogDescription>
@@ -892,8 +907,30 @@ export default function Documents() {
                 <FileDropzone
                   onFilesSelected={handleFileUpload}
                   multiple
-                  maxSize={20 * 1024 * 1024}
+                  maxSize={20}
                   label={uploading ? "Uploading..." : "Drag files here or click to upload"}
+                />
+              </DialogContent>
+            </Dialog>
+            <Dialog open={uploadFolderOpen} onOpenChange={setUploadFolderOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Folder className="mr-2 h-4 w-4" />
+                  Upload Folder
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Upload Folder</DialogTitle>
+                  <DialogDescription>
+                    Select a folder to upload with all its contents (max 20MB per file)
+                  </DialogDescription>
+                </DialogHeader>
+                <FileDropzone
+                  onFilesSelected={handleFileUpload}
+                  allowFolders
+                  maxSize={20}
+                  label={uploading ? "Uploading..." : "Select folder to upload"}
                 />
               </DialogContent>
             </Dialog>

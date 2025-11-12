@@ -11,6 +11,7 @@ interface FileDropzoneProps {
   className?: string;
   label?: string;
   description?: string;
+  allowFolders?: boolean;
 }
 
 export function FileDropzone({
@@ -21,6 +22,7 @@ export function FileDropzone({
   className,
   label,
   description,
+  allowFolders = false,
 }: FileDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
 
@@ -105,12 +107,13 @@ export function FileDropzone({
           multiple={multiple}
           onChange={handleFileSelect}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          {...(allowFolders ? { webkitdirectory: '', directory: '' } as any : {})}
         />
         <div className="flex flex-col items-center justify-center gap-2 text-center">
           <Upload className={cn('size-8', isDragging ? 'text-primary' : 'text-muted-foreground')} />
           <div>
             <p className="text-sm font-medium">
-              Drop files here or click to browse
+              {allowFolders ? 'Select a folder to upload' : 'Drop files here or click to browse'}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               Max {maxSize}MB per file
