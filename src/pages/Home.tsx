@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { NewsFeedModule } from "@/components/home/NewsFeedModule";
-import { PendingApprovalsWidget } from "@/components/home/PendingApprovalsWidget";
+import { QuickLinksModule } from "@/components/home/QuickLinksModule";
 import { Button } from "@/components/ui/button";
 import { 
   FileText, 
@@ -62,6 +62,47 @@ export default function Home() {
       return data || [];
     },
   });
+
+  // Quick links
+  const { data: quickLinks = [], refetch: refetchQuickLinks } = useQuery({
+    queryKey: ['quick-links', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('quick_links')
+        .select('*')
+        .order('position', { ascending: true });
+
+      if (error) throw error;
+      return data?.map(link => ({
+        id: link.id,
+        title: link.title,
+        url: link.url,
+        icon: link.icon || undefined
+      })) || [];
+    },
+    enabled: !!user?.id,
+  });
+
+  const handleQuickLinksUpdate = async (links: any[]) => {
+    // Delete all existing links
+    await supabase.from('quick_links').delete().eq('user_id', user?.id);
+    
+    // Insert new links with positions
+    if (links.length > 0) {
+      const linksToInsert = links.map((link, index) => ({
+        user_id: user?.id,
+        company_id: company?.id,
+        title: link.title,
+        url: link.url,
+        icon: link.icon || null,
+        position: index
+      }));
+      
+      await supabase.from('quick_links').insert(linksToInsert);
+    }
+    
+    refetchQuickLinks();
+  };
 
   const quickActions = [
     {
@@ -174,42 +215,12 @@ export default function Home() {
 
         {/* Sidebar Content */}
         <div className="space-y-6">
-          {/* Pending Approvals (if user has permission) */}
-          {hasPermission('approve_requests') ? (
-            <PendingApprovalsWidget title="Pending Approvals" />
-          ) : (
-            <Card className="rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                  Quick Tips
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-accent/50 hover:bg-accent/70 transition-colors">
-                  <FileText className="h-5 w-5 mt-0.5 text-primary flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium">Submit Requests</p>
-                    <p className="text-xs text-muted-foreground">Track all your requests in one place</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-accent/50 hover:bg-accent/70 transition-colors">
-                  <Users className="h-5 w-5 mt-0.5 text-primary flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium">Team Directory</p>
-                    <p className="text-xs text-muted-foreground">Find and connect with colleagues</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-accent/50 hover:bg-accent/70 transition-colors">
-                  <FileText className="h-5 w-5 mt-0.5 text-primary flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium">Knowledge Base</p>
-                    <p className="text-xs text-muted-foreground">Access help articles and guides</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <QuickLinksModule 
+            title="Quick Links" 
+            links={quickLinks}
+            isEditing={true}
+            onUpdate={handleQuickLinksUpdate}
+          />
         </div>
       </div>
 

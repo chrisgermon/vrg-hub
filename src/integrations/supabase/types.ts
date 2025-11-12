@@ -2513,6 +2513,42 @@ export type Database = {
           },
         ]
       }
+      quick_links: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          icon: string | null
+          id: string
+          position: number | null
+          title: string
+          updated_at: string | null
+          url: string
+          user_id: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          position?: number | null
+          title: string
+          updated_at?: string | null
+          url: string
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          position?: number | null
+          title?: string
+          updated_at?: string | null
+          url?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       rbac_audit_log: {
         Row: {
           action: string
