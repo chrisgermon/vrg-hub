@@ -8,14 +8,8 @@ import {
   Globe, 
   Download,
   Phone,
-  Building2,
   ExternalLink,
   Shield,
-  Users,
-  Briefcase,
-  BookOpen,
-  ClipboardList,
-  UserCheck,
   Loader2,
   LockKeyhole,
   Link2,
@@ -104,19 +98,41 @@ export default function HRAssistance() {
   const loadHRDocuments = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.storage
-        .from("documents")
-        .list("shared/Human Resources/", {
-          sortBy: { column: "name", order: "asc" },
-        });
+      
+      // Load all documents from the entire documents bucket
+      const allFiles: DocumentFile[] = [];
+      
+      // Recursively load files from all folders
+      const loadFolder = async (path: string) => {
+        const { data, error } = await supabase.storage
+          .from("documents")
+          .list(path, {
+            sortBy: { column: "name", order: "asc" },
+          });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // Filter out folders and only get files
-      const fileItems = (data || []).filter((item) => item.id !== null) as DocumentFile[];
-      setHrFiles(fileItems);
+        for (const item of data || []) {
+          if (item.id === null) {
+            // It's a folder, recurse into it
+            await loadFolder(`${path}${item.name}/`);
+          } else if (item.name !== '.keep') {
+            // It's a file
+            allFiles.push({
+              ...item,
+              name: `${path}${item.name}`, // Store full path
+              id: item.id,
+              created_at: item.created_at || new Date().toISOString(),
+              metadata: item.metadata
+            } as DocumentFile);
+          }
+        }
+      };
+
+      await loadFolder("shared/");
+      setHrFiles(allFiles);
     } catch (error: any) {
-      console.error("Error loading HR documents:", error);
+      console.error("Error loading documents:", error);
     } finally {
       setLoading(false);
     }
@@ -135,7 +151,7 @@ export default function HRAssistance() {
     try {
       const { data, error } = await supabase.storage
         .from("documents")
-        .createSignedUrl(`shared/Human Resources/${fileName}`, 3600); // 1 hour expiry
+        .createSignedUrl(fileName, 3600); // fileName now includes full path
 
       if (error) throw error;
 
@@ -239,25 +255,25 @@ export default function HRAssistance() {
   // HR Documents organized by category - these will link to actual files
   const hrDocuments = {
     organisational: [
-      { name: "VR Group Organisational Support Centre Chart", icon: Building2, fileName: "VR-Group-Organisational-Support-Centre-Chart" },
-      { name: "VR-Clinic-Workflow-Chart", icon: ClipboardList, fileName: "VR-Clinic-Workflow-Chart" }
+      { name: "VR Group Organisational Support Centre Chart", icon: FileText, fileName: "VR-Group-Organisational-Support-Centre-Chart" },
+      { name: "VR-Clinic-Workflow-Chart", icon: FileText, fileName: "VR-Clinic-Workflow-Chart" }
     ],
     forms: [
-      { name: "Vision-Radiology---Employee-Induction-V2", icon: UserCheck, fileName: "Vision-Radiology---Employee-Induction-V2" },
-      { name: "Employee-Led-Check-In", icon: ClipboardList, fileName: "Employee-Led-Check-In" },
+      { name: "Vision-Radiology---Employee-Induction-V2", icon: FileText, fileName: "Vision-Radiology---Employee-Induction-V2" },
+      { name: "Employee-Led-Check-In", icon: FileText, fileName: "Employee-Led-Check-In" },
       { name: "Change of Bank Account Form", icon: FileText, fileName: "Change-of-Bank-Account-Form" },
       { name: "Maternity leave application letter", icon: FileText, fileName: "Maternity-leave-application-letter" }
     ],
     policies: [
-      { name: "Responsibilities for incident management", icon: Shield, fileName: "Responsibilities-for-incident-management" },
-      { name: "VRG Workflow for Addressing Incidents", icon: AlertTriangle, fileName: "VRG-Workflow-for-Addressing-Incidents" },
-      { name: "VRG-HR-Policy-Manual-V2", icon: BookOpen, fileName: "VRG-HR-Policy-Manual-V2" },
-      { name: "VRG_WHS Policy Statement", icon: Shield, fileName: "VRG_WHS-Policy-Statement" },
-      { name: "Respectful Workplace Training - VRG Group", icon: Users, fileName: "Respectful-Workplace-Training-VRG-Group" },
-      { name: "VRG Work Health Safety Management System Manual", icon: Shield, fileName: "VRG-Work-Health-Safety-Management-System-Manual" },
-      { name: "Vision Radiology Saturday Urgent Reports Procedure", icon: ClipboardList, fileName: "Vision-Radiology-Saturday-Urgent-Reports-Procedure" },
+      { name: "Responsibilities for incident management", icon: FileText, fileName: "Responsibilities-for-incident-management" },
+      { name: "VRG Workflow for Addressing Incidents", icon: FileText, fileName: "VRG-Workflow-for-Addressing-Incidents" },
+      { name: "VRG-HR-Policy-Manual-V2", icon: FileText, fileName: "VRG-HR-Policy-Manual-V2" },
+      { name: "VRG_WHS Policy Statement", icon: FileText, fileName: "VRG_WHS-Policy-Statement" },
+      { name: "Respectful Workplace Training - VRG Group", icon: FileText, fileName: "Respectful-Workplace-Training-VRG-Group" },
+      { name: "VRG Work Health Safety Management System Manual", icon: FileText, fileName: "VRG-Work-Health-Safety-Management-System-Manual" },
+      { name: "Vision Radiology Saturday Urgent Reports Procedure", icon: FileText, fileName: "Vision-Radiology-Saturday-Urgent-Reports-Procedure" },
       { name: "Contrast Media Administration Policy", icon: FileText, fileName: "Contrast-Media-Administration-Policy" },
-      { name: "Managing Risk Of Potential Cross Infection", icon: Shield, fileName: "Managing-Risk-Of-Potential-Cross-Infection" }
+      { name: "Managing Risk Of Potential Cross Infection", icon: FileText, fileName: "Managing-Risk-Of-Potential-Cross-Infection" }
     ]
   };
 
@@ -642,7 +658,7 @@ export default function HRAssistance() {
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a file..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[300px]">
                   {hrFiles.map((file) => (
                     <SelectItem key={file.id} value={file.name}>
                       {file.name}
