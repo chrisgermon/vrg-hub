@@ -205,8 +205,8 @@ export default function Home() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6">
-        {/* Quick Links - Takes 3 columns (60% width) */}
-        <div className="lg:col-span-3">
+        {/* Quick Links - Takes 2 columns (40% width) */}
+        <div className="lg:col-span-2">
           <QuickLinksModule 
             title="Quick Links" 
             links={quickLinks}
@@ -215,8 +215,8 @@ export default function Home() {
           />
         </div>
 
-        {/* News Feed - Takes 2 columns (40% width) */}
-        <div className="lg:col-span-2">
+        {/* News Feed - Takes 3 columns (60% width) */}
+        <div className="lg:col-span-3">
           <NewsFeedModule title="Latest News" maxItems={5} />
         </div>
       </div>
