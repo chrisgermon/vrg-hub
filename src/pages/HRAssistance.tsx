@@ -170,7 +170,7 @@ export default function HRAssistance() {
     {
       title: "EAP Assist Flyer",
       description: "Download program information",
-      url: "#flyer",
+      url: "shared/EAP Assist/EAP ASSIST.pdf",
       icon: Download,
       external: false
     }
@@ -454,11 +454,26 @@ export default function HRAssistance() {
                   key={index}
                   variant="outline"
                   className="w-full justify-start text-left h-auto py-4"
-                  onClick={() => {
+                  onClick={async () => {
                     if (link.external) {
                       window.open(link.url, '_blank', 'noopener,noreferrer');
                     } else {
-                      console.log(`Navigate to ${link.url}`);
+                      // Handle EAP Assist Flyer document
+                      try {
+                        const { data, error } = await supabase.storage
+                          .from("documents")
+                          .createSignedUrl(link.url, 3600);
+                        
+                        if (error) throw error;
+                        window.open(data.signedUrl, "_blank");
+                      } catch (error) {
+                        console.error("Error opening document:", error);
+                        toast({
+                          title: "Error",
+                          description: "Failed to open document.",
+                          variant: "destructive",
+                        });
+                      }
                     }
                   }}
                 >
