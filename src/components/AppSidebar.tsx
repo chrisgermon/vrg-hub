@@ -329,7 +329,6 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
       { title: "Home", url: "/home", icon: Home },
       { title: "Requests", url: "/requests", icon: ShoppingCart },
       { title: "Reminders", url: "/reminders", icon: Bell },
-      { title: "Knowledge Base", url: "/knowledge-base", icon: BookOpen },
     ].filter(item => isMenuItemVisible(getMenuItemKey(item.title, item.url)));
 
     const helpItem = { title: "Help Guide", url: "/help", icon: HelpCircle, key: "help" };
