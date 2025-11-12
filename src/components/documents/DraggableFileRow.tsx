@@ -2,7 +2,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, Edit, Download, Trash2 } from "lucide-react";
+import { Eye, Edit, Download, Trash2, Link } from "lucide-react";
 import { DocumentFile } from './types';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +16,7 @@ interface DraggableFileRowProps {
   onDownload: () => void;
   onDelete: () => void;
   onOpenFile: () => void;
+  onCopyLink: () => void;
   getFileIcon: (filename: string, mimetype?: string) => JSX.Element;
   getFileExtension: (filename: string) => string;
   formatFileSize: (bytes: number) => string;
@@ -32,6 +33,7 @@ export function DraggableFileRow({
   onDownload,
   onDelete,
   onOpenFile,
+  onCopyLink,
   getFileIcon,
   getFileExtension,
   formatFileSize,
@@ -92,6 +94,14 @@ export function DraggableFileRow({
               <Eye className="h-4 w-4" />
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onCopyLink}
+            title="Copy Link"
+          >
+            <Link className="h-4 w-4" />
+          </Button>
           <Button
             size="sm"
             variant="ghost"

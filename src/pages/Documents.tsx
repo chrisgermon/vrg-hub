@@ -681,6 +681,36 @@ export default function Documents() {
     }
   };
 
+  const handleCopyLink = async (file: DocumentFile) => {
+    if (!user) return;
+
+    try {
+      const filePath = `${currentPath}${file.name}`;
+      
+      // Create a signed URL valid for 1 year
+      const { data, error } = await supabase.storage
+        .from("documents")
+        .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year
+
+      if (error) throw error;
+
+      if (data?.signedUrl) {
+        await navigator.clipboard.writeText(data.signedUrl);
+        toast({
+          title: "Success",
+          description: "Link copied to clipboard",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error copying link:", error);
+      toast({
+        title: "Error",
+        description: "Failed to copy link",
+        variant: "destructive",
+      });
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteFile || !user) return;
 
@@ -1061,6 +1091,7 @@ export default function Documents() {
                       onRename={() => openRenameDialog(file)}
                       onDelete={() => setDeleteFile(file)}
                       onOpenFile={() => handleOpenFile(file)}
+                      onCopyLink={() => handleCopyLink(file)}
                       isPreviewable={isPreviewable(file.name, file.metadata?.mimetype)}
                       getFileIcon={getFileIcon}
                       getFileExtension={getFileExtension}
