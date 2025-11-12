@@ -10,15 +10,13 @@ interface DroppableFolderRowProps {
   onNavigate: () => void;
   onDelete: () => void;
   onRename: () => void;
-  formatDate: (date: string) => string;
 }
 
 export function DroppableFolderRow({ 
   folder, 
   onNavigate, 
   onDelete, 
-  onRename,
-  formatDate 
+  onRename
 }: DroppableFolderRowProps) {
   const { isOver, setNodeRef } = useDroppable({
     id: folder.id,
@@ -49,9 +47,6 @@ export function DroppableFolderRow({
       </TableCell>
       <TableCell className="text-muted-foreground">
         -
-      </TableCell>
-      <TableCell className="text-muted-foreground">
-        {formatDate(folder.created_at)}
       </TableCell>
       <TableCell className="text-right">
         <div 

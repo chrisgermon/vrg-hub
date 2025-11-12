@@ -1095,15 +1095,6 @@ export default function Documents() {
                         Size {getSortIcon("size")}
                       </Button>
                     </TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        onClick={() => handleSort("date")}
-                        className="hover:bg-transparent p-0 h-auto font-semibold"
-                      >
-                        Uploaded {getSortIcon("date")}
-                      </Button>
-                    </TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1116,7 +1107,6 @@ export default function Documents() {
                       onNavigate={() => navigateToFolder(folder.name)}
                       onDelete={() => setDeleteFolder(folder)}
                       onRename={() => openRenameFolderDialog(folder)}
-                      formatDate={formatDate}
                     />
                   ))}
                   
@@ -1137,7 +1127,6 @@ export default function Documents() {
                       getFileIcon={getFileIcon}
                       getFileExtension={getFileExtension}
                       formatFileSize={formatFileSize}
-                      formatDate={formatDate}
                     />
                   ))}
                 </TableBody>

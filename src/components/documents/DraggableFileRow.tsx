@@ -20,7 +20,6 @@ interface DraggableFileRowProps {
   getFileIcon: (filename: string, mimetype?: string) => JSX.Element;
   getFileExtension: (filename: string) => string;
   formatFileSize: (bytes: number) => string;
-  formatDate: (date: string) => string;
 }
 
 export function DraggableFileRow({ 
@@ -36,8 +35,7 @@ export function DraggableFileRow({
   onCopyLink,
   getFileIcon,
   getFileExtension,
-  formatFileSize,
-  formatDate
+  formatFileSize
 }: DraggableFileRowProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: file.id,
@@ -78,9 +76,6 @@ export function DraggableFileRow({
       </TableCell>
       <TableCell className="text-muted-foreground">
         {formatFileSize(file.metadata?.size || 0)}
-      </TableCell>
-      <TableCell className="text-muted-foreground">
-        {formatDate(file.created_at)}
       </TableCell>
       <TableCell className="text-right">
         <div className="flex gap-2 justify-end">
