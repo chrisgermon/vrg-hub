@@ -64,9 +64,9 @@ export default function Home() {
     },
   });
 
-  // Quick links
+  // Quick links - fetch all links (not user-specific)
   const { data: quickLinks = [], refetch: refetchQuickLinks } = useQuery({
-    queryKey: ['quick-links', user?.id],
+    queryKey: ['quick-links'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('quick_links')
@@ -81,22 +81,24 @@ export default function Home() {
         icon: link.icon || undefined
       })) || [];
     },
-    enabled: !!user?.id,
   });
 
   const handleQuickLinksUpdate = async (links: any[]) => {
+    // Only super_admins can update quick links
+    if (userRole !== 'super_admin') return;
+    
     // Delete all existing links
-    await supabase.from('quick_links').delete().eq('user_id', user?.id);
+    await supabase.from('quick_links').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     
     // Insert new links with positions
     if (links.length > 0) {
       const linksToInsert = links.map((link, index) => ({
-        user_id: user?.id,
-        company_id: company?.id,
         title: link.title,
         url: link.url,
         icon: link.icon || null,
-        position: index
+        position: index,
+        company_id: company?.id || null,
+        user_id: null
       }));
       
       await supabase.from('quick_links').insert(linksToInsert);
@@ -156,7 +158,7 @@ export default function Home() {
           <QuickLinksModule 
             title="Quick Links" 
             links={quickLinks}
-            isEditing={true}
+            isEditing={userRole === 'super_admin'}
             onUpdate={handleQuickLinksUpdate}
           />
         </div>
