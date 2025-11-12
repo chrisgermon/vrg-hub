@@ -73,6 +73,7 @@ const SetupVerification = lazy(() => import("./pages/SetupVerification"));
 const Documentation = lazy(() => import("./pages/Documentation"));
 const Documents = lazy(() => import("./pages/Documents"));
 const HRAssistance = lazy(() => import("./pages/HRAssistance"));
+const IncidentForm = lazy(() => import("./pages/IncidentForm"));
 
 const protectedLayoutRoutes: Array<{
   path: string;
@@ -94,6 +95,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/requests/tickets/new", element: <NewTicket /> },
   { path: "/documents", element: <Documents /> },
   { path: "/hr-assistance", element: <HRAssistance /> },
+  { path: "/incident-form", element: <IncidentForm /> },
   { path: "/news/view-all", element: <NewsViewAll /> },
   { path: "/news", element: <NewsManagement /> },
   { path: "/news/new", element: <ArticleEditor /> },

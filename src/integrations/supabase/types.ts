@@ -1181,6 +1181,63 @@ export type Database = {
           },
         ]
       }
+      incidents: {
+        Row: {
+          assigned_to: string | null
+          clinic: string
+          created_at: string
+          further_comments: string | null
+          id: string
+          incident_date: string
+          incident_description: string
+          incident_involves: string
+          incident_time: string
+          incident_type: string
+          modality_area: string
+          persons_involved: string
+          reporter_name: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          clinic: string
+          created_at?: string
+          further_comments?: string | null
+          id?: string
+          incident_date: string
+          incident_description: string
+          incident_involves: string
+          incident_time: string
+          incident_type: string
+          modality_area: string
+          persons_involved: string
+          reporter_name: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          clinic?: string
+          created_at?: string
+          further_comments?: string | null
+          id?: string
+          incident_date?: string
+          incident_description?: string
+          incident_involves?: string
+          incident_time?: string
+          incident_type?: string
+          modality_area?: string
+          persons_involved?: string
+          reporter_name?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       kb_categories: {
         Row: {
           created_at: string
