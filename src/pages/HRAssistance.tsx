@@ -318,13 +318,13 @@ export default function HRAssistance() {
                   <span className="ml-2 text-muted-foreground">Loading HR documents...</span>
                 </div>
               ) : (
-                <div className="grid md:grid-cols-3 gap-6">
+                <div className="space-y-8">
                   {/* Organisational Charts */}
                   <div className="space-y-3">
                     <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
                       VR Organisational Chart
                     </h3>
-                    <div className="space-y-2">
+                    <div className="grid gap-2">
                       {hrDocuments.organisational.map((doc, index) => (
                         <Button
                           key={index}
@@ -334,24 +334,9 @@ export default function HRAssistance() {
                           disabled={!findDocument(doc.fileName)}
                         >
                           <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
-                          <span className="text-sm line-clamp-2">{doc.name}</span>
+                          <span className="text-sm break-words">{doc.name}</span>
                         </Button>
                       ))}
-                    </div>
-
-                    {/* Monthly Newsletter Forms */}
-                    <div className="mt-6 pt-6 border-t">
-                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
-                        Monthly Newsletter Forms
-                      </h3>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start"
-                        onClick={() => window.open('/newsletter', '_blank')}
-                      >
-                        <Globe className="h-4 w-4 mr-2 text-primary" />
-                        Access newsletter forms
-                      </Button>
                     </div>
                   </div>
 
@@ -360,7 +345,7 @@ export default function HRAssistance() {
                     <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
                       HR Forms
                     </h3>
-                    <div className="space-y-2">
+                    <div className="grid gap-2">
                       {hrDocuments.forms.map((doc, index) => (
                         <Button
                           key={index}
@@ -370,13 +355,13 @@ export default function HRAssistance() {
                           disabled={!findDocument(doc.fileName)}
                         >
                           <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
-                          <span className="text-sm line-clamp-2">{doc.name}</span>
+                          <span className="text-sm break-words">{doc.name}</span>
                         </Button>
                       ))}
                       <Button
                         variant="destructive"
                         className="w-full justify-start"
-                        onClick={() => window.open('/requests/help', '_blank')}
+                        onClick={() => window.open('/incident-form', '_blank')}
                       >
                         <AlertTriangle className="h-4 w-4 mr-2" />
                         <span className="text-sm">Report workplace incident</span>
@@ -389,7 +374,7 @@ export default function HRAssistance() {
                     <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
                       Policies | Procedures | Training
                     </h3>
-                    <div className="space-y-2">
+                    <div className="grid gap-2">
                       {hrDocuments.policies.map((doc, index) => (
                         <Button
                           key={index}
@@ -399,10 +384,25 @@ export default function HRAssistance() {
                           disabled={!findDocument(doc.fileName)}
                         >
                           <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
-                          <span className="text-sm line-clamp-2">{doc.name}</span>
+                          <span className="text-sm break-words">{doc.name}</span>
                         </Button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Monthly Newsletter Forms */}
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Monthly Newsletter Forms
+                    </h3>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => window.open('/newsletter', '_blank')}
+                    >
+                      <Globe className="h-4 w-4 mr-2 text-primary" />
+                      Access newsletter forms
+                    </Button>
                   </div>
                 </div>
               )}
