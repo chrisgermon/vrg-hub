@@ -1,10 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Plus, Pencil, Trash2 } from "lucide-react";
+import { ExternalLink, Plus, Pencil, Trash2, Link as LinkIcon, FolderOpen } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DocumentBrowser } from "./DocumentBrowser";
 
 interface QuickLink {
   id: string;
@@ -30,16 +32,19 @@ export function QuickLinksModule({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<QuickLink | null>(null);
   const [formData, setFormData] = useState({ title: "", url: "", icon: "" });
+  const [linkType, setLinkType] = useState<"manual" | "document">("manual");
 
   const handleAddLink = () => {
     setEditingLink(null);
     setFormData({ title: "", url: "", icon: "" });
+    setLinkType("manual");
     setIsDialogOpen(true);
   };
 
   const handleEditLink = (link: QuickLink) => {
     setEditingLink(link);
     setFormData({ title: link.title, url: link.url, icon: link.icon || "" });
+    setLinkType("manual");
     setIsDialogOpen(true);
   };
 
@@ -66,6 +71,11 @@ export function QuickLinksModule({
     const updatedLinks = currentLinks.filter(l => l.id !== id);
     setCurrentLinks(updatedLinks);
     onUpdate?.(updatedLinks);
+  };
+
+  const handleDocumentSelect = (url: string, title: string) => {
+    setFormData({ ...formData, title, url });
+    setLinkType("manual");
   };
 
   return (
@@ -129,45 +139,64 @@ export function QuickLinksModule({
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingLink ? "Edit Link" : "Add Link"}</DialogTitle>
-            <DialogDescription>Add a title and URL. Optionally include an emoji icon.</DialogDescription>
+            <DialogDescription>Link to external websites or internal documents</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="e.g., Equipment Support"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="url">URL</Label>
-              <Input
-                id="url"
-                value={formData.url}
-                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                placeholder="https://example.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="icon">Icon (emoji)</Label>
-              <Input
-                id="icon"
-                value={formData.icon}
-                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                placeholder="📞"
-              />
-            </div>
-          </div>
+          
+          <Tabs value={linkType} onValueChange={(v) => setLinkType(v as "manual" | "document")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="manual" className="flex items-center gap-2">
+                <LinkIcon className="h-4 w-4" />
+                Manual URL
+              </TabsTrigger>
+              <TabsTrigger value="document" className="flex items-center gap-2">
+                <FolderOpen className="h-4 w-4" />
+                Browse Documents
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="manual" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g., Equipment Support"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="url">URL</Label>
+                <Input
+                  id="url"
+                  value={formData.url}
+                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                  placeholder="https://example.com or /documents"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="icon">Icon (emoji)</Label>
+                <Input
+                  id="icon"
+                  value={formData.icon}
+                  onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                  placeholder="📞"
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="document" className="py-4">
+              <DocumentBrowser onSelect={handleDocumentSelect} />
+            </TabsContent>
+          </Tabs>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveLink}>
+            <Button onClick={handleSaveLink} disabled={!formData.title || !formData.url}>
               {editingLink ? "Update" : "Add"}
             </Button>
           </DialogFooter>
