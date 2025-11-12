@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Plus, Pencil, Trash2, Link as LinkIcon, FolderOpen, FileText, File } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +35,11 @@ export function QuickLinksModule({
   const [editingLink, setEditingLink] = useState<QuickLink | null>(null);
   const [formData, setFormData] = useState({ title: "", url: "", icon: "" });
   const [linkType, setLinkType] = useState<"manual" | "document" | "request" | "page">("manual");
+
+  // Sync local state with props when they change
+  useEffect(() => {
+    setCurrentLinks(links);
+  }, [links]);
 
   const handleAddLink = () => {
     setEditingLink(null);
