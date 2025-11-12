@@ -18,13 +18,29 @@ import {
   UserCheck,
   Loader2,
   LockKeyhole,
-  FolderOpen
+  Link2,
+  Settings
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import eapQrCode from "@/assets/eap-qr-code.png";
 
 interface DocumentFile {
@@ -34,12 +50,22 @@ interface DocumentFile {
   metadata?: Record<string, any>;
 }
 
+interface DocumentMapping {
+  id: string;
+  document_key: string;
+  file_path: string;
+  category: string;
+}
+
 export default function HRAssistance() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [hrFiles, setHrFiles] = useState<DocumentFile[]>([]);
+  const [mappings, setMappings] = useState<Record<string, string>>({});
+  const [editingDoc, setEditingDoc] = useState<{ key: string; category: string; currentPath?: string } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<string>("");
 
   // Check permissions
   const canViewHRDocs = hasPermission("view_hr_documents");
@@ -53,8 +79,27 @@ export default function HRAssistance() {
   useEffect(() => {
     if (user) {
       loadHRDocuments();
+      loadMappings();
     }
   }, [user]);
+
+  const loadMappings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("hr_document_mappings")
+        .select("*");
+
+      if (error) throw error;
+
+      const mappingsMap: Record<string, string> = {};
+      (data || []).forEach((mapping: DocumentMapping) => {
+        mappingsMap[mapping.document_key] = mapping.file_path;
+      });
+      setMappings(mappingsMap);
+    } catch (error: any) {
+      console.error("Error loading mappings:", error);
+    }
+  };
 
   const loadHRDocuments = async () => {
     try {
@@ -106,8 +151,53 @@ export default function HRAssistance() {
   };
 
   const findDocument = (searchName: string): DocumentFile | undefined => {
-    // Direct filename match
+    // First check if there's a mapping
+    const mappedPath = mappings[searchName];
+    if (mappedPath) {
+      return hrFiles.find((file) => file.name === mappedPath);
+    }
+    // Fallback to direct filename match
     return hrFiles.find((file) => file.name === searchName);
+  };
+
+  const openEditDialog = (docKey: string, category: string) => {
+    const currentPath = mappings[docKey];
+    setEditingDoc({ key: docKey, category, currentPath });
+    setSelectedFile(currentPath || "");
+  };
+
+  const saveMapping = async () => {
+    if (!editingDoc || !selectedFile) return;
+
+    try {
+      const { error } = await supabase
+        .from("hr_document_mappings")
+        .upsert({
+          document_key: editingDoc.key,
+          file_path: selectedFile,
+          category: editingDoc.category,
+        }, {
+          onConflict: 'document_key'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Document mapping saved successfully",
+      });
+
+      await loadMappings();
+      setEditingDoc(null);
+      setSelectedFile("");
+    } catch (error: any) {
+      console.error("Error saving mapping:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save document mapping",
+        variant: "destructive",
+      });
+    }
   };
 
   // EAP Information
@@ -182,11 +272,6 @@ export default function HRAssistance() {
         variant: "destructive",
       });
     }
-  };
-
-  const navigateToDocumentInFolder = (fileName: string) => {
-    // Navigate to the Documents page with the HR folder path
-    window.location.href = '/documents?path=shared/Human%20Resources/';
   };
 
   return (
@@ -341,15 +426,18 @@ export default function HRAssistance() {
                           >
                             <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
                             <span className="text-sm break-words">{doc.name}</span>
+                            {mappings[doc.fileName] && (
+                              <Link2 className="h-3 w-3 ml-auto text-green-500" />
+                            )}
                           </Button>
                           {isSuperAdmin && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => navigateToDocumentInFolder(doc.fileName)}
-                              title="View in Documents folder"
+                              onClick={() => openEditDialog(doc.fileName, "organisational")}
+                              title="Link to file"
                             >
-                              <FolderOpen className="h-4 w-4" />
+                              <Settings className="h-4 w-4" />
                             </Button>
                           )}
                         </div>
@@ -373,15 +461,18 @@ export default function HRAssistance() {
                           >
                             <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
                             <span className="text-sm break-words">{doc.name}</span>
+                            {mappings[doc.fileName] && (
+                              <Link2 className="h-3 w-3 ml-auto text-green-500" />
+                            )}
                           </Button>
                           {isSuperAdmin && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => navigateToDocumentInFolder(doc.fileName)}
-                              title="View in Documents folder"
+                              onClick={() => openEditDialog(doc.fileName, "forms")}
+                              title="Link to file"
                             >
-                              <FolderOpen className="h-4 w-4" />
+                              <Settings className="h-4 w-4" />
                             </Button>
                           )}
                         </div>
@@ -413,15 +504,18 @@ export default function HRAssistance() {
                           >
                             <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
                             <span className="text-sm break-words">{doc.name}</span>
+                            {mappings[doc.fileName] && (
+                              <Link2 className="h-3 w-3 ml-auto text-green-500" />
+                            )}
                           </Button>
                           {isSuperAdmin && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => navigateToDocumentInFolder(doc.fileName)}
-                              title="View in Documents folder"
+                              onClick={() => openEditDialog(doc.fileName, "policies")}
+                              title="Link to file"
                             >
-                              <FolderOpen className="h-4 w-4" />
+                              <Settings className="h-4 w-4" />
                             </Button>
                           )}
                         </div>
@@ -527,6 +621,47 @@ export default function HRAssistance() {
           </Card>
         </div>
       </div>
+
+      {/* Edit Mapping Dialog */}
+      <Dialog open={!!editingDoc} onOpenChange={() => setEditingDoc(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link Document to File</DialogTitle>
+            <DialogDescription>
+              Select the actual file from storage to link to this document
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Document:</label>
+              <p className="text-sm text-muted-foreground">{editingDoc?.key}</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select File:</label>
+              <Select value={selectedFile} onValueChange={setSelectedFile}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a file..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {hrFiles.map((file) => (
+                    <SelectItem key={file.id} value={file.name}>
+                      {file.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingDoc(null)}>
+              Cancel
+            </Button>
+            <Button onClick={saveMapping} disabled={!selectedFile}>
+              Save Mapping
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

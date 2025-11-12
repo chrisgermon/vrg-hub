@@ -1217,6 +1217,33 @@ export type Database = {
           },
         ]
       }
+      hr_document_mappings: {
+        Row: {
+          category: string
+          created_at: string | null
+          document_key: string
+          file_path: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          document_key: string
+          file_path: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          document_key?: string
+          file_path?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       incidents: {
         Row: {
           assigned_to: string | null
