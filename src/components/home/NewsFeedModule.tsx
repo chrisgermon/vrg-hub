@@ -86,16 +86,21 @@ export function NewsFeedModule({
   }
 
   return (
-    <Card className="rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200 h-full">
-      <CardHeader>
+    <Card className="rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 h-full border-2 border-primary/20 bg-gradient-to-br from-background to-background/95 hover:border-primary/40 animate-fade-in">
+      <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-primary/10">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-2xl font-bold text-foreground">{title}</CardTitle>
-          <Link to="/news/view-all" className="text-sm text-primary hover:underline">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Newspaper className="h-5 w-5 text-primary" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-foreground">{title}</CardTitle>
+          </div>
+          <Link to="/news/view-all" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors hover:underline">
             View All
           </Link>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <div className="space-y-4">
           {articles.map((article) => (
             <Link
@@ -103,16 +108,16 @@ export function NewsFeedModule({
               to={`/news/${article.slug || article.id}`}
               className="block group"
             >
-              <div className="flex gap-3 items-start">
+              <div className="flex gap-4 items-start p-3 rounded-lg hover:bg-accent/50 transition-all duration-200 -mx-3">
                 {article.featured_image_url && (
                   <img 
                     src={article.featured_image_url} 
                     alt={article.title}
-                    className="w-16 h-16 object-cover rounded-md flex-shrink-0"
+                    className="w-20 h-20 object-cover rounded-lg flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-200 border border-border"
                   />
                 )}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                  <h3 className="font-semibold text-base line-clamp-2 group-hover:text-primary transition-colors duration-200">
                     {article.title}
                   </h3>
                   {article.excerpt && (
