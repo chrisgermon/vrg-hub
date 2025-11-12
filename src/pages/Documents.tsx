@@ -43,6 +43,7 @@ import {
   Folder,
   ChevronRight,
   Home,
+  RefreshCw,
 } from "lucide-react";
 import {
   Card,
@@ -934,6 +935,15 @@ export default function Documents() {
                 />
               </DialogContent>
             </Dialog>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={loadFiles}
+              disabled={loading}
+              title="Refresh"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
           </div>
         </div>
 
