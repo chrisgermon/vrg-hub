@@ -12,7 +12,8 @@ import {
   Megaphone,
   UserPlus,
   Printer,
-  Bell
+  Bell,
+  Plus
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -23,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
-  const { user, company } = useAuth();
+  const { user, company, userRole } = useAuth();
   const navigate = useNavigate();
   const { isFeatureEnabled } = useCompanyFeatures();
   const { hasPermission } = usePermissions();
@@ -132,6 +133,17 @@ export default function Home() {
             <FileText className="mr-2 h-5 w-5" />
             New Request
           </Button>
+          {userRole === 'super_admin' && (
+            <Button
+              size="lg"
+              variant="outline"
+              className="shadow-lg hover:shadow-xl transition-all duration-200 bg-white/90 hover:bg-white font-semibold"
+              onClick={() => navigate('/pages/edit')}
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              New Page
+            </Button>
+          )}
         </div>
         <div className="absolute top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-white/10 rounded-full -mr-24 md:-mr-32 -mt-24 md:-mt-32 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-48 h-48 md:w-64 md:h-64 bg-white/5 rounded-full -ml-16 md:-ml-20 -mb-16 md:-mb-20 blur-3xl" />

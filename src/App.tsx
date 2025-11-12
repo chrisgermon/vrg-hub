@@ -74,6 +74,9 @@ const Documentation = lazy(() => import("./pages/Documentation"));
 const Documents = lazy(() => import("./pages/Documents"));
 const HRAssistance = lazy(() => import("./pages/HRAssistance"));
 const IncidentForm = lazy(() => import("./pages/IncidentForm"));
+const PageEditor = lazy(() => import("./pages/PageEditor"));
+const PageViewer = lazy(() => import("./pages/PageViewer"));
+const PageManager = lazy(() => import("./pages/PageManager"));
 
 const protectedLayoutRoutes: Array<{
   path: string;
@@ -96,6 +99,9 @@ const protectedLayoutRoutes: Array<{
   { path: "/documents", element: <Documents /> },
   { path: "/hr-assistance", element: <HRAssistance /> },
   { path: "/incident-form", element: <IncidentForm /> },
+  { path: "/pages/edit", element: <PageEditor />, requiredRole: ["super_admin"] },
+  { path: "/pages/manage", element: <PageManager />, requiredRole: ["super_admin"] },
+  { path: "/pages/:slug", element: <PageViewer /> },
   { path: "/news/view-all", element: <NewsViewAll /> },
   { path: "/news", element: <NewsManagement /> },
   { path: "/news/new", element: <ArticleEditor /> },
