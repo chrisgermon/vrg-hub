@@ -9,7 +9,6 @@ import {
   Download,
   Phone,
   Building2,
-  QrCode,
   ExternalLink,
   Shield,
   Users,
@@ -25,6 +24,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import eapQrCode from "@/assets/eap-qr-code.png";
 
 interface DocumentFile {
   name: string;
@@ -494,7 +494,11 @@ export default function HRAssistance() {
                   scan the below QR Code:
                 </p>
                 <div className="bg-white rounded-lg p-4 flex items-center justify-center border-2 border-primary/20">
-                  <QrCode className="h-32 w-32 text-primary" />
+                  <img 
+                    src={eapQrCode} 
+                    alt="EAP Assist QR Code" 
+                    className="w-48 h-auto"
+                  />
                 </div>
               </div>
 
