@@ -175,8 +175,8 @@ export default function Documents() {
               id: item.name,
               created_at: item.created_at || new Date().toISOString(),
             });
-          } else {
-            // It's a file
+          } else if (item.name !== '.keep') {
+            // It's a file (excluding .keep files)
             fileItems.push(item as DocumentFile);
           }
         });
@@ -205,8 +205,8 @@ export default function Documents() {
               id: item.name,
               created_at: item.created_at || new Date().toISOString(),
             });
-          } else {
-            // It's a file
+          } else if (item.name !== '.keep') {
+            // It's a file (excluding .keep files)
             fileItems.push(item as DocumentFile);
           }
         });
