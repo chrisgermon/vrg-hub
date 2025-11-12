@@ -204,20 +204,20 @@ export default function Home() {
       )}
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-        {/* News Feed - Takes 2 columns on large screens, 3 on XL */}
-        <div className="lg:col-span-2 xl:col-span-3">
-          <NewsFeedModule title="Latest News" maxItems={5} />
-        </div>
-
-        {/* Sidebar Content */}
-        <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6">
+        {/* Quick Links - Takes 3 columns (60% width) */}
+        <div className="lg:col-span-3">
           <QuickLinksModule 
             title="Quick Links" 
             links={quickLinks}
             isEditing={true}
             onUpdate={handleQuickLinksUpdate}
           />
+        </div>
+
+        {/* News Feed - Takes 2 columns (40% width) */}
+        <div className="lg:col-span-2">
+          <NewsFeedModule title="Latest News" maxItems={5} />
         </div>
       </div>
 
