@@ -580,8 +580,218 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             <SidebarGroupContent>
             <SidebarMenu>
 
-              {/* Common Items */}
-              {menuConfig.common.map((item) => {
+              {/* 1. Home - First priority item */}
+              {menuConfig.common.filter(item => item.title === "Home").map((item) => {
+                const itemKey = getMenuItemKey(item.title, item.url);
+                const CustomIcon = getCustomIcon(itemKey, item.icon);
+                const customLabel = getCustomLabel(itemKey, item.title);
+                
+                const menuItem = (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url} 
+                        onClick={handleMenuItemClick}
+                        className={({ isActive }) => 
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
+                            isActive 
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+                          }`
+                        }
+                      >
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+
+                return canEditMenu ? (
+                  <ContextMenu key={item.title}>
+                    <ContextMenuTrigger>
+                      {menuItem}
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onClick={() => handleEditMenuItem(itemKey, customLabel, menuCustomizations[itemKey]?.icon)}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Menu Item
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                ) : menuItem;
+              })}
+
+              {/* 2. Documents - Second priority */}
+              {menuConfig.documents && (() => {
+                const itemKey = getMenuItemKey(menuConfig.documents.title, menuConfig.documents.url);
+                const CustomIcon = getCustomIcon(itemKey, menuConfig.documents.icon);
+                const customLabel = getCustomLabel(itemKey, menuConfig.documents.title);
+                
+                const menuItem = (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={menuConfig.documents.url}
+                        onClick={handleMenuItemClick}
+                        className={({ isActive }) => 
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
+                            isActive 
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+                          }`
+                        }
+                      >
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+
+                return canEditMenu ? (
+                  <ContextMenu>
+                    <ContextMenuTrigger>
+                      {menuItem}
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onClick={() => handleEditMenuItem(itemKey, customLabel, menuCustomizations[itemKey]?.icon)}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Menu Item
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                ) : menuItem;
+              })()}
+
+              {/* 3. HR & Employee Assistance - Third priority */}
+              {menuConfig.hrAssistance && (() => {
+                const itemKey = getMenuItemKey(menuConfig.hrAssistance.title, menuConfig.hrAssistance.url);
+                const CustomIcon = getCustomIcon(itemKey, menuConfig.hrAssistance.icon);
+                const customLabel = getCustomLabel(itemKey, menuConfig.hrAssistance.title);
+                
+                const menuItem = (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={menuConfig.hrAssistance.url}
+                        onClick={handleMenuItemClick}
+                        className={({ isActive }) => 
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
+                            isActive 
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+                          }`
+                        }
+                      >
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+
+                return canEditMenu ? (
+                  <ContextMenu>
+                    <ContextMenuTrigger>
+                      {menuItem}
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onClick={() => handleEditMenuItem(itemKey, customLabel, menuCustomizations[itemKey]?.icon)}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Menu Item
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                ) : menuItem;
+              })()}
+
+              {/* 4. News - Fourth priority */}
+              {menuConfig.news && (() => {
+                const itemKey = getMenuItemKey(menuConfig.news.title, menuConfig.news.url);
+                const CustomIcon = getCustomIcon(itemKey, menuConfig.news.icon);
+                const customLabel = getCustomLabel(itemKey, menuConfig.news.title);
+                
+                const menuItem = (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={menuConfig.news.url}
+                        onClick={handleMenuItemClick}
+                        className={({ isActive }) => 
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
+                            isActive 
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+                          }`
+                        }
+                      >
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+
+                return canEditMenu ? (
+                  <ContextMenu>
+                    <ContextMenuTrigger>
+                      {menuItem}
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onClick={() => handleEditMenuItem(itemKey, customLabel, menuCustomizations[itemKey]?.icon)}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Menu Item
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                ) : menuItem;
+              })()}
+
+              {/* 5. Requests - Fifth priority item */}
+              {menuConfig.common.filter(item => item.title === "Requests").map((item) => {
+                const itemKey = getMenuItemKey(item.title, item.url);
+                const CustomIcon = getCustomIcon(itemKey, item.icon);
+                const customLabel = getCustomLabel(itemKey, item.title);
+                
+                const menuItem = (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url} 
+                        onClick={handleMenuItemClick}
+                        className={({ isActive }) => 
+                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
+                            isActive 
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+                          }`
+                        }
+                      >
+                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span className="text-sm">{customLabel}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+
+                return canEditMenu ? (
+                  <ContextMenu key={item.title}>
+                    <ContextMenuTrigger>
+                      {menuItem}
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onClick={() => handleEditMenuItem(itemKey, customLabel, menuCustomizations[itemKey]?.icon)}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Menu Item
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                ) : menuItem;
+              })}
+
+              {/* Other Common Items (Reminders, etc.) */}
+              {menuConfig.common.filter(item => item.title !== "Home" && item.title !== "Requests").map((item) => {
                 const itemKey = getMenuItemKey(item.title, item.url);
                 const CustomIcon = getCustomIcon(itemKey, item.icon);
                 const customLabel = getCustomLabel(itemKey, item.title);
@@ -784,47 +994,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 ) : menuItem;
               })()}
 
-              {/* News */}
-              {menuConfig.news && (() => {
-                const itemKey = getMenuItemKey(menuConfig.news.title, menuConfig.news.url);
-                const CustomIcon = getCustomIcon(itemKey, menuConfig.news.icon);
-                const customLabel = getCustomLabel(itemKey, menuConfig.news.title);
-                
-                const menuItem = (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <NavLink 
-                        to={menuConfig.news.url}
-                        onClick={handleMenuItemClick}
-                        className={({ isActive }) => 
-                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
-                            isActive 
-                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
-                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
-                          }`
-                        }
-                      >
-                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
-                        {!collapsed && <span className="text-sm">{customLabel}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-
-                return canEditMenu ? (
-                  <ContextMenu>
-                    <ContextMenuTrigger>
-                      {menuItem}
-                    </ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem onClick={() => handleEditMenuItem(itemKey, customLabel, menuCustomizations[itemKey]?.icon)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit Menu Item
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
-                ) : menuItem;
-              })()}
+              {/* News - moved to top priority section */}
 
               {/* Admin Items (super_admin only) */}
               {menuConfig.admin && menuConfig.admin.map((item) => {
@@ -952,89 +1122,9 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 ) : menuItem;
               })()}
 
-              {/* Documents */}
-              {menuConfig.documents && (() => {
-                const itemKey = getMenuItemKey(menuConfig.documents.title, menuConfig.documents.url);
-                const CustomIcon = getCustomIcon(itemKey, menuConfig.documents.icon);
-                const customLabel = getCustomLabel(itemKey, menuConfig.documents.title);
-                
-                const menuItem = (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <NavLink 
-                        to={menuConfig.documents.url}
-                        onClick={handleMenuItemClick}
-                        className={({ isActive }) => 
-                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
-                            isActive 
-                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
-                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
-                          }`
-                        }
-                      >
-                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
-                        {!collapsed && <span className="text-sm">{customLabel}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
+              {/* Documents - moved to top priority section */}
 
-                return canEditMenu ? (
-                  <ContextMenu>
-                    <ContextMenuTrigger>
-                      {menuItem}
-                    </ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem onClick={() => handleEditMenuItem(itemKey, customLabel, menuCustomizations[itemKey]?.icon)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit Menu Item
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
-                ) : menuItem;
-              })()}
-
-              {/* HR & Employee Assistance */}
-              {menuConfig.hrAssistance && (() => {
-                const itemKey = getMenuItemKey(menuConfig.hrAssistance.title, menuConfig.hrAssistance.url);
-                const CustomIcon = getCustomIcon(itemKey, menuConfig.hrAssistance.icon);
-                const customLabel = getCustomLabel(itemKey, menuConfig.hrAssistance.title);
-                
-                const menuItem = (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <NavLink 
-                        to={menuConfig.hrAssistance.url}
-                        onClick={handleMenuItemClick}
-                        className={({ isActive }) => 
-                          `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-all duration-200 ${
-                            isActive 
-                              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
-                              : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
-                          }`
-                        }
-                      >
-                        <CustomIcon className="w-5 h-5 flex-shrink-0" />
-                        {!collapsed && <span className="text-sm">{customLabel}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-
-                return canEditMenu ? (
-                  <ContextMenu>
-                    <ContextMenuTrigger>
-                      {menuItem}
-                    </ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem onClick={() => handleEditMenuItem(itemKey, customLabel, menuCustomizations[itemKey]?.icon)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit Menu Item
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
-                ) : menuItem;
-              })()}
+              {/* HR & Employee Assistance - moved to top priority section */}
 
               {/* Modality Details */}
               {menuConfig.modalityDetails && (() => {
