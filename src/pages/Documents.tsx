@@ -107,6 +107,8 @@ export default function Documents() {
   const [deleteFolder, setDeleteFolder] = useState<FolderItem | null>(null);
   const [renameFolder, setRenameFolder] = useState<FolderItem | null>(null);
   const [renameFolderValue, setRenameFolderValue] = useState("");
+  const [searchResults, setSearchResults] = useState<Array<DocumentFile & { path: string }>>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -815,12 +817,105 @@ export default function Documents() {
     );
   };
 
+  // Search across entire file system
+  const searchAllFiles = async (query: string) => {
+    if (!user || !query.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      setLoading(true);
+      
+      // Recursively search through all folders
+      const searchInFolder = async (path: string): Promise<Array<DocumentFile & { path: string }>> => {
+        const { data, error } = await supabase.storage
+          .from("documents")
+          .list(path, {
+            limit: 1000,
+            sortBy: { column: "name", order: "asc" },
+          });
+
+        if (error) throw error;
+
+        let results: Array<DocumentFile & { path: string }> = [];
+
+        for (const item of data || []) {
+          if (item.id === null) {
+            // It's a folder, search recursively
+            const subResults = await searchInFolder(`${path}${item.name}/`);
+            results = results.concat(subResults);
+          } else if (item.name !== '.keep' && item.name.toLowerCase().includes(query.toLowerCase())) {
+            // It's a file that matches the search
+            results.push({
+              ...item as DocumentFile,
+              path: path
+            });
+          }
+        }
+
+        return results;
+      };
+
+      const results = await searchInFolder("shared/");
+      setSearchResults(results);
+    } catch (error: any) {
+      console.error("Error searching files:", error);
+      toast({
+        title: "Error",
+        description: "Failed to search documents",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim()) {
+        searchAllFiles(searchQuery);
+      } else {
+        setSearchResults([]);
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const filteredAndSortedFiles = useMemo(() => {
+    // If searching, use search results
+    if (isSearching && searchResults.length > 0) {
+      let filtered = searchResults.filter((file) => {
+        const fileExt = getFileExtension(file.name).toLowerCase();
+        const matchesFilter = filterType === "all" || fileExt === filterType.toLowerCase();
+        return matchesFilter;
+      });
+
+      filtered.sort((a, b) => {
+        let comparison = 0;
+        if (sortBy === "name") {
+          comparison = a.name.localeCompare(b.name);
+        } else if (sortBy === "date") {
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        } else if (sortBy === "size") {
+          comparison = (a.metadata?.size || 0) - (b.metadata?.size || 0);
+        }
+        return sortOrder === "asc" ? comparison : -comparison;
+      });
+
+      return filtered;
+    }
+
+    // Normal folder view
     let filtered = files.filter((file) => {
-      const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase());
       const fileExt = getFileExtension(file.name).toLowerCase();
       const matchesFilter = filterType === "all" || fileExt === filterType.toLowerCase();
-      return matchesSearch && matchesFilter;
+      return matchesFilter;
     });
 
     filtered.sort((a, b) => {
@@ -836,7 +931,7 @@ export default function Documents() {
     });
 
     return filtered;
-  }, [files, searchQuery, filterType, sortBy, sortOrder]);
+  }, [files, searchResults, isSearching, filterType, sortBy, sortOrder]);
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
@@ -1053,12 +1148,14 @@ export default function Documents() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <File className="h-16 w-16 text-muted-foreground mb-4" />
               <p className="text-lg font-medium">
-                {files.length === 0 ? "No documents yet" : "No documents found"}
+                {isSearching ? "No documents found" : files.length === 0 ? "No documents yet" : "No documents found"}
               </p>
               <p className="text-sm text-muted-foreground">
-                {files.length === 0
-                  ? "Click the upload button to get started"
-                  : "Try adjusting your search or filters"}
+                {isSearching 
+                  ? `No files found matching "${searchQuery}"`
+                  : files.length === 0
+                    ? "Click the upload button to get started"
+                    : "Try adjusting your search or filters"}
               </p>
             </CardContent>
           </Card>
@@ -1099,8 +1196,8 @@ export default function Documents() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* Folders first */}
-                  {folders.map((folder) => (
+                  {/* Folders first - hide when searching */}
+                  {!isSearching && folders.map((folder) => (
                     <DroppableFolderRow 
                       key={folder.id} 
                       folder={folder}
@@ -1111,24 +1208,28 @@ export default function Documents() {
                   ))}
                   
                   {/* Files */}
-                  {filteredAndSortedFiles.map((file) => (
-                    <DraggableFileRow
-                      key={file.id}
-                      file={file}
-                      selected={selectedFiles.has(file.id)}
-                      onToggleSelect={() => toggleFileSelection(file.id)}
-                      onPreview={() => handlePreview(file)}
-                      onDownload={() => handleDownload(file)}
-                      onRename={() => openRenameDialog(file)}
-                      onDelete={() => setDeleteFile(file)}
-                      onOpenFile={() => handleOpenFile(file)}
-                      onCopyLink={() => handleCopyLink(file)}
-                      isPreviewable={isPreviewable(file.name, file.metadata?.mimetype)}
-                      getFileIcon={getFileIcon}
-                      getFileExtension={getFileExtension}
-                      formatFileSize={formatFileSize}
-                    />
-                  ))}
+                  {filteredAndSortedFiles.map((file) => {
+                    const filePath = isSearching && 'path' in file ? (file as any).path : undefined;
+                    return (
+                      <DraggableFileRow
+                        key={file.id}
+                        file={file}
+                        selected={selectedFiles.has(file.id)}
+                        onToggleSelect={() => toggleFileSelection(file.id)}
+                        onPreview={() => handlePreview(file)}
+                        onDownload={() => handleDownload(file)}
+                        onRename={() => openRenameDialog(file)}
+                        onDelete={() => setDeleteFile(file)}
+                        onOpenFile={() => handleOpenFile(file)}
+                        onCopyLink={() => handleCopyLink(file)}
+                        isPreviewable={isPreviewable(file.name, file.metadata?.mimetype)}
+                        getFileIcon={getFileIcon}
+                        getFileExtension={getFileExtension}
+                        formatFileSize={formatFileSize}
+                        filePath={filePath}
+                      />
+                    );
+                  })}
                 </TableBody>
               </Table>
               </DndContext>

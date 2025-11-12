@@ -20,6 +20,7 @@ interface DraggableFileRowProps {
   getFileIcon: (filename: string, mimetype?: string) => JSX.Element;
   getFileExtension: (filename: string) => string;
   formatFileSize: (bytes: number) => string;
+  filePath?: string;
 }
 
 export function DraggableFileRow({ 
@@ -35,7 +36,8 @@ export function DraggableFileRow({
   onCopyLink,
   getFileIcon,
   getFileExtension,
-  formatFileSize
+  formatFileSize,
+  filePath
 }: DraggableFileRowProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: file.id,
@@ -68,7 +70,14 @@ export function DraggableFileRow({
           className="text-left hover:text-primary transition-colors hover:underline"
           title={file.name}
         >
-          {file.name}
+          <div>
+            <div>{file.name}</div>
+            {filePath && (
+              <div className="text-xs text-muted-foreground mt-0.5">
+                {filePath.replace('shared/', '')}
+              </div>
+            )}
+          </div>
         </button>
       </TableCell>
       <TableCell className="text-muted-foreground">
