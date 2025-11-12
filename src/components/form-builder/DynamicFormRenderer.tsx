@@ -25,6 +25,15 @@ import {
 } from '@/components/ui/select';
 import { LocationSelect } from '@/components/ui/location-select';
 
+// Helper function to check if a field has an "Other" option
+function hasOtherOption(field: FormFieldType): boolean {
+  if (!field.options) return false;
+  return field.options.some(option => {
+    const value = typeof option === 'string' ? option : option.value;
+    return value.toLowerCase() === 'other';
+  });
+}
+
 function buildZodSchema(fields: FormFieldType[]) {
   const shape: Record<string, any> = {};
 
@@ -72,6 +81,11 @@ function buildZodSchema(fields: FormFieldType[]) {
     }
 
     shape[field.id] = validator;
+    
+    // Add validation for "other" text field if field has "Other" option
+    if ((field.type === 'select' || field.type === 'radio') && hasOtherOption(field)) {
+      shape[`${field.id}_other_text`] = z.string().optional();
+    }
   });
 
   return z.object(shape);
@@ -83,6 +97,10 @@ export function DynamicFormRenderer({ template, onSubmit, isSubmitting }: Dynami
     resolver: zodResolver(schema),
     defaultValues: template.fields.reduce((acc, field) => {
       acc[field.id] = field.defaultValue || '';
+      // Initialize other_text fields for select/radio with Other option
+      if ((field.type === 'select' || field.type === 'radio') && hasOtherOption(field)) {
+        acc[`${field.id}_other_text`] = '';
+      }
       return acc;
     }, {} as Record<string, any>),
   });
@@ -113,37 +131,75 @@ export function DynamicFormRenderer({ template, onSubmit, isSubmitting }: Dynami
                     );
                   case 'select':
                     return (
-                      <Select onValueChange={formField.onChange} value={formField.value}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={field.placeholder || 'Select an option'} />
-                        </SelectTrigger>
-                        <SelectContent>
+                      <>
+                        <Select onValueChange={formField.onChange} value={formField.value}>
+                          <SelectTrigger>
+                            <SelectValue placeholder={field.placeholder || 'Select an option'} />
+                          </SelectTrigger>
+                          <SelectContent className="bg-background z-50">
+                            {field.options?.map((option) => {
+                              const optionValue = typeof option === 'string' ? option : option.value;
+                              const optionLabel = typeof option === 'string' ? option : option.label;
+                              return (
+                                <SelectItem key={optionValue} value={optionValue}>
+                                  {optionLabel}
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                        {hasOtherOption(field) && formField.value?.toLowerCase() === 'other' && (
+                          <FormField
+                            control={form.control}
+                            name={`${field.id}_other_text`}
+                            render={({ field: otherField }) => (
+                              <FormItem className="mt-2">
+                                <FormControl>
+                                  <Input
+                                    placeholder="Please specify..."
+                                    {...otherField}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </>
+                    );
+                  case 'radio':
+                    return (
+                      <>
+                        <RadioGroup onValueChange={formField.onChange} value={formField.value}>
                           {field.options?.map((option) => {
                             const optionValue = typeof option === 'string' ? option : option.value;
                             const optionLabel = typeof option === 'string' ? option : option.label;
                             return (
-                              <SelectItem key={optionValue} value={optionValue}>
-                                {optionLabel}
-                              </SelectItem>
+                              <div key={optionValue} className="flex items-center space-x-2">
+                                <RadioGroupItem value={optionValue} id={`${field.id}-${optionValue}`} />
+                                <label htmlFor={`${field.id}-${optionValue}`}>{optionLabel}</label>
+                              </div>
                             );
                           })}
-                        </SelectContent>
-                      </Select>
-                    );
-                  case 'radio':
-                    return (
-                      <RadioGroup onValueChange={formField.onChange} value={formField.value}>
-                        {field.options?.map((option) => {
-                          const optionValue = typeof option === 'string' ? option : option.value;
-                          const optionLabel = typeof option === 'string' ? option : option.label;
-                          return (
-                            <div key={optionValue} className="flex items-center space-x-2">
-                              <RadioGroupItem value={optionValue} id={`${field.id}-${optionValue}`} />
-                              <label htmlFor={`${field.id}-${optionValue}`}>{optionLabel}</label>
-                            </div>
-                          );
-                        })}
-                      </RadioGroup>
+                        </RadioGroup>
+                        {hasOtherOption(field) && formField.value?.toLowerCase() === 'other' && (
+                          <FormField
+                            control={form.control}
+                            name={`${field.id}_other_text`}
+                            render={({ field: otherField }) => (
+                              <FormItem className="mt-2">
+                                <FormControl>
+                                  <Input
+                                    placeholder="Please specify..."
+                                    {...otherField}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </>
                     );
                   case 'multiselect':
                     return (
