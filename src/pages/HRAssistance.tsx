@@ -163,9 +163,9 @@ export default function HRAssistance() {
     {
       title: "Whistleblower Program",
       description: "Report concerns confidentially",
-      url: "#whistleblower",
+      url: "https://eapassist.com.au/whistleblower-program/",
       icon: Shield,
-      external: false
+      external: true
     },
     {
       title: "EAP Assist Flyer",
