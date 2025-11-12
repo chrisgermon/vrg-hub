@@ -421,20 +421,6 @@ export default function HRAssistance() {
                     </div>
                   </div>
 
-                  {/* Monthly Newsletter Forms */}
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                      Monthly Newsletter Forms
-                    </h3>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={() => window.open('/newsletter', '_blank')}
-                    >
-                      <Globe className="h-4 w-4 mr-2 text-primary" />
-                      Access newsletter forms
-                    </Button>
-                  </div>
                 </div>
               )}
             </CardContent>
