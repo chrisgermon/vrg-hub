@@ -122,9 +122,6 @@ export default function Home() {
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">
               Welcome back, {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
             </h1>
-            <p className="text-sm md:text-base text-white/90 max-w-2xl mb-4 md:mb-0">
-              {company?.name || 'CrowdHub'} - Your central hub for all requests and services
-            </p>
           </div>
           <Button
             size="lg"
