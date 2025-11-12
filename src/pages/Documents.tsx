@@ -817,7 +817,7 @@ export default function Documents() {
     );
   };
 
-  // Search across entire file system
+  // Search across entire file system using backend function
   const searchAllFiles = async (query: string) => {
     if (!user || !query.trim()) {
       setSearchResults([]);
@@ -829,38 +829,13 @@ export default function Documents() {
       setIsSearching(true);
       setLoading(true);
       
-      // Recursively search through all folders
-      const searchInFolder = async (path: string): Promise<Array<DocumentFile & { path: string }>> => {
-        const { data, error } = await supabase.storage
-          .from("documents")
-          .list(path, {
-            limit: 1000,
-            sortBy: { column: "name", order: "asc" },
-          });
+      const { data, error } = await supabase.functions.invoke('search-documents', {
+        body: { searchQuery: query }
+      });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        let results: Array<DocumentFile & { path: string }> = [];
-
-        for (const item of data || []) {
-          if (item.id === null) {
-            // It's a folder, search recursively
-            const subResults = await searchInFolder(`${path}${item.name}/`);
-            results = results.concat(subResults);
-          } else if (item.name !== '.keep' && item.name.toLowerCase().includes(query.toLowerCase())) {
-            // It's a file that matches the search
-            results.push({
-              ...item as DocumentFile,
-              path: path
-            });
-          }
-        }
-
-        return results;
-      };
-
-      const results = await searchInFolder("shared/");
-      setSearchResults(results);
+      setSearchResults(data.results || []);
     } catch (error: any) {
       console.error("Error searching files:", error);
       toast({
@@ -868,6 +843,7 @@ export default function Documents() {
         description: "Failed to search documents",
         variant: "destructive",
       });
+      setSearchResults([]);
     } finally {
       setLoading(false);
     }
