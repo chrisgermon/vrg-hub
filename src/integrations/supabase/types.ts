@@ -1247,7 +1247,8 @@ export type Database = {
       incidents: {
         Row: {
           assigned_to: string | null
-          clinic: string
+          brand_id: string | null
+          clinic: string | null
           created_at: string
           further_comments: string | null
           id: string
@@ -1256,6 +1257,7 @@ export type Database = {
           incident_involves: string
           incident_time: string
           incident_type: string
+          location_id: string | null
           modality_area: string
           persons_involved: string
           reporter_name: string
@@ -1265,7 +1267,8 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
-          clinic: string
+          brand_id?: string | null
+          clinic?: string | null
           created_at?: string
           further_comments?: string | null
           id?: string
@@ -1274,6 +1277,7 @@ export type Database = {
           incident_involves: string
           incident_time: string
           incident_type: string
+          location_id?: string | null
           modality_area: string
           persons_involved: string
           reporter_name: string
@@ -1283,7 +1287,8 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
-          clinic?: string
+          brand_id?: string | null
+          clinic?: string | null
           created_at?: string
           further_comments?: string | null
           id?: string
@@ -1292,6 +1297,7 @@ export type Database = {
           incident_involves?: string
           incident_time?: string
           incident_type?: string
+          location_id?: string | null
           modality_area?: string
           persons_involved?: string
           reporter_name?: string
@@ -1299,7 +1305,22 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "incidents_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       kb_categories: {
         Row: {

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BrandLocationSelect } from '@/components/ui/brand-location-select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
@@ -26,7 +27,7 @@ export default function IncidentForm() {
     e.preventDefault();
     
     // Validate required fields
-    const requiredFields = ['name', 'incident_involves', 'persons_involved', 'clinic', 'modality_area', 'incident_date', 'incident_time', 'incident_type', 'incident_description'];
+    const requiredFields = ['name', 'incident_involves', 'persons_involved', 'brand_id', 'location_id', 'modality_area', 'incident_date', 'incident_time', 'incident_type', 'incident_description'];
     const missingFields = requiredFields.filter(field => !formData[field]);
     
     if (missingFields.length > 0) {
@@ -61,7 +62,8 @@ export default function IncidentForm() {
           reporter_name: formData.name,
           incident_involves: formData.incident_involves,
           persons_involved: formData.persons_involved,
-          clinic: formData.clinic,
+          brand_id: formData.brand_id,
+          location_id: formData.location_id,
           modality_area: formData.modality_area,
           incident_date: formData.incident_date,
           incident_time: formData.incident_time,
@@ -144,23 +146,14 @@ export default function IncidentForm() {
               />
             </div>
 
-            {/* Clinic */}
-            <div className="space-y-2">
-              <Label htmlFor="clinic">Clinic *</Label>
-              <Select
-                value={formData.clinic}
-                onValueChange={(value) => handleFieldChange('clinic', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select clinic" />
-                </SelectTrigger>
-                <SelectContent>
-                  {['Botanic Ridge', 'Bulleen', 'Carnegie', 'Coburg', 'Colac', 'Diamond Creek', 'Greensborough', 'Hampton East', 'Kangaroo Flat', 'Kyabram', 'Lilydale', 'Lynbrook', 'Mornington', 'Mentone', 'Mulgrave', 'North Melbourne', 'Reservoir', 'Sebastopol', 'Shepparton', 'Thornbury', 'Torquay', 'Werribee', 'Williamstown'].map((clinic) => (
-                    <SelectItem key={clinic} value={clinic}>{clinic}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Company and Location */}
+            <BrandLocationSelect
+              selectedBrandId={formData.brand_id}
+              selectedLocationId={formData.location_id}
+              onBrandChange={(brandId) => handleFieldChange('brand_id', brandId)}
+              onLocationChange={(locationId) => handleFieldChange('location_id', locationId)}
+              required
+            />
 
             {/* Modality / Area */}
             <div className="space-y-2">
