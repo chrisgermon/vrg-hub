@@ -296,27 +296,15 @@ export default function HRAssistance() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      {/* Header with Report Incident Button */}
-      <div className="flex justify-between items-start mb-6 gap-4">
-        <div className="flex-1">
-          {!hasAccess && (
-            <Alert className="border-destructive/50">
-              <LockKeyhole className="h-4 w-4" />
-              <AlertDescription>
-                You don't have permission to access HR & Employee Assistance resources. 
-                Please contact your administrator if you need access.
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
-        <Button
-          onClick={() => window.open('/incident-form', '_blank')}
-          className="bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 px-6 py-6 text-base font-semibold whitespace-nowrap"
-        >
-          <AlertTriangle className="h-5 w-5" />
-          Report Workplace Incident
-        </Button>
-      </div>
+      {!hasAccess && (
+        <Alert className="mb-6 border-destructive/50">
+          <LockKeyhole className="h-4 w-4" />
+          <AlertDescription>
+            You don't have permission to access HR & Employee Assistance resources. 
+            Please contact your administrator if you need access.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-hero p-8 md:p-12 mb-8 text-white">
@@ -561,6 +549,26 @@ export default function HRAssistance() {
               <CardTitle className="text-lg">Quick Links</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {/* Report Workplace Incident - Featured at top */}
+              <Button
+                onClick={() => window.open('/incident-form', '_blank')}
+                className="w-full justify-start text-left h-auto py-4 bg-destructive hover:bg-destructive/90 text-destructive-foreground border-0 shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                <div className="flex items-start gap-3 w-full">
+                  <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm mb-0.5 flex items-center gap-1">
+                      Report Workplace Incident
+                      <ExternalLink className="h-3 w-3" />
+                    </div>
+                    <div className="text-xs opacity-90">
+                      Submit an incident report confidentially
+                    </div>
+                  </div>
+                </div>
+              </Button>
+
+              {/* Other Quick Links */}
               {eapLinks.map((link, index) => (
                 <Button
                   key={index}
