@@ -68,29 +68,6 @@ export default function HRAssistance() {
       // Filter out folders and only get files
       const fileItems = (data || []).filter((item) => item.id !== null) as DocumentFile[];
       setHrFiles(fileItems);
-
-      // Use AI to match expected documents with actual files
-      const allExpectedDocs = [
-        ...hrDocuments.organisational.map(d => d.fileName),
-        ...hrDocuments.forms.map(d => d.fileName),
-        ...hrDocuments.policies.map(d => d.fileName)
-      ];
-
-      try {
-        const { data: matchData } = await supabase.functions.invoke('match-hr-documents', {
-          body: {
-            expectedDocuments: allExpectedDocs,
-            availableDocuments: fileItems.map(f => f.name)
-          }
-        });
-
-        if (matchData?.matches) {
-          console.log('AI-matched HR documents:', matchData.matches);
-          (window as any).hrDocumentMatches = matchData.matches;
-        }
-      } catch (matchError) {
-        console.error('Error matching documents with AI:', matchError);
-      }
     } catch (error: any) {
       console.error("Error loading HR documents:", error);
     } finally {
@@ -127,17 +104,8 @@ export default function HRAssistance() {
   };
 
   const findDocument = (searchName: string): DocumentFile | undefined => {
-    // First try AI-matched document if available
-    const matches = (window as any).hrDocumentMatches;
-    if (matches && matches[searchName]) {
-      const matchedFile = hrFiles.find(file => file.name === matches[searchName]);
-      if (matchedFile) return matchedFile;
-    }
-    
-    // Fallback to fuzzy name match
-    return hrFiles.find((file) =>
-      file.name.toLowerCase().includes(searchName.toLowerCase())
-    );
+    // Direct filename match
+    return hrFiles.find((file) => file.name === searchName);
   };
 
   // EAP Information
