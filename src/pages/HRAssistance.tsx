@@ -17,7 +17,8 @@ import {
   ClipboardList,
   UserCheck,
   Loader2,
-  LockKeyhole
+  LockKeyhole,
+  FolderOpen
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,6 +45,7 @@ export default function HRAssistance() {
   const canViewHRDocs = hasPermission("view_hr_documents");
   const canAccessEAP = hasPermission("access_eap_program");
   const canViewEmployeeAssistance = hasPermission("view_employee_assistance");
+  const isSuperAdmin = hasPermission("manage_system_settings");
 
   // By default, all users should have access
   const hasAccess = canViewHRDocs || canAccessEAP || canViewEmployeeAssistance;
@@ -180,6 +182,11 @@ export default function HRAssistance() {
         variant: "destructive",
       });
     }
+  };
+
+  const navigateToDocumentInFolder = (fileName: string) => {
+    // Navigate to the Documents page with the HR folder path
+    window.location.href = '/documents?path=shared/Human%20Resources/';
   };
 
   return (
@@ -325,16 +332,27 @@ export default function HRAssistance() {
                     </h3>
                     <div className="grid gap-2">
                       {hrDocuments.organisational.map((doc, index) => (
-                        <Button
-                          key={index}
-                          variant="outline"
-                          className="w-full justify-start text-left h-auto py-3 px-3"
-                          onClick={() => handleDocumentClick(doc.fileName)}
-                          disabled={!findDocument(doc.fileName)}
-                        >
-                          <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
-                          <span className="text-sm break-words">{doc.name}</span>
-                        </Button>
+                        <div key={index} className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            className="flex-1 justify-start text-left h-auto py-3 px-3"
+                            onClick={() => handleDocumentClick(doc.fileName)}
+                            disabled={!findDocument(doc.fileName)}
+                          >
+                            <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
+                            <span className="text-sm break-words">{doc.name}</span>
+                          </Button>
+                          {isSuperAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => navigateToDocumentInFolder(doc.fileName)}
+                              title="View in Documents folder"
+                            >
+                              <FolderOpen className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -346,16 +364,27 @@ export default function HRAssistance() {
                     </h3>
                     <div className="grid gap-2">
                       {hrDocuments.forms.map((doc, index) => (
-                        <Button
-                          key={index}
-                          variant="outline"
-                          className="w-full justify-start text-left h-auto py-3 px-3"
-                          onClick={() => handleDocumentClick(doc.fileName)}
-                          disabled={!findDocument(doc.fileName)}
-                        >
-                          <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
-                          <span className="text-sm break-words">{doc.name}</span>
-                        </Button>
+                        <div key={index} className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            className="flex-1 justify-start text-left h-auto py-3 px-3"
+                            onClick={() => handleDocumentClick(doc.fileName)}
+                            disabled={!findDocument(doc.fileName)}
+                          >
+                            <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
+                            <span className="text-sm break-words">{doc.name}</span>
+                          </Button>
+                          {isSuperAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => navigateToDocumentInFolder(doc.fileName)}
+                              title="View in Documents folder"
+                            >
+                              <FolderOpen className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       ))}
                       <Button
                         variant="destructive"
@@ -375,16 +404,27 @@ export default function HRAssistance() {
                     </h3>
                     <div className="grid gap-2">
                       {hrDocuments.policies.map((doc, index) => (
-                        <Button
-                          key={index}
-                          variant="outline"
-                          className="w-full justify-start text-left h-auto py-3 px-3"
-                          onClick={() => handleDocumentClick(doc.fileName)}
-                          disabled={!findDocument(doc.fileName)}
-                        >
-                          <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
-                          <span className="text-sm break-words">{doc.name}</span>
-                        </Button>
+                        <div key={index} className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            className="flex-1 justify-start text-left h-auto py-3 px-3"
+                            onClick={() => handleDocumentClick(doc.fileName)}
+                            disabled={!findDocument(doc.fileName)}
+                          >
+                            <doc.icon className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
+                            <span className="text-sm break-words">{doc.name}</span>
+                          </Button>
+                          {isSuperAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => navigateToDocumentInFolder(doc.fileName)}
+                              title="View in Documents folder"
+                            >
+                              <FolderOpen className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>
