@@ -1,12 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Plus, Pencil, Trash2, Link as LinkIcon, FolderOpen } from "lucide-react";
+import { ExternalLink, Plus, Pencil, Trash2, Link as LinkIcon, FolderOpen, FileText } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentBrowser } from "./DocumentBrowser";
+import { RequestFormBrowser } from "./RequestFormBrowser";
 
 interface QuickLink {
   id: string;
@@ -32,7 +33,7 @@ export function QuickLinksModule({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<QuickLink | null>(null);
   const [formData, setFormData] = useState({ title: "", url: "", icon: "" });
-  const [linkType, setLinkType] = useState<"manual" | "document">("manual");
+  const [linkType, setLinkType] = useState<"manual" | "document" | "request">("manual");
 
   const handleAddLink = () => {
     setEditingLink(null);
@@ -142,18 +143,22 @@ export function QuickLinksModule({
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingLink ? "Edit Link" : "Add Link"}</DialogTitle>
-            <DialogDescription>Link to external websites or internal documents</DialogDescription>
+            <DialogDescription>Link to external websites, internal documents, or request forms</DialogDescription>
           </DialogHeader>
           
-          <Tabs value={linkType} onValueChange={(v) => setLinkType(v as "manual" | "document")}>
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs value={linkType} onValueChange={(v) => setLinkType(v as "manual" | "document" | "request")}>
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="manual" className="flex items-center gap-2">
                 <LinkIcon className="h-4 w-4" />
                 Manual URL
               </TabsTrigger>
               <TabsTrigger value="document" className="flex items-center gap-2">
                 <FolderOpen className="h-4 w-4" />
-                Browse Documents
+                Documents
+              </TabsTrigger>
+              <TabsTrigger value="request" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Request Forms
               </TabsTrigger>
             </TabsList>
 
@@ -189,6 +194,10 @@ export function QuickLinksModule({
 
             <TabsContent value="document" className="py-4">
               <DocumentBrowser onSelect={handleDocumentSelect} />
+            </TabsContent>
+
+            <TabsContent value="request" className="py-4">
+              <RequestFormBrowser onSelect={handleDocumentSelect} />
             </TabsContent>
           </Tabs>
 
