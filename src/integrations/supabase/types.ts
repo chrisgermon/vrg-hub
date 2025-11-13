@@ -370,6 +370,7 @@ export type Database = {
           department_name: string
           id: string
           is_active: boolean
+          requires_brand_location: boolean | null
           sections: Json
           sort_order: number | null
           updated_at: string
@@ -379,6 +380,7 @@ export type Database = {
           department_name: string
           id?: string
           is_active?: boolean
+          requires_brand_location?: boolean | null
           sections?: Json
           sort_order?: number | null
           updated_at?: string
@@ -388,6 +390,7 @@ export type Database = {
           department_name?: string
           id?: string
           is_active?: boolean
+          requires_brand_location?: boolean | null
           sections?: Json
           sort_order?: number | null
           updated_at?: string
@@ -1984,12 +1987,14 @@ export type Database = {
       newsletter_assignments: {
         Row: {
           assigned_at: string
+          brand_id: string | null
           contributor_id: string
           created_at: string
           cycle_id: string
           department: string
           id: string
           is_required: boolean | null
+          location_id: string | null
           section: string | null
           status: string
           submitted_at: string | null
@@ -2000,12 +2005,14 @@ export type Database = {
         }
         Insert: {
           assigned_at?: string
+          brand_id?: string | null
           contributor_id: string
           created_at?: string
           cycle_id: string
           department: string
           id?: string
           is_required?: boolean | null
+          location_id?: string | null
           section?: string | null
           status?: string
           submitted_at?: string | null
@@ -2016,12 +2023,14 @@ export type Database = {
         }
         Update: {
           assigned_at?: string
+          brand_id?: string | null
           contributor_id?: string
           created_at?: string
           cycle_id?: string
           department?: string
           id?: string
           is_required?: boolean | null
+          location_id?: string | null
           section?: string | null
           status?: string
           submitted_at?: string | null
@@ -2032,10 +2041,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "newsletter_assignments_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "newsletter_assignments_cycle_id_fkey"
             columns: ["cycle_id"]
             isOneToOne: false
             referencedRelation: "newsletter_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsletter_assignments_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
         ]
@@ -2083,6 +2106,7 @@ export type Database = {
         Row: {
           assignment_id: string
           attachments: Json | null
+          brand_id: string | null
           clinic_updates: Json | null
           content: string
           contributor_id: string
@@ -2091,6 +2115,7 @@ export type Database = {
           department: string
           id: string
           images: Json | null
+          location_id: string | null
           no_update_this_month: boolean | null
           review_notes: string | null
           reviewed_at: string | null
@@ -2105,6 +2130,7 @@ export type Database = {
         Insert: {
           assignment_id: string
           attachments?: Json | null
+          brand_id?: string | null
           clinic_updates?: Json | null
           content: string
           contributor_id: string
@@ -2113,6 +2139,7 @@ export type Database = {
           department: string
           id?: string
           images?: Json | null
+          location_id?: string | null
           no_update_this_month?: boolean | null
           review_notes?: string | null
           reviewed_at?: string | null
@@ -2127,6 +2154,7 @@ export type Database = {
         Update: {
           assignment_id?: string
           attachments?: Json | null
+          brand_id?: string | null
           clinic_updates?: Json | null
           content?: string
           contributor_id?: string
@@ -2135,6 +2163,7 @@ export type Database = {
           department?: string
           id?: string
           images?: Json | null
+          location_id?: string | null
           no_update_this_month?: boolean | null
           review_notes?: string | null
           reviewed_at?: string | null
@@ -2155,10 +2184,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "newsletter_submissions_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "newsletter_submissions_cycle_id_fkey"
             columns: ["cycle_id"]
             isOneToOne: false
             referencedRelation: "newsletter_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsletter_submissions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
         ]

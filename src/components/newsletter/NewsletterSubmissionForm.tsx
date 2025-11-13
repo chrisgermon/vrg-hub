@@ -22,12 +22,20 @@ export function NewsletterSubmissionForm({
   assignmentId, 
   cycleId, 
   department,
+  brandId,
+  locationId,
+  brandName,
+  locationName,
   onSuccess,
   onCancel
 }: { 
   assignmentId: string; 
   cycleId: string; 
   department: string;
+  brandId?: string | null;
+  locationId?: string | null;
+  brandName?: string | null;
+  locationName?: string | null;
   onSuccess?: () => void;
   onCancel?: () => void;
 }) {
@@ -101,6 +109,8 @@ export function NewsletterSubmissionForm({
         cycle_id: cycleId,
         contributor_id: user?.id,
         department,
+        brand_id: brandId || null,
+        location_id: locationId || null,
         title: defaultTitle,
         content: '', // Keep for backward compatibility
         sections_data: sectionsData as any,
@@ -207,7 +217,12 @@ export function NewsletterSubmissionForm({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Newsletter Submission - {department}</CardTitle>
+              <CardTitle>
+                Newsletter Submission - {department}
+                {brandName && (
+                  <span className="text-primary"> • {brandName}{locationName && ` - ${locationName}`}</span>
+                )}
+              </CardTitle>
             </div>
             <div className="flex items-center gap-4">
               {lastSaved && (

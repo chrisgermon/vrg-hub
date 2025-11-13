@@ -81,7 +81,16 @@ export function EditorDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('newsletter_submissions')
-        .select('id, title, department, status, submitted_at, contributor_id')
+        .select(`
+          id, 
+          title, 
+          department, 
+          status, 
+          submitted_at, 
+          contributor_id,
+          brand_id,
+          location_id
+        `)
         .order('submitted_at', { ascending: false })
         .limit(10);
       if (error) throw error;
@@ -95,9 +104,28 @@ export function EditorDashboard() {
 
       const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
 
+      // Fetch brands and locations
+      const brandIds = [...new Set(data?.map(s => s.brand_id).filter(Boolean))];
+      const locationIds = [...new Set(data?.map(s => s.location_id).filter(Boolean))];
+      
+      const { data: brands } = await supabase
+        .from('brands')
+        .select('id, name')
+        .in('id', brandIds);
+      
+      const { data: locations } = await supabase
+        .from('locations')
+        .select('id, name')
+        .in('id', locationIds);
+
+      const brandMap = new Map(brands?.map(b => [b.id, b.name]) || []);
+      const locationMap = new Map(locations?.map(l => [l.id, l.name]) || []);
+
       return data?.map(s => ({
         ...s,
         contributor_name: profileMap.get(s.contributor_id) || 'Unknown',
+        brand_name: s.brand_id ? brandMap.get(s.brand_id) : null,
+        location_name: s.location_id ? locationMap.get(s.location_id) : null,
       })) || [];
     },
   });
@@ -181,6 +209,7 @@ export function EditorDashboard() {
                       <TableHead>Title</TableHead>
                       <TableHead>Contributor</TableHead>
                       <TableHead>Department</TableHead>
+                      <TableHead>Company/Location</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Submitted</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -192,6 +221,16 @@ export function EditorDashboard() {
                         <TableCell className="font-medium">{submission.title}</TableCell>
                         <TableCell>{submission.contributor_name}</TableCell>
                         <TableCell>{submission.department}</TableCell>
+                        <TableCell>
+                          {submission.brand_name ? (
+                            <span className="text-sm">
+                              {submission.brand_name}
+                              {submission.location_name && <span className="text-muted-foreground"> • {submission.location_name}</span>}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Badge
                             variant={

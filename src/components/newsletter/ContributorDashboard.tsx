@@ -50,7 +50,9 @@ export function ContributorDashboard() {
         .from('newsletter_assignments')
         .select(`
           *,
-          cycle:newsletter_cycles(*)
+          cycle:newsletter_cycles(*),
+          brand:brands(id, name),
+          location:locations(id, name)
         `)
         .eq('contributor_id', user?.id)
         .order('assigned_at', { ascending: false });
@@ -97,12 +99,14 @@ export function ContributorDashboard() {
   const potentialDepartments = latestCycle
     ? (deptAssignments as any[])
         .map((d: any) => d.department)
-        .filter((dep: string) =>
-          (dep ?? '').length > 0 &&
-          (assignments as any[]).every(
-            (a: any) => !(a.cycle_id === latestCycle.id && a.department === dep)
-          )
-        )
+        .filter((dep: string) => {
+          if (!dep || dep.length === 0) return false;
+          // For Technical Partners, check if all brand/location combinations are assigned
+          // For others, check if department is assigned
+          return (assignments as any[]).every(
+            (a: any) => !(a.cycle_id === latestCycle.id && a.department === dep && !a.brand_id)
+          );
+        })
     : [];
 
   if (selectedAssignment) {
@@ -111,6 +115,10 @@ export function ContributorDashboard() {
         assignmentId={selectedAssignment.id}
         cycleId={selectedAssignment.cycle_id}
         department={selectedAssignment.department}
+        brandId={selectedAssignment.brand_id}
+        locationId={selectedAssignment.location_id}
+        brandName={selectedAssignment.brand?.name}
+        locationName={selectedAssignment.location?.name}
         onSuccess={() => setSelectedAssignment(null)}
         onCancel={() => setSelectedAssignment(null)}
       />
@@ -147,6 +155,12 @@ export function ContributorDashboard() {
                         <p className="text-sm text-muted-foreground">
                           Department: {assignment.department}
                         </p>
+                        {assignment.brand && (
+                          <p className="text-sm font-medium text-primary">
+                            {assignment.brand.name}
+                            {assignment.location && ` - ${assignment.location.name}`}
+                          </p>
+                        )}
                         <p className="text-sm text-muted-foreground flex items-center gap-2">
                           <Clock className="h-4 w-4" />
                           Due: {new Date(assignment.cycle?.due_date).toLocaleDateString()}

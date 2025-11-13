@@ -72,17 +72,72 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
         if (deptError) {
           console.error('Failed to fetch department assignments:', deptError);
         } else if (deptAssignments && deptAssignments.length > 0) {
+          // Fetch department templates to check which need brand/location
+          const { data: templates } = await supabase
+            .from('department_section_templates')
+            .select('department_name, requires_brand_location');
+          
+          const templateMap = new Map(templates?.map(t => [t.department_name, t.requires_brand_location]) || []);
+
+          // Fetch active brands and locations for Technical Partners
+          const { data: brands } = await supabase
+            .from('brands')
+            .select('id, name')
+            .eq('is_active', true)
+            .order('name');
+
+          const { data: locations } = await supabase
+            .from('locations')
+            .select('id, name, brand_id')
+            .eq('is_active', true)
+            .order('name');
+
           // Create newsletter_assignments for each department assignee
           const newsletterAssignments = [];
           for (const dept of deptAssignments) {
             if (dept.assignee_ids && dept.assignee_ids.length > 0) {
+              const requiresBrandLocation = templateMap.get(dept.department) === true;
+              
               for (const userId of dept.assignee_ids) {
-                newsletterAssignments.push({
-                  cycle_id: cycleId,
-                  contributor_id: userId,
-                  department: dept.department,
-                  status: 'pending',
-                });
+                if (requiresBrandLocation && brands && brands.length > 0) {
+                  // For Technical Partners: create one assignment per brand/location combination
+                  for (const brand of brands) {
+                    const brandLocations = locations?.filter(l => l.brand_id === brand.id) || [];
+                    
+                    if (brandLocations.length > 0) {
+                      for (const location of brandLocations) {
+                        newsletterAssignments.push({
+                          cycle_id: cycleId,
+                          contributor_id: userId,
+                          department: dept.department,
+                          brand_id: brand.id,
+                          location_id: location.id,
+                          status: 'pending',
+                        });
+                      }
+                    } else {
+                      // Brand without locations - create one assignment for the brand
+                      newsletterAssignments.push({
+                        cycle_id: cycleId,
+                        contributor_id: userId,
+                        department: dept.department,
+                        brand_id: brand.id,
+                        location_id: null,
+                        status: 'pending',
+                      });
+                    }
+                  }
+                } else {
+                  // Regular departments: one assignment per user
+                  newsletterAssignments.push({
+                    cycle_id: cycleId,
+                    contributor_id: userId,
+                    department: dept.department,
+                    brand_id: null,
+                    location_id: null,
+                    status: 'pending',
+                  });
+                }
               }
             }
           }
