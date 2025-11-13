@@ -172,16 +172,40 @@ export function SystemEmailLogs() {
 
   const getEmailTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
+      // Request-related
       request_submitted: 'Request Submitted',
       request_approved: 'Request Approved',
       request_declined: 'Request Declined',
       request_ordered: 'Request Ordered',
-      marketing_request_submitted: 'Marketing Request',
+      request_created: 'Request Created',
+      request_assigned: 'Request Assigned',
+      request_reassigned: 'Request Reassigned',
+      request_status_changed: 'Request Status Changed',
+      request_resolved: 'Request Resolved',
+      request_escalated: 'Request Escalated',
+      request_comment_reply: 'Request Comment Reply',
+      request_comment_added: 'Request Comment Added',
+      
+      // Department & Marketing
+      department_request_submitted: 'Department Request Submitted',
+      marketing_request_submitted: 'Marketing Request Submitted',
+      marketing_request_approved: 'Marketing Request Approved',
+      marketing_request_declined: 'Marketing Request Declined',
+      
+      // Hardware & Orders
+      hardware_order_notification: 'Hardware Order Notification',
+      hardware_approval: 'Hardware Approval',
+      order_confirmation: 'Order Confirmation',
+      
+      // User Management
       user_account_request_submitted: 'User Account Request',
       user_account_notification: 'User Account Notification',
-      toner_request: 'Toner Request',
       user_invite: 'User Invite',
-      hardware_approval: 'Hardware Approval',
+      welcome_email: 'Welcome Email',
+      
+      // Other
+      toner_request: 'Toner Request',
+      approval_request: 'Approval Request',
     };
     return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
