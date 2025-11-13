@@ -75,6 +75,7 @@ export function Office365UserSync() {
   const [directQuery, setDirectQuery] = useState('');
   const [directLoading, setDirectLoading] = useState(false);
   const [directResults, setDirectResults] = useState<Office365User[] | null>(null);
+  const [syncingUsers, setSyncingUsers] = useState<Set<string>>(new Set());
   const usersPerPage = 20;
   const syncPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -558,6 +559,50 @@ export function Office365UserSync() {
     }
   };
 
+  const syncSingleUser = async (userId: string) => {
+    try {
+      const companyId = await getTenantCompanyId();
+      if (!companyId) {
+        toast.error('Could not determine company ID');
+        return false;
+      }
+
+      setSyncingUsers(prev => new Set(prev).add(userId));
+      
+      const { data, error } = await supabase.functions.invoke('office365-sync-single-user', {
+        body: { userId, companyId }
+      });
+
+      if (error) throw error;
+
+      toast.success(data.message || 'User synced successfully');
+      
+      // Reload synced users
+      await loadUsers();
+      
+      return true;
+    } catch (error) {
+      console.error('Error syncing single user:', error);
+      toast.error('Failed to sync user from Office 365');
+      return false;
+    } finally {
+      setSyncingUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
+    }
+  };
+
+  const syncAndImportUser = async (user: Office365User) => {
+    const synced = await syncSingleUser(user.id);
+    if (synced) {
+      // Open import dialog after successful sync
+      setSelectedUser(user);
+      setImportDialogOpen(true);
+    }
+  };
+
   const bulkImportUsers = async () => {
     if (!confirm(`Import all ${office365Users.length} synced users as inactive "requester" accounts? They will be activated when they first sign in.`)) {
       return;
@@ -915,9 +960,23 @@ export function Office365UserSync() {
                           <Badge variant={u.hasLicense ? 'default' : 'secondary'}>{u.hasLicense ? 'Licensed' : 'Unlicensed'}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Button size="sm" variant="outline" onClick={() => { setSelectedUser(u); setImportDialogOpen(true); }}>
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Import
+                          <Button 
+                            size="sm" 
+                            variant="default"
+                            onClick={() => syncAndImportUser(u)}
+                            disabled={syncingUsers.has(u.id)}
+                          >
+                            {syncingUsers.has(u.id) ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Syncing...
+                              </>
+                            ) : (
+                              <>
+                                <UserPlus className="h-4 w-4 mr-2" />
+                                Sync & Import
+                              </>
+                            )}
                           </Button>
                         </TableCell>
                       </TableRow>
