@@ -74,6 +74,14 @@ export function NewsletterSubmissionForm({
     },
   });
 
+  // Check if we're before the deadline
+  const isBeforeDeadline = () => {
+    if (!assignment?.cycle?.due_date) return true;
+    const dueDate = new Date(assignment.cycle.due_date);
+    const now = new Date();
+    return now <= dueDate;
+  };
+
   const { data: existingSubmission, isLoading } = useQuery({
     queryKey: ['newsletter-submission', assignmentId],
     queryFn: async () => {
@@ -202,7 +210,12 @@ export function NewsletterSubmissionForm({
       return;
     }
 
-    if (confirm('Submit your contribution? You cannot edit after submission.')) {
+    const isResubmit = existingSubmission?.status === 'submitted';
+    const confirmMessage = isResubmit
+      ? 'Re-submit your updated contribution?'
+      : 'Submit your contribution? You can edit until the deadline.';
+    
+    if (confirm(confirmMessage)) {
       saveSubmission.mutate({ status: 'submitted' });
     }
   };
@@ -217,19 +230,22 @@ export function NewsletterSubmissionForm({
 
   const departmentSections = (departmentTemplate.sections as any[]) || [];
 
-  if (existingSubmission?.status === 'submitted') {
+  // Show "completed" view only if submitted AND past deadline
+  if (existingSubmission?.status === 'submitted' && !isBeforeDeadline()) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
           <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
           <h3 className="text-xl font-semibold mb-2">Submission Complete</h3>
           <p className="text-muted-foreground">
-            Your contribution has been submitted and is under review.
+            Your contribution has been submitted and the deadline has passed.
           </p>
         </CardContent>
       </Card>
     );
   }
+
+  const isAlreadySubmitted = existingSubmission?.status === 'submitted';
 
   return (
     <div className="space-y-6">
@@ -243,6 +259,11 @@ export function NewsletterSubmissionForm({
                   <span className="text-primary"> • {brandName}{locationName && ` - ${locationName}`}</span>
                 )}
               </CardTitle>
+              {isAlreadySubmitted && isBeforeDeadline() && (
+                <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
+                  ⚠️ This submission has been sent. You can edit until the deadline ({new Date(assignment?.cycle?.due_date || '').toLocaleDateString()}).
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-4">
               {lastSaved && (
@@ -263,7 +284,7 @@ export function NewsletterSubmissionForm({
                 disabled={saveSubmission.isPending}
               >
                 <Send className="h-4 w-4 mr-2" />
-                Submit
+                {isAlreadySubmitted ? 'Re-submit' : 'Submit'}
               </Button>
             </div>
           </div>
@@ -274,7 +295,6 @@ export function NewsletterSubmissionForm({
               id="no-update"
               checked={noUpdateThisMonth}
               onCheckedChange={(checked) => setNoUpdateThisMonth(checked as boolean)}
-              disabled={existingSubmission?.status === 'submitted'}
             />
             <label
               htmlFor="no-update"
@@ -297,7 +317,6 @@ export function NewsletterSubmissionForm({
                       value={sectionData?.content || ''}
                       onChange={(content) => handleSectionChange(section.key, content)}
                       placeholder={`Enter ${section.name.toLowerCase()}...`}
-                      disabled={existingSubmission?.status === 'submitted'}
                     />
                   </div>
                 );
