@@ -68,9 +68,10 @@ export function Office365UserSync() {
   const [importProgress, setImportProgress] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-const [filterRole, setFilterRole] = useState<string>('all');
-const [filterDepartment, setFilterDepartment] = useState<string>('all');
-const [showUnlicensed, setShowUnlicensed] = useState<boolean>(false);
+  const [filterRole, setFilterRole] = useState<string>('all');
+  const [filterDepartment, setFilterDepartment] = useState<string>('all');
+  const [showUnlicensed, setShowUnlicensed] = useState<boolean>(false);
+  const [sortByLicense, setSortByLicense] = useState<'asc' | 'desc' | null>(null);
   const usersPerPage = 20;
   const syncPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -102,7 +103,7 @@ const [showUnlicensed, setShowUnlicensed] = useState<boolean>(false);
 
   // Memoize filtered and paginated users for performance
   const filteredUsers = useMemo(() => {
-    return office365Users.filter(user => {
+    const filtered = office365Users.filter(user => {
       // Search filter
       const matchesSearch = 
         user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -120,7 +121,20 @@ const [showUnlicensed, setShowUnlicensed] = useState<boolean>(false);
       
       return matchesSearch && matchesRole && matchesDepartment && matchesLicense;
     });
-  }, [office365Users, searchQuery, filterRole, filterDepartment, showUnlicensed]);
+
+    // Apply license sorting if active
+    if (sortByLicense) {
+      return [...filtered].sort((a, b) => {
+        if (sortByLicense === 'asc') {
+          return (a.hasLicense ? 0 : 1) - (b.hasLicense ? 0 : 1);
+        } else {
+          return (b.hasLicense ? 0 : 1) - (a.hasLicense ? 0 : 1);
+        }
+      });
+    }
+
+    return filtered;
+  }, [office365Users, searchQuery, filterRole, filterDepartment, showUnlicensed, sortByLicense]);
 
   const paginatedUsers = useMemo(() => {
     const startIndex = (currentPage - 1) * usersPerPage;
@@ -834,6 +848,14 @@ const [showUnlicensed, setShowUnlicensed] = useState<boolean>(false);
                   <TableHead>Email</TableHead>
                   <TableHead>Job Title</TableHead>
                   <TableHead>Department</TableHead>
+                  <TableHead 
+                    className="cursor-pointer select-none"
+                    onClick={() => setSortByLicense(prev => 
+                      prev === null ? 'desc' : prev === 'desc' ? 'asc' : null
+                    )}
+                  >
+                    License {sortByLicense && (sortByLicense === 'asc' ? '↑' : '↓')}
+                  </TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -849,6 +871,14 @@ const [showUnlicensed, setShowUnlicensed] = useState<boolean>(false);
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {o365User.department || '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={o365User.hasLicense ? "default" : "secondary"}
+                        className={o365User.hasLicense ? "bg-green-600 hover:bg-green-700" : "bg-muted text-muted-foreground"}
+                      >
+                        {o365User.hasLicense ? 'Licensed' : 'Unlicensed'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Button
@@ -868,7 +898,7 @@ const [showUnlicensed, setShowUnlicensed] = useState<boolean>(false);
                 ))}
                 {paginatedUsers.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       No users found
                     </TableCell>
                   </TableRow>
