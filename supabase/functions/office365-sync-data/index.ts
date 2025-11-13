@@ -172,10 +172,17 @@ serve(async (req) => {
       );
     }
 
-    // Start the sync in the background using Promise (no await)
-    performSync(syncJob.id, company_id, user.id, supabase).catch(err => {
+    // Start the sync in the background and keep function alive until complete
+    const syncPromise = performSync(syncJob.id, company_id, user.id, supabase).catch(err => {
       console.error('Background sync failed:', err);
     });
+    
+    // Keep the function instance alive until sync completes
+    // @ts-ignore - EdgeRuntime is available in Deno Deploy
+    if (typeof EdgeRuntime !== 'undefined') {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(syncPromise);
+    }
 
     // Return immediately with the job ID
     return new Response(
