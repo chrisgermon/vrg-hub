@@ -171,25 +171,25 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Start the sync in the background and keep function alive until complete
-    const syncPromise = performSync(syncJob.id, company_id, user.id, supabase).catch(err => {
-      console.error('Background sync failed:', err);
-    });
-    
-    // Keep the function instance alive until sync completes
-    // @ts-ignore - EdgeRuntime is available in Deno Deploy
-    if (typeof EdgeRuntime !== 'undefined') {
-      // @ts-ignore
-      EdgeRuntime.waitUntil(syncPromise);
-    }
+    // Perform the sync synchronously
+    await performSync(syncJob.id, company_id, user.id, supabase);
 
-    // Return immediately with the job ID
+    // Fetch the updated job to get final statistics
+    const { data: completedJob } = await supabase
+      .from('office365_sync_jobs')
+      .select('*')
+      .eq('id', syncJob.id)
+      .single();
+
     return new Response(
       JSON.stringify({ 
         success: true,
         job_id: syncJob.id,
-        status: 'started',
-        message: 'Sync started in background. Poll the job status for updates.'
+        status: completedJob?.status || 'completed',
+        users_synced: completedJob?.users_synced || 0,
+        users_created: completedJob?.users_created || 0,
+        mailboxes_synced: completedJob?.mailboxes_synced || 0,
+        message: 'Sync completed successfully'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

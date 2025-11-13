@@ -397,28 +397,41 @@ export function Office365UserSync() {
         return;
       }
 
-      // Call the sync function (it now returns immediately with a job ID)
+      setSyncStatus('running');
+      
+      // Call the sync function (now synchronous - waits for completion)
       const { data, error } = await supabase.functions.invoke('office365-sync-data', {
         body: { company_id: companyId }
       });
 
       if (error) throw error;
 
-      const jobId = (data as any)?.job_id;
-      if (!jobId) {
-        throw new Error('No job ID returned from sync');
+      // Sync is complete, update UI with results
+      const result = data as any;
+      setSyncJobId(result.job_id);
+      
+      if (result.status === 'failed') {
+        throw new Error(result.error_message || 'Sync failed');
       }
-
-      setSyncJobId(jobId);
-      toast.success('Sync started in background. This may take a few minutes for large organizations.');
-
-      // Start polling for status
-      pollSyncStatus(jobId, companyId);
+      
+      setSyncProgress({
+        users_synced: result.users_synced || 0,
+        users_created: result.users_created || 0,
+        mailboxes_synced: result.mailboxes_synced || 0,
+      });
+      
+      setSyncStatus('completed');
+      toast.success(`Sync completed! ${result.users_synced || 0} users synced, ${result.users_created || 0} created`);
+      
+      // Reload users to show the synced data
+      await loadUsers();
     } catch (error) {
       console.error('Error syncing users:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to sync Office 365 users');
       setSyncing(false);
       setSyncStatus(null);
+    } finally {
+      setSyncing(false);
     }
   };
 
