@@ -11,7 +11,6 @@ const corsHeaders = {
 interface InviteEmailRequest {
   email: string;
   displayName: string;
-  companyName: string;
   inviterName: string;
   loginUrl: string;
 }
@@ -22,7 +21,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, displayName, companyName, inviterName, loginUrl }: InviteEmailRequest = await req.json();
+    const { email, displayName, inviterName, loginUrl }: InviteEmailRequest = await req.json();
+    const companyName = "VRG Hub"; // Always use VRG Hub instead of brand name
 
     if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
       console.error("Mailgun not configured");
