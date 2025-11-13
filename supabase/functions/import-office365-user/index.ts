@@ -34,34 +34,52 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check if user already exists
-    const { data: existingAuthUser } = await supabase.auth.admin.listUsers();
-    const userExists = existingAuthUser?.users?.some((u: any) => u.email === o365User.mail);
+    // Check if user already exists in auth
+    let userId: string;
+    let userAlreadyExists = false;
+    
+    try {
+      // Try to get existing user by email
+      const { data: existingUsers } = await supabase.auth.admin.listUsers();
+      const existingUser = existingUsers?.users?.find((u: any) => u.email === o365User.mail);
+      
+      if (existingUser) {
+        userId = existingUser.id;
+        userAlreadyExists = true;
+        console.log(`User ${o365User.mail} already exists with ID ${userId}`);
+      } else {
+        // Create auth user
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email: o365User.mail,
+          email_confirm: true,
+          user_metadata: {
+            full_name: o365User.display_name,
+            imported_from_o365: true,
+          }
+        });
 
-    if (userExists) {
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          message: 'User already exists',
-          skipped: true,
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Create auth user
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: o365User.mail,
-      email_confirm: true,
-      user_metadata: {
-        full_name: o365User.display_name,
-        imported_from_o365: true,
+        if (authError) {
+          // If error is about duplicate user, try to find the existing user
+          if (authError.message.includes('already been registered')) {
+            const { data: existingUsers } = await supabase.auth.admin.listUsers();
+            const existingUser = existingUsers?.users?.find((u: any) => u.email === o365User.mail);
+            if (existingUser) {
+              userId = existingUser.id;
+              userAlreadyExists = true;
+            } else {
+              throw authError;
+            }
+          } else {
+            throw authError;
+          }
+        } else {
+          userId = authData.user.id;
+        }
       }
-    });
-
-    if (authError) throw authError;
-
-    const userId = authData.user.id;
+    } catch (error) {
+      console.error('Error handling user:', error);
+      throw error;
+    }
 
     // Update or create profile (trigger may have already created it)
     const { error: profileError } = await supabase
@@ -127,7 +145,8 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true,
         userId,
-        email: o365User.mail 
+        email: o365User.mail,
+        message: userAlreadyExists ? 'User profile updated successfully' : 'User imported successfully'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
