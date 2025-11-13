@@ -146,6 +146,35 @@ export function Office365UserSync() {
     return Math.ceil(filteredUsers.length / usersPerPage);
   }, [filteredUsers.length, usersPerPage]);
 
+  const handleDirectSearch = useCallback(async () => {
+    if (!directQuery.trim()) {
+      setDirectResults(null);
+      return;
+    }
+    setDirectLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('office365-user-search', { body: { q: directQuery.trim() } });
+      if (error) throw error as any;
+      const results = (data?.results || []) as any[];
+      const mapped: Office365User[] = results.map((u: any) => ({
+        id: u.userPrincipalName,
+        displayName: u.displayName,
+        mail: u.mail,
+        userPrincipalName: u.userPrincipalName,
+        jobTitle: u.jobTitle,
+        department: u.department,
+        hasLicense: !!u.hasLicense,
+      }));
+      setDirectResults(mapped);
+    } catch (e) {
+      console.error('Direct O365 search failed:', e);
+      toast.error('Direct Office 365 search failed');
+      setDirectResults(null);
+    } finally {
+      setDirectLoading(false);
+    }
+  }, [directQuery]);
+
   const getTenantCompanyId = useCallback(async (): Promise<string | null> => {
     try {
       const { data, error } = await (supabase as any)
@@ -841,7 +870,60 @@ export function Office365UserSync() {
                 <label htmlFor="show-unlicensed" className="text-sm">Show unlicensed</label>
               </div>
             </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Input 
+                  placeholder="Direct Office 365 search (name/email/UPN)"
+                  value={directQuery}
+                  onChange={(e) => setDirectQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleDirectSearch(); }}
+                  className="w-full sm:w-[320px]"
+                />
+                <Button onClick={handleDirectSearch} disabled={directLoading} variant="secondary">
+                  {directLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  Search
+                </Button>
+              </div>
+            </div>
+
+            {directResults && (
+              <div className="mb-4">
+                <div className="text-sm text-muted-foreground mb-2">Live Office 365 results ({directResults.length})</div>
             <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Job Title</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>License</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {directResults.map((u) => (
+                      <TableRow key={`live-${u.id}`}>
+                        <TableCell className="font-medium">{u.displayName}</TableCell>
+                        <TableCell>{u.mail || u.userPrincipalName}</TableCell>
+                        <TableCell className="text-muted-foreground">{u.jobTitle || '-'}</TableCell>
+                        <TableCell className="text-muted-foreground">{u.department || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant={u.hasLicense ? 'default' : 'secondary'}>{u.hasLicense ? 'Licensed' : 'Unlicensed'}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button size="sm" variant="outline" onClick={() => { setSelectedUser(u); setImportDialogOpen(true); }}>
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Import
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
@@ -875,7 +957,6 @@ export function Office365UserSync() {
                     <TableCell>
                       <Badge 
                         variant={o365User.hasLicense ? "default" : "secondary"}
-                        className={o365User.hasLicense ? "bg-green-600 hover:bg-green-700" : "bg-muted text-muted-foreground"}
                       >
                         {o365User.hasLicense ? 'Licensed' : 'Unlicensed'}
                       </Badge>
