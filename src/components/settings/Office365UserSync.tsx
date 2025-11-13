@@ -72,6 +72,9 @@ export function Office365UserSync() {
   const [filterDepartment, setFilterDepartment] = useState<string>('all');
   const [showUnlicensed, setShowUnlicensed] = useState<boolean>(false);
   const [sortByLicense, setSortByLicense] = useState<'asc' | 'desc' | null>(null);
+  const [directQuery, setDirectQuery] = useState('');
+  const [directLoading, setDirectLoading] = useState(false);
+  const [directResults, setDirectResults] = useState<Office365User[] | null>(null);
   const usersPerPage = 20;
   const syncPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -924,6 +927,7 @@ export function Office365UserSync() {
               </div>
             )}
 
+            <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
