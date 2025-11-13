@@ -57,8 +57,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     const appUrl = 'https://hub.visionradiology.com.au';
     const signupUrl = `${appUrl}/auth`;
+    const systemName = "VRG Hub"; // Always use VRG Hub instead of brand name
     
-    const subject = `You're invited to join ${inviteData.brands.name} on Vision Radiology Hub`;
+    const subject = `You're invited to join ${systemName}`;
     
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -67,7 +68,7 @@ const handler = async (req: Request): Promise<Response> => {
         </div>
         <h2 style="color: #2563eb;">You're Invited! 🎉</h2>
         <p>Hello,</p>
-        <p>${inviterData.full_name || 'Someone'} has invited you to join <strong>${inviteData.brands.name}</strong> on Vision Radiology Hub.</p>
+        <p>${inviterData.full_name || 'Someone'} has invited you to join <strong>${systemName}</strong>.</p>
         
         <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
           <p><strong>Your Role:</strong> ${inviteData.role.replace(/_/g, ' ')}</p>
@@ -93,7 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
         
         <p style="font-size: 12px; color: #94a3b8; text-align: center;">
-          This invitation was sent by ${inviterData.full_name || 'a team member'} from ${inviteData.brands.name}
+          This invitation was sent by ${inviterData.full_name || 'a team member'}
         </p>
       </div>
     `;
@@ -101,9 +102,9 @@ const handler = async (req: Request): Promise<Response> => {
     const text = `
 You're Invited to Join ${inviteData.brands.name} on Vision Radiology Hub
 
-Hello,
+    Hello,
 
-${inviterData.full_name || 'Someone'} has invited you to join ${inviteData.brands.name} on Vision Radiology Hub.
+${inviterData.full_name || 'Someone'} has invited you to join ${systemName}.
 
 Your Role: ${inviteData.role.replace(/_/g, ' ')}
 Invite Expires: ${new Date(inviteData.expires_at).toLocaleDateString('en-AU')}
