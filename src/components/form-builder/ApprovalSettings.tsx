@@ -35,11 +35,24 @@ export function ApprovalSettings({
   }, []);
 
   const loadApprovers = async () => {
+    // Get role IDs for manager, tenant_admin, and super_admin
+    const { data: roleData, error: roleError } = await supabase
+      .from('rbac_roles')
+      .select('id, name')
+      .in('name', ['manager', 'tenant_admin', 'super_admin']);
+
+    if (roleError) {
+      console.error('Error loading roles:', roleError);
+      return;
+    }
+
+    const roleIds = roleData?.map(r => r.id) || [];
+
     // Get users with manager or admin roles
     const { data: userRoles, error: rolesError } = await supabase
-      .from('user_roles')
+      .from('rbac_user_roles')
       .select('user_id')
-      .in('role', ['manager', 'tenant_admin', 'super_admin']);
+      .in('role_id', roleIds);
 
     if (rolesError) {
       console.error('Error loading user roles:', rolesError);

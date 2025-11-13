@@ -48,13 +48,22 @@ export function UnifiedUserManagement() {
         .eq('is_active', true);
       if (o365Error) throw o365Error;
 
-      // Fetch user roles
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
+      // Fetch user roles from RBAC system
+      const { data: rbacRoles, error: rbacError } = await supabase
+        .from('rbac_roles')
+        .select('id, name');
+      if (rbacError) throw rbacError;
+
+      const roleNameMap = new Map(rbacRoles?.map(r => [r.id, r.name]) || []);
+
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('rbac_user_roles')
+        .select('user_id, role_id');
       if (rolesError) throw rolesError;
 
-      const roleMap = new Map(roles?.map(r => [r.user_id, r.role]) || []);
+      const roleMap = new Map(
+        userRoles?.map(r => [r.user_id, roleNameMap.get(r.role_id)]) || []
+      );
 
       // Create unified list
       const unifiedUsers: UnifiedUser[] = [];
@@ -95,12 +104,22 @@ export function UnifiedUserManagement() {
 
   const assignRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      // First check if role exists
+      // Get role ID from rbac_roles
+      const { data: roleData, error: roleError } = await supabase
+        .from('rbac_roles')
+        .select('id')
+        .eq('name', role)
+        .single();
+
+      if (roleError) throw roleError;
+      if (!roleData) throw new Error('Role not found');
+
+      // Check if user already has this role
       const { data: existing } = await supabase
-        .from('user_roles')
+        .from('rbac_user_roles')
         .select('id')
         .eq('user_id', userId)
-        .eq('role', role)
+        .eq('role_id', roleData.id)
         .maybeSingle();
 
       if (existing) {
@@ -108,10 +127,16 @@ export function UnifiedUserManagement() {
         return;
       }
 
+      // Delete existing roles for user (only one role per user)
+      await supabase
+        .from('rbac_user_roles')
+        .delete()
+        .eq('user_id', userId);
+
       // Insert new role
       const { error } = await supabase
-        .from('user_roles')
-        .insert([{ user_id: userId, role }]);
+        .from('rbac_user_roles')
+        .insert([{ user_id: userId, role_id: roleData.id }]);
       if (error) throw error;
     },
     onSuccess: () => {

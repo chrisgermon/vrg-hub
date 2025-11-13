@@ -33,17 +33,26 @@ export default function SetupVerification() {
       
       if (profilesError) throw profilesError;
       
+      const { data: rbacRoles, error: rbacError } = await supabase
+        .from('rbac_roles')
+        .select('id, name');
+      
+      if (rbacError) throw rbacError;
+
+      const roleNameMap = new Map(rbacRoles?.map(r => [r.id, r.name]) || []);
+
       const { data: userRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
+        .from('rbac_user_roles')
+        .select('user_id, role_id');
       
       if (rolesError) throw rolesError;
       
       return profiles?.map(profile => {
-        const role = userRoles?.find(ur => ur.user_id === profile.id);
+        const roleEntry = userRoles?.find(ur => ur.user_id === profile.id);
+        const roleName = roleEntry ? roleNameMap.get(roleEntry.role_id) : null;
         return {
           ...profile,
-          role: role?.role || 'user'
+          role: roleName || 'user'
         };
       }) || [];
     },

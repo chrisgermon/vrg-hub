@@ -24,15 +24,17 @@ export default function MonthlyNewsletter() {
 
     try {
       const { data: roles, error } = await supabase
-        .from("user_roles")
-        .select("role")
+        .from("rbac_user_roles")
+        .select(`
+          role:rbac_roles(name)
+        `)
         .eq("user_id", user.id);
 
       console.log("Newsletter - User roles:", roles);
       console.log("Newsletter - Query error:", error);
 
-      const hasEditorRole = roles?.some((r) =>
-        ["manager", "tenant_admin", "super_admin"].includes(r.role)
+      const hasEditorRole = roles?.some((r: any) =>
+        ["manager", "tenant_admin", "super_admin"].includes(r.role?.name)
       );
       
       console.log("Newsletter - Has editor role:", hasEditorRole);

@@ -49,21 +49,31 @@ export function UserRoleManager() {
 
       if (profilesError) throw profilesError;
 
-      // Fetch user roles
+      // Fetch RBAC roles
+      const { data: rbacRoles, error: rbacError } = await supabase
+        .from('rbac_roles')
+        .select('id, name');
+      
+      if (rbacError) throw rbacError;
+
+      const roleMap = new Map(rbacRoles?.map(r => [r.id, r.name]) || []);
+
+      // Fetch user roles from RBAC system
       const { data: userRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
+        .from('rbac_user_roles')
+        .select('user_id, role_id');
 
       if (rolesError) throw rolesError;
 
       // Combine profiles with roles
       const usersWithRoles: UserWithRole[] = (profiles || []).map(profile => {
-        const userRole = userRoles?.find(r => r.user_id === profile.id);
+        const userRoleEntry = userRoles?.find(r => r.user_id === profile.id);
+        const roleName = userRoleEntry ? roleMap.get(userRoleEntry.role_id) : null;
         return {
           id: profile.id,
           name: profile.full_name || profile.email || 'Unknown',
           email: profile.email || '',
-          role: userRole?.role || 'requester',
+          role: (roleName as any) || 'requester',
           created_at: profile.created_at
         };
       });
@@ -83,10 +93,29 @@ export function UserRoleManager() {
 
   const updateUserRole = async (userId: string, newRole: 'requester' | 'manager' | 'marketing' | 'marketing_manager' | 'tenant_admin' | 'super_admin') => {
     try {
-      const { error } = await supabase
-        .from('user_roles')
-        .update({ role: newRole })
+      // Get role ID from rbac_roles
+      const { data: roleData, error: roleError } = await supabase
+        .from('rbac_roles')
+        .select('id')
+        .eq('name', newRole)
+        .single();
+
+      if (roleError) throw roleError;
+      if (!roleData) throw new Error('Role not found');
+
+      // Delete existing roles for user
+      await supabase
+        .from('rbac_user_roles')
+        .delete()
         .eq('user_id', userId);
+
+      // Insert new role
+      const { error } = await supabase
+        .from('rbac_user_roles')
+        .insert({
+          user_id: userId,
+          role_id: roleData.id
+        });
 
       if (error) throw error;
 

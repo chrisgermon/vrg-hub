@@ -38,8 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserRole = async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
+        .from('rbac_user_roles')
+        .select(`
+          role:rbac_roles(name)
+        `)
         .eq('user_id', userId);
 
       if (error) {
@@ -48,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const roles = (data?.map(r => r.role) || []) as UserRole[];
+      const roles = (data?.map((r: any) => r.role?.name).filter(Boolean) || []) as UserRole[];
       // Determine highest role via explicit priority
       const priority: Record<UserRole, number> = {
         super_admin: 100,
