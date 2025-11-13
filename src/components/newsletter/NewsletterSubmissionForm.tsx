@@ -44,9 +44,41 @@ export function NewsletterSubmissionForm({
   const [sectionsData, setSectionsData] = useState<SectionData[]>([]);
   const [noUpdateThisMonth, setNoUpdateThisMonth] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [selectedBrandId, setSelectedBrandId] = useState<string>(brandId || '');
+  const [selectedLocationId, setSelectedLocationId] = useState<string>(locationId || '');
 
   // Fetch department template sections from database
   const { data: departmentTemplate, isLoading: templateLoading } = useDepartmentTemplate(department);
+
+  // Fetch brands and locations for Technical Partners when not pre-assigned
+  const { data: brands = [] } = useQuery({
+    queryKey: ['active-brands'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('brands')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: departmentTemplate?.requires_brand_location && !brandId,
+  });
+
+  const { data: locations = [] } = useQuery({
+    queryKey: ['active-locations', selectedBrandId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, name, brand_id')
+        .eq('is_active', true)
+        .eq('brand_id', selectedBrandId)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: departmentTemplate?.requires_brand_location && !brandId && !!selectedBrandId,
+  });
 
   // Initialize sections data from template
   useEffect(() => {
@@ -107,6 +139,13 @@ export function NewsletterSubmissionForm({
 
   const saveSubmission = useMutation({
     mutationFn: async ({ status }: { status: string }) => {
+      // Validate brand/location for Technical Partners if required
+      if (departmentTemplate?.requires_brand_location && !brandId) {
+        if (!selectedBrandId || !selectedLocationId) {
+          throw new Error('Please select a brand and location');
+        }
+      }
+
       // Generate default title from department and cycle
       const defaultTitle = assignment?.cycle?.name 
         ? `${department} - ${assignment.cycle.name}`
@@ -117,8 +156,8 @@ export function NewsletterSubmissionForm({
         cycle_id: cycleId,
         contributor_id: user?.id,
         department,
-        brand_id: brandId || null,
-        location_id: locationId || null,
+        brand_id: brandId || selectedBrandId || null,
+        location_id: locationId || selectedLocationId || null,
         title: defaultTitle,
         content: '', // Keep for backward compatibility
         sections_data: sectionsData as any,
@@ -199,6 +238,18 @@ export function NewsletterSubmissionForm({
   };
 
   const handleSubmit = () => {
+    // Validate brand/location for Technical Partners
+    if (departmentTemplate?.requires_brand_location && !brandId) {
+      if (!selectedBrandId) {
+        toast.error('Please select a brand');
+        return;
+      }
+      if (!selectedLocationId) {
+        toast.error('Please select a location');
+        return;
+      }
+    }
+
     const requiredSections = sectionsData.filter(s => s.isRequired);
     const missingRequired = requiredSections.filter(s => !s.content.trim());
     
@@ -290,6 +341,44 @@ export function NewsletterSubmissionForm({
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
+          {departmentTemplate?.requires_brand_location && !brandId && (
+            <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+              <div className="space-y-2">
+                <Label htmlFor="brand">Brand *</Label>
+                <select
+                  id="brand"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={selectedBrandId}
+                  onChange={(e) => {
+                    setSelectedBrandId(e.target.value);
+                    setSelectedLocationId('');
+                  }}
+                >
+                  <option value="">Select a brand...</option>
+                  {brands.map((brand: any) => (
+                    <option key={brand.id} value={brand.id}>{brand.name}</option>
+                  ))}
+                </select>
+              </div>
+              {selectedBrandId && (
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location *</Label>
+                  <select
+                    id="location"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={selectedLocationId}
+                    onChange={(e) => setSelectedLocationId(e.target.value)}
+                  >
+                    <option value="">Select a location...</option>
+                    {locations.map((location: any) => (
+                      <option key={location.id} value={location.id}>{location.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center space-x-2">
             <Checkbox
               id="no-update"
