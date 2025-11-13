@@ -86,8 +86,8 @@ Deno.serve(async (req) => {
 
     if (needsRefresh) {
       if (!connection.refresh_token) return new Response(JSON.stringify({ error: 'Office 365 connection expired. Please reconnect.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      const clientId = Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID')!;
-      const clientSecret = Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET')!;
+      const clientId = Deno.env.get('OFFICE365_CLIENT_ID')!;
+      const clientSecret = Deno.env.get('OFFICE365_CLIENT_SECRET')!;
       const tokens = await refreshAccessToken(connection.refresh_token, clientId, clientSecret);
       accessToken = tokens.access_token;
       await supabase.from('office365_connections').update({
