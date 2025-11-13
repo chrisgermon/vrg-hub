@@ -479,18 +479,18 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
         console.log(`Processing user ${totalUsers}/${usersData.value.length}...`);
       }
       
-      // Skip users without licenses
-      if (!graphUser.assignedLicenses || graphUser.assignedLicenses.length === 0) {
+      // Determine license status (do not skip unlicensed users anymore)
+      const hasLicense = Array.isArray(graphUser.assignedLicenses) && graphUser.assignedLicenses.length > 0;
+      if (!hasLicense) {
         usersSkipped++;
         if (totalUsers <= 5) {
-          console.log(`  Skipping ${graphUser.userPrincipalName} - no licenses`);
+          console.log(`  Including ${graphUser.userPrincipalName} - no licenses (will be stored as unlicensed)`);
         }
-        continue;
-      }
-      
-      usersWithLicenses++;
-      if (totalUsers <= 5) {
-        console.log(`  ✓ Syncing ${graphUser.userPrincipalName} (${graphUser.assignedLicenses.length} licenses)`);
+      } else {
+        usersWithLicenses++;
+        if (totalUsers <= 5) {
+          console.log(`  ✓ Syncing ${graphUser.userPrincipalName} (${graphUser.assignedLicenses.length} licenses)`);
+        }
       }
       
       await supabase

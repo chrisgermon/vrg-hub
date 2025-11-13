@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -48,6 +49,7 @@ interface Office365User {
   userPrincipalName: string;
   jobTitle?: string;
   department?: string;
+  hasLicense: boolean;
 }
 
 export function Office365UserSync() {
@@ -66,8 +68,9 @@ export function Office365UserSync() {
   const [importProgress, setImportProgress] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterRole, setFilterRole] = useState<string>('all');
-  const [filterDepartment, setFilterDepartment] = useState<string>('all');
+const [filterRole, setFilterRole] = useState<string>('all');
+const [filterDepartment, setFilterDepartment] = useState<string>('all');
+const [showUnlicensed, setShowUnlicensed] = useState<boolean>(false);
   const usersPerPage = 20;
   const syncPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -111,10 +114,13 @@ export function Office365UserSync() {
       
       // Department filter
       const matchesDepartment = filterDepartment === 'all' || user.department === filterDepartment;
+
+      // License filter (default hide unlicensed)
+      const matchesLicense = showUnlicensed || user.hasLicense;
       
-      return matchesSearch && matchesRole && matchesDepartment;
+      return matchesSearch && matchesRole && matchesDepartment && matchesLicense;
     });
-  }, [office365Users, searchQuery, filterRole, filterDepartment]);
+  }, [office365Users, searchQuery, filterRole, filterDepartment, showUnlicensed]);
 
   const paginatedUsers = useMemo(() => {
     const startIndex = (currentPage - 1) * usersPerPage;
@@ -173,6 +179,7 @@ export function Office365UserSync() {
         userPrincipalName: u.user_principal_name,
         jobTitle: u.job_title,
         department: u.department,
+        hasLicense: Array.isArray(u.assigned_licenses) && u.assigned_licenses.length > 0,
       }));
       setOffice365Users(users);
     } catch (error) {
@@ -812,6 +819,13 @@ export function Office365UserSync() {
                   ))}
                 </SelectContent>
               </Select>
+              <div className="flex items-center gap-2 pl-1">
+                <Switch id="show-unlicensed" checked={showUnlicensed} onCheckedChange={(v) => {
+                  setShowUnlicensed(!!v);
+                  setCurrentPage(1);
+                }} />
+                <label htmlFor="show-unlicensed" className="text-sm">Show unlicensed</label>
+              </div>
             </div>
             <Table>
               <TableHeader>
