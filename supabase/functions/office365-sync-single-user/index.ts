@@ -45,12 +45,14 @@ serve(async (req) => {
 
     console.log(`Syncing single user: ${userId} for company: ${companyId}`);
 
-    // Get the Office 365 connection
+    // Get the Office 365 connection (most recent for this company)
     const { data: connection, error: connError } = await supabaseClient
       .from('office365_connections')
       .select('*')
       .eq('company_id', companyId)
-      .single();
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (connError || !connection) {
       console.error('Connection error:', connError);
