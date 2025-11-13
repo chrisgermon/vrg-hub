@@ -66,6 +66,8 @@ export function Office365UserSync() {
   const [importProgress, setImportProgress] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterRole, setFilterRole] = useState<string>('all');
+  const [filterDepartment, setFilterDepartment] = useState<string>('all');
   const usersPerPage = 20;
   const syncPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -80,14 +82,39 @@ export function Office365UserSync() {
 
   const isAdmin = userRole === 'super_admin' || userRole === 'tenant_admin';
 
+  // Get unique roles and departments for filters
+  const uniqueRoles = useMemo(() => {
+    const roles = office365Users
+      .map(u => u.jobTitle)
+      .filter((title): title is string => !!title);
+    return Array.from(new Set(roles)).sort();
+  }, [office365Users]);
+
+  const uniqueDepartments = useMemo(() => {
+    const depts = office365Users
+      .map(u => u.department)
+      .filter((dept): dept is string => !!dept);
+    return Array.from(new Set(depts)).sort();
+  }, [office365Users]);
+
   // Memoize filtered and paginated users for performance
   const filteredUsers = useMemo(() => {
-    return office365Users.filter(user =>
-      user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (user.mail && user.mail.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      user.userPrincipalName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [office365Users, searchQuery]);
+    return office365Users.filter(user => {
+      // Search filter
+      const matchesSearch = 
+        user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (user.mail && user.mail.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        user.userPrincipalName.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Role filter
+      const matchesRole = filterRole === 'all' || user.jobTitle === filterRole;
+      
+      // Department filter
+      const matchesDepartment = filterDepartment === 'all' || user.department === filterDepartment;
+      
+      return matchesSearch && matchesRole && matchesDepartment;
+    });
+  }, [office365Users, searchQuery, filterRole, filterDepartment]);
 
   const paginatedUsers = useMemo(() => {
     const startIndex = (currentPage - 1) * usersPerPage;
@@ -746,15 +773,45 @@ export function Office365UserSync() {
                 <Progress value={importProgress} />
               </div>
             )}
-            <div>
-              <Input
-                placeholder="Search by name or email..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <Input
+                  placeholder="Search by name, email, or UPN..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
+              <Select value={filterRole} onValueChange={(value) => {
+                setFilterRole(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  {uniqueRoles.map(role => (
+                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterDepartment} onValueChange={(value) => {
+                setFilterDepartment(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Filter by department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {uniqueDepartments.map(dept => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Table>
               <TableHeader>
