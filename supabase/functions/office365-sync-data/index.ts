@@ -171,24 +171,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Perform the sync synchronously
-    await performSync(syncJob.id, company_id, user.id, supabase);
-
-    // Fetch the updated job to get final statistics
-    const { data: completedJob } = await supabase
-      .from('office365_sync_jobs')
-      .select('*')
-      .eq('id', syncJob.id)
-      .single();
+    // Perform the sync synchronously and collect stats
+    const stats = await performSync(syncJob.id, company_id, user.id, supabase);
 
     return new Response(
       JSON.stringify({ 
         success: true,
         job_id: syncJob.id,
-        status: completedJob?.status || 'completed',
-        users_synced: completedJob?.users_synced || 0,
-        users_created: completedJob?.users_created || 0,
-        mailboxes_synced: completedJob?.mailboxes_synced || 0,
+        status: 'completed',
+        ...stats,
         message: 'Sync completed successfully'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -525,6 +516,15 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
       .eq('id', jobId);
 
     console.log('Sync completed successfully for job:', jobId);
+
+    return {
+      users_synced: usersWithLicenses,
+      users_created: usersCreated,
+      mailboxes_synced: mailboxesData.value?.length || 0,
+      total_users_found: totalUsers,
+      users_skipped: usersSkipped,
+      users_existed: usersExisted,
+    };
   } catch (error) {
     console.error('Sync error for job:', jobId, error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -538,5 +538,7 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
         completed_at: new Date().toISOString()
       })
       .eq('id', jobId);
+
+    throw new Error(errorMessage);
   }
 }
