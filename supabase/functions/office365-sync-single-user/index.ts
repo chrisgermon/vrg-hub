@@ -153,9 +153,8 @@ serve(async (req) => {
       office_location: userData.officeLocation,
       business_phones: userData.businessPhones,
       mobile_phone: userData.mobilePhone,
-      has_license: licenses.length > 0,
-      licenses: licenses.map((l: any) => l.skuPartNumber),
-      last_synced_at: new Date().toISOString(),
+      assigned_licenses: licenses,
+      synced_at: new Date().toISOString(),
     };
 
     const { error: upsertError } = await supabaseClient
