@@ -228,4 +228,4 @@ If you didn't expect this invitation, you can safely ignore this email.
   }
 };
 
-serve(handler);
+Deno.serve(handler);

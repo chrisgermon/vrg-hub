@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+// Using Deno.serve instead of deprecated import
 
 const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY");
 const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN");
@@ -158,4 +158,4 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-serve(handler);
+Deno.serve(handler);

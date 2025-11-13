@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+// Using Deno.serve instead of deprecated import
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -156,4 +156,4 @@ Remember: Prices should be in AUD and reflect the Australian market.`;
   }
 };
 
-serve(handler);
+Deno.serve(handler);
