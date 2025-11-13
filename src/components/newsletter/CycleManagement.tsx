@@ -410,13 +410,12 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="owner_id">Newsletter Owner</Label>
-                  <Select name="owner_id" defaultValue={typeof editing === 'object' ? editing?.owner_id || '' : ''}>
+                  <Select name="owner_id" defaultValue={typeof editing === 'object' ? editing?.owner_id || undefined : undefined}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select owner (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No owner</SelectItem>
-                      {profiles.map((profile) => (
+                      {profiles.filter(p => p.id).map((profile) => (
                         <SelectItem key={profile.id} value={profile.id}>
                           {profile.full_name} ({profile.email})
                         </SelectItem>
