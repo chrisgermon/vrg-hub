@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 async function refreshAccessToken(refreshToken: string, clientId: string, clientSecret: string) {
@@ -256,7 +255,7 @@ async function syncCompany(supabase: any, connection: any, clientId: string, cli
   };
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   try {
     console.log('Starting Office 365 cron sync...');
     
