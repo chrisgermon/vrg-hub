@@ -198,31 +198,48 @@ Deno.serve(async (req) => {
 
 async function performSync(jobId: string, companyId: string, userId: string, supabase: any) {
   try {
+    console.log('=== OFFICE 365 SYNC START ===');
+    console.log('Job ID:', jobId);
+    console.log('Company ID:', companyId);
+    console.log('User ID:', userId);
+    console.log('Timestamp:', new Date().toISOString());
+    
     // Update job status to running
     await supabase
       .from('office365_sync_jobs')
-      .update({ status: 'running' })
+      .update({ 
+        status: 'running',
+        progress: { step: 'Initializing', timestamp: new Date().toISOString() }
+      })
       .eq('id', jobId);
 
-    console.log('Starting sync for job:', jobId, 'company:', companyId);
+    console.log('✓ Job status updated to running');
 
+    // Update progress
+    await supabase
+      .from('office365_sync_jobs')
+      .update({ 
+        progress: { step: 'Finding Office 365 connection', timestamp: new Date().toISOString() }
+      })
+      .eq('id', jobId);
+    
     // Debug visibility into connections available
+    console.log('\n--- Step 1: Finding Office 365 Connection ---');
     try {
       const { count: totalConns } = await supabase
         .from('office365_connections')
         .select('id', { count: 'exact', head: true });
-      console.log('DEBUG office365_connections total:', totalConns, 'company_id:', companyId, 'user_id:', userId);
+      console.log('Total Office 365 connections in database:', totalConns);
+      console.log('Looking for company_id:', companyId, 'user_id:', userId);
     } catch (e) {
-      console.error('DEBUG failed counting office365_connections:', e);
+      console.error('Failed counting office365_connections:', e);
     }
-
-    // Try multiple strategies to find a connection
-    console.log('Sync request received. Company_id:', companyId, 'user_id:', userId);
 
     let connection: any = null;
     let connError: any = null;
 
     // 1) If company_id provided, try tenant/company-level match
+    console.log('Strategy 1: Trying company_id match...');
     if (companyId) {
       const { data: companyConn, error } = await supabase
         .from('office365_connections')
@@ -231,11 +248,18 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (companyConn) connection = companyConn; else connError = error || connError;
+      if (companyConn) {
+        console.log('✓ Found connection by company_id');
+        connection = companyConn;
+      } else {
+        console.log('✗ No connection found by company_id');
+        connError = error || connError;
+      }
     }
 
     // 2) Fallback to user-level connection
     if (!connection) {
+      console.log('Strategy 2: Trying user_id match...');
       const { data: userConn, error } = await supabase
         .from('office365_connections')
         .select('*')
@@ -243,11 +267,18 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (userConn) connection = userConn; else connError = error || connError;
+      if (userConn) {
+        console.log('✓ Found connection by user_id');
+        connection = userConn;
+      } else {
+        console.log('✗ No connection found by user_id');
+        connError = error || connError;
+      }
     }
 
     // 3) Final fallback: most recent tenant/company-level connection (user_id IS NULL)
     if (!connection) {
+      console.log('Strategy 3: Trying tenant-level connection (user_id IS NULL)...');
       const { data: tenantConn, error } = await supabase
         .from('office365_connections')
         .select('*')
@@ -255,52 +286,88 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (tenantConn) connection = tenantConn; else connError = error || connError;
+      if (tenantConn) {
+        console.log('✓ Found tenant-level connection');
+        connection = tenantConn;
+      } else {
+        console.log('✗ No tenant-level connection found');
+        connError = error || connError;
+      }
     }
 
     // 4) Last resort: any most recent connection regardless of user/company
     if (!connection) {
+      console.log('Strategy 4: Trying any connection (last resort)...');
       const { data: anyConn, error } = await supabase
         .from('office365_connections')
         .select('*')
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (anyConn) connection = anyConn; else connError = error || connError;
+      if (anyConn) {
+        console.log('✓ Found connection (any)');
+        connection = anyConn;
+      } else {
+        console.log('✗ No connection found at all');
+        connError = error || connError;
+      }
     }
 
-    console.log('Connection found:', !!connection, 'error:', connError?.message);
-
     if (!connection) {
+      console.error('✗✗✗ FATAL: No Office 365 connection found');
       await supabase
         .from('office365_sync_jobs')
         .update({ 
           status: 'failed',
           error_message: 'No active Office 365 connection found',
-          completed_at: new Date().toISOString()
+          completed_at: new Date().toISOString(),
+          progress: { step: 'Failed - No connection', timestamp: new Date().toISOString() }
         })
         .eq('id', jobId);
       throw new Error('No active Office 365 connection found');
     }
 
+    console.log('✓ Connection found! ID:', connection.id);
+    console.log('  Company ID:', connection.company_id);
+    console.log('  User ID:', connection.user_id);
+    console.log('  Expires at:', connection.expires_at);
+    console.log('  Has access token:', !!connection.access_token);
+    console.log('  Has refresh token:', !!connection.refresh_token);
+
     let accessToken = connection.access_token;
 
+    // Update progress
+    await supabase
+      .from('office365_sync_jobs')
+      .update({ 
+        progress: { step: 'Checking token validity', timestamp: new Date().toISOString() }
+      })
+      .eq('id', jobId);
+    
     // If access token is missing, attempt immediate refresh using refresh_token
+    console.log('\n--- Step 2: Checking Token Validity ---');
     if (!accessToken) {
+      console.log('⚠ No access token found, attempting refresh...');
       if (!connection.refresh_token) {
+        console.error('✗✗✗ FATAL: No refresh token available');
         const errMsg = 'Office 365 not connected. Please connect or reconnect in Settings > Integrations.';
         await supabase
           .from('office365_sync_jobs')
           .update({ 
             status: 'failed',
             error_message: errMsg,
-            completed_at: new Date().toISOString()
+            completed_at: new Date().toISOString(),
+            progress: { step: 'Failed - No refresh token', timestamp: new Date().toISOString() }
           })
           .eq('id', jobId);
         throw new Error(errMsg);
       }
+      console.log('Attempting to refresh token...');
       const clientId = Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID');
       const clientSecret = Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET');
+      console.log('Client ID configured:', !!clientId);
+      console.log('Client Secret configured:', !!clientSecret);
+      
       const tokens = await refreshAccessToken(connection.refresh_token, clientId!, clientSecret!);
       accessToken = tokens.access_token;
       await supabase
@@ -311,7 +378,9 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
           expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
         })
         .eq('id', connection.id);
-      console.log('Token created via refresh due to missing access token');
+      console.log('✓ Token refreshed successfully');
+    } else {
+      console.log('✓ Access token exists');
     }
     
     // Check if token needs refresh (expires within 5 minutes)
@@ -319,16 +388,24 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
     const now = new Date();
     const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
     
+    console.log('Token expiration check:');
+    console.log('  Current time:', now.toISOString());
+    console.log('  Token expires at:', tokenExpiresAt.toISOString());
+    console.log('  Five minutes from now:', fiveMinutesFromNow.toISOString());
+    console.log('  Needs refresh:', tokenExpiresAt <= fiveMinutesFromNow);
+    
     if (tokenExpiresAt <= fiveMinutesFromNow) {
-      console.log('Access token expired or expiring soon, refreshing...');
+      console.log('⚠ Access token expired or expiring soon, refreshing...');
       
       if (!connection.refresh_token) {
+        console.error('✗✗✗ FATAL: Connection expired and no refresh token');
         throw new Error('Office 365 connection expired and cannot be refreshed. Please reconnect in Settings > Integrations.');
       }
       
       const clientId = Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID');
       const clientSecret = Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET');
       
+      console.log('Refreshing token...');
       const tokens = await refreshAccessToken(connection.refresh_token, clientId!, clientSecret!);
       accessToken = tokens.access_token;
       
@@ -342,26 +419,54 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
         })
         .eq('id', connection.id);
       
-      console.log('Token refreshed successfully');
+      console.log('✓ Token refreshed successfully');
+    } else {
+      console.log('✓ Token is still valid');
     }
 
+    // Update progress
+    await supabase
+      .from('office365_sync_jobs')
+      .update({ 
+        progress: { step: 'Fetching users from Microsoft Graph', timestamp: new Date().toISOString() }
+      })
+      .eq('id', jobId);
+    
     // Fetch users with phone numbers and groups
+    console.log('\n--- Step 3: Fetching Users from Microsoft Graph ---');
     const effectiveCompanyId = companyId ?? connection.company_id;
+    console.log('Effective company ID:', effectiveCompanyId);
+    
     let usersData;
     try {
+      console.log('Attempting to fetch users with extended data and group memberships...');
       usersData = await fetchGraphData(
         accessToken,
         'users?$select=userPrincipalName,displayName,mail,jobTitle,department,officeLocation,assignedLicenses,businessPhones,mobilePhone,memberOf&$expand=memberOf($select=id,displayName)'
       );
+      console.log('✓ Fetched extended user data successfully');
     } catch (error) {
-      console.error('Failed to fetch extended user data with group memberships. Falling back to basic user fields.', error);
+      console.warn('⚠ Failed to fetch extended user data, falling back to basic fields');
+      console.error('Error:', error);
       usersData = await fetchGraphData(
         accessToken,
         'users?$select=userPrincipalName,displayName,mail,jobTitle,department,officeLocation,assignedLicenses,businessPhones,mobilePhone'
       );
+      console.log('✓ Fetched basic user data successfully');
     }
     
+    console.log('Total users retrieved:', usersData.value?.length || 0);
+    
+    // Update progress
+    await supabase
+      .from('office365_sync_jobs')
+      .update({ 
+        progress: { step: 'Processing users', timestamp: new Date().toISOString(), total_users: usersData.value?.length || 0 }
+      })
+      .eq('id', jobId);
+    
     // Track sync statistics
+    console.log('\n--- Step 4: Processing Users ---');
     let totalUsers = 0;
     let usersWithLicenses = 0;
     let usersSkipped = 0;
@@ -370,13 +475,24 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
     for (const graphUser of usersData.value || []) {
       totalUsers++;
       
+      if (totalUsers % 10 === 0) {
+        console.log(`Processing user ${totalUsers}/${usersData.value.length}...`);
+      }
+      
       // Skip users without licenses
       if (!graphUser.assignedLicenses || graphUser.assignedLicenses.length === 0) {
         usersSkipped++;
+        if (totalUsers <= 5) {
+          console.log(`  Skipping ${graphUser.userPrincipalName} - no licenses`);
+        }
         continue;
       }
       
       usersWithLicenses++;
+      if (totalUsers <= 5) {
+        console.log(`  ✓ Syncing ${graphUser.userPrincipalName} (${graphUser.assignedLicenses.length} licenses)`);
+      }
+      
       await supabase
         .from('synced_office365_users')
         .upsert({
@@ -396,16 +512,53 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
         }, {
           onConflict: 'company_id,user_principal_name',
         });
+        
+      // Update progress every 50 users
+      if (totalUsers % 50 === 0) {
+        await supabase
+          .from('office365_sync_jobs')
+          .update({ 
+            users_synced: usersWithLicenses,
+            progress: { 
+              step: `Processing users (${totalUsers}/${usersData.value.length})`, 
+              timestamp: new Date().toISOString(),
+              users_with_licenses: usersWithLicenses,
+              users_skipped: usersSkipped
+            }
+          })
+          .eq('id', jobId);
+      }
     }
+    
+    console.log('✓ User processing complete');
+    console.log(`  Total users: ${totalUsers}`);
+    console.log(`  Users with licenses: ${usersWithLicenses}`);
+    console.log(`  Users skipped (no license): ${usersSkipped}`);
 
+    // Update progress
+    await supabase
+      .from('office365_sync_jobs')
+      .update({ 
+        progress: { step: 'Fetching mailboxes', timestamp: new Date().toISOString() }
+      })
+      .eq('id', jobId);
+    
     // Fetch mailboxes (shared mailboxes and groups)
+    console.log('\n--- Step 5: Fetching Mailboxes ---');
     const mailboxesData = await fetchGraphData(
       accessToken,
       'groups?$filter=mailEnabled eq true&$select=displayName,mail,id'
     );
+    console.log('Total mailboxes found:', mailboxesData.value?.length || 0);
 
     // Store mailboxes with members
+    let mailboxesProcessed = 0;
     for (const mailbox of mailboxesData.value || []) {
+      mailboxesProcessed++;
+      if (mailboxesProcessed <= 5 || mailboxesProcessed % 10 === 0) {
+        console.log(`Processing mailbox ${mailboxesProcessed}/${mailboxesData.value.length}: ${mailbox.displayName}`);
+      }
+      
       // Fetch members for this group/mailbox
       let members = [];
       try {
@@ -414,8 +567,11 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
           `groups/${mailbox.id}/members?$select=id,displayName,mail,userPrincipalName`
         );
         members = membersData.value || [];
+        if (mailboxesProcessed <= 5) {
+          console.log(`  ✓ Found ${members.length} members`);
+        }
       } catch (error) {
-        console.error(`Failed to fetch members for mailbox ${mailbox.displayName}:`, error);
+        console.error(`  ✗ Failed to fetch members for ${mailbox.displayName}:`, error);
       }
 
       await supabase
@@ -431,8 +587,18 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
           onConflict: 'company_id,email_address',
         });
     }
+    console.log('✓ Mailbox processing complete');
 
+    // Update progress
+    await supabase
+      .from('office365_sync_jobs')
+      .update({ 
+        progress: { step: 'Creating auth users', timestamp: new Date().toISOString() }
+      })
+      .eq('id', jobId);
+    
     // Auto-create auth users for synced O365 users (as inactive)
+    console.log('\n--- Step 6: Creating Auth Users ---');
     const adminClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -442,13 +608,14 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
     let usersExisted = 0;
     const existingEmails = new Set<string>();
 
+    console.log('Preloading existing auth users...');
     try {
       const perPage = 1000;
       let page = 1;
       while (true) {
         const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
         if (error) {
-          console.error('Failed to preload existing auth users for Office 365 sync:', error);
+          console.error('Failed to preload existing auth users:', error);
           break;
         }
 
@@ -463,16 +630,23 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
         }
         page++;
       }
+      console.log(`✓ Preloaded ${existingEmails.size} existing auth users`);
     } catch (error) {
-      console.error('Unexpected error preloading auth users for Office 365 sync:', error);
+      console.error('Unexpected error preloading auth users:', error);
     }
 
+    console.log('Creating auth users for synced O365 users...');
+    let authUsersProcessed = 0;
     for (const syncedUser of usersData.value || []) {
       if (!syncedUser.mail) continue;
+      authUsersProcessed++;
 
       const normalizedEmail = syncedUser.mail.toLowerCase();
       if (existingEmails.has(normalizedEmail)) {
         usersExisted++;
+        if (authUsersProcessed <= 5) {
+          console.log(`  User exists: ${normalizedEmail}`);
+        }
         continue;
       }
 
@@ -487,18 +661,32 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
         });
         usersCreated++;
         existingEmails.add(normalizedEmail);
+        if (authUsersProcessed <= 5) {
+          console.log(`  ✓ Created: ${normalizedEmail}`);
+        }
       } catch (error) {
-        console.error(`Failed to create user ${syncedUser.mail}:`, error);
+        console.error(`  ✗ Failed to create ${syncedUser.mail}:`, error);
+      }
+      
+      if (authUsersProcessed % 50 === 0) {
+        console.log(`  Progress: ${authUsersProcessed}/${usersData.value.length} auth users processed`);
       }
     }
+    
+    console.log('✓ Auth user creation complete');
+    console.log(`  Users created: ${usersCreated}`);
+    console.log(`  Users existed: ${usersExisted}`);
 
     // Update last sync time
+    console.log('\n--- Step 7: Finalizing Sync ---');
+    console.log('Updating connection last sync time...');
     await supabase
       .from('office365_connections')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', connection.id);
 
     // Update job status to completed
+    console.log('Updating job status to completed...');
     await supabase
       .from('office365_sync_jobs')
       .update({ 
@@ -508,28 +696,52 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
         users_created: usersCreated,
         completed_at: new Date().toISOString(),
         progress: {
+          step: 'Completed',
+          timestamp: new Date().toISOString(),
           total_users_found: totalUsers,
           users_synced: usersWithLicenses,
           users_skipped: usersSkipped,
           users_created: usersCreated,
           users_existed: usersExisted,
+          mailboxes_synced: mailboxesData.value?.length || 0
         }
       })
       .eq('id', jobId);
 
-    console.log('Sync completed successfully for job:', jobId);
+    console.log('=== SYNC COMPLETED SUCCESSFULLY ===');
+    console.log('Job ID:', jobId);
+    console.log('Summary:');
+    console.log(`  Total users found: ${totalUsers}`);
+    console.log(`  Users with licenses synced: ${usersWithLicenses}`);
+    console.log(`  Users skipped (no license): ${usersSkipped}`);
+    console.log(`  Auth users created: ${usersCreated}`);
+    console.log(`  Auth users existed: ${usersExisted}`);
+    console.log(`  Mailboxes synced: ${mailboxesData.value?.length || 0}`);
   } catch (error) {
-    console.error('Sync error for job:', jobId, error);
+    console.error('=== SYNC FAILED ===');
+    console.error('Job ID:', jobId);
+    console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack available');
+    
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     // Update job status to failed
+    console.log('Updating job status to failed...');
     await supabase
       .from('office365_sync_jobs')
       .update({ 
         status: 'failed',
         error_message: errorMessage,
-        completed_at: new Date().toISOString()
+        completed_at: new Date().toISOString(),
+        progress: {
+          step: 'Failed',
+          timestamp: new Date().toISOString(),
+          error: errorMessage
+        }
       })
       .eq('id', jobId);
+    
+    console.error('=== ERROR DETAILS LOGGED ===');
   }
 }
