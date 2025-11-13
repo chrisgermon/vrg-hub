@@ -140,6 +140,26 @@ export function NewsletterSubmissionForm({
             submitted_at: new Date().toISOString()
           })
           .eq('id', assignmentId);
+
+        // Notify cycle owner of submission (don't await - run in background)
+        try {
+          const { data: submission } = await supabase
+            .from('newsletter_submissions')
+            .select('id')
+            .eq('assignment_id', assignmentId)
+            .single();
+
+          if (submission?.id) {
+            supabase.functions.invoke('notify-newsletter-owner-submission', {
+              body: { 
+                submissionId: submission.id,
+                cycleId: cycleId 
+              }
+            }).catch(err => console.error('Failed to notify owner:', err));
+          }
+        } catch (err) {
+          console.error('Failed to trigger owner notification:', err);
+        }
       }
     },
     onSuccess: (_, { status }) => {

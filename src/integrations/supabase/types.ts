@@ -2072,6 +2072,8 @@ export type Database = {
           month: number
           name: string
           notes: string | null
+          owner_id: string | null
+          owner_reminder_sent: boolean | null
           status: string
           updated_at: string
           year: number
@@ -2084,6 +2086,8 @@ export type Database = {
           month: number
           name: string
           notes?: string | null
+          owner_id?: string | null
+          owner_reminder_sent?: boolean | null
           status?: string
           updated_at?: string
           year: number
@@ -2096,11 +2100,21 @@ export type Database = {
           month?: number
           name?: string
           notes?: string | null
+          owner_id?: string | null
+          owner_reminder_sent?: boolean | null
           status?: string
           updated_at?: string
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_cycles_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       newsletter_submissions: {
         Row: {

@@ -33,10 +33,25 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
     queryFn: async () => {
       const { data, error } = await supabase
         .from('newsletter_cycles')
-        .select('*')
+        .select(`
+          *,
+          owner:profiles!newsletter_cycles_owner_id_fkey(full_name, email)
+        `)
         .order('year', { ascending: false })
         .order('month', { ascending: false });
 
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: profiles = [] } = useQuery({
+    queryKey: ['profiles-for-owners'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .order('full_name');
       if (error) throw error;
       return data || [];
     },
@@ -296,6 +311,7 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const ownerId = formData.get('owner_id') as string;
     const cycleData = {
       name: formData.get('name') as string,
       month: parseInt(formData.get('month') as string),
@@ -303,6 +319,7 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
       due_date: formData.get('due_date') as string,
       status: formData.get('status') as string,
       notes: formData.get('notes') as string,
+      owner_id: ownerId || null,
       created_by: user?.id,
     };
     saveCycle.mutate(cycleData);
@@ -392,6 +409,25 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="owner_id">Newsletter Owner</Label>
+                  <Select name="owner_id" defaultValue={typeof editing === 'object' ? editing?.owner_id || '' : ''}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select owner (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No owner</SelectItem>
+                      {profiles.map((profile) => (
+                        <SelectItem key={profile.id} value={profile.id}>
+                          {profile.full_name} ({profile.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Owner will receive submission notifications and daily reminders
+                  </p>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="notes">Notes</Label>
                   <Textarea
                     id="notes"
@@ -425,18 +461,29 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
                 <TableHead>Name</TableHead>
                 <TableHead>Period</TableHead>
                 <TableHead>Due Date</TableHead>
+                <TableHead>Owner</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cycles.map((cycle) => (
+              {cycles.map((cycle: any) => (
                 <TableRow key={cycle.id}>
                   <TableCell className="font-medium">{cycle.name}</TableCell>
                   <TableCell>
                     {MONTHS[cycle.month - 1]} {cycle.year}
                   </TableCell>
                   <TableCell>{new Date(cycle.due_date).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    {cycle.owner ? (
+                      <div className="text-sm">
+                        <div className="font-medium">{cycle.owner.full_name}</div>
+                        <div className="text-muted-foreground">{cycle.owner.email}</div>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">No owner</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={cycle.status === 'active' ? 'default' : 'secondary'}>
                       {cycle.status}
