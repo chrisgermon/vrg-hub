@@ -45,13 +45,14 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
   // Save mutation
   const saveCycle = useMutation({
     mutationFn: async (cycleData: any) => {
-      let cycleId = editing;
+      const editingId = typeof editing === 'object' ? editing?.id : editing;
+      let cycleId = editingId;
       
-      if (editing) {
+      if (editingId) {
         const { error } = await supabase
           .from("newsletter_cycles")
           .update(cycleData)
-          .eq("id", editing);
+          .eq("id", editingId);
         
         if (error) throw error;
       } else {
@@ -196,17 +197,18 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
       return cycleId;
     },
     onSuccess: (cycleId, variables) => {
+      const editingId = typeof editing === 'object' ? editing?.id : editing;
       queryClient.invalidateQueries({ queryKey: ["newsletter-cycles"] });
       queryClient.invalidateQueries({ queryKey: ["newsletter-assignments"] });
       toast.success(
-        editing 
+        editingId 
           ? "Cycle updated successfully."
           : "Cycle created and contributors notified."
       );
       setOpen(false);
       setEditing(null);
       
-      if (!editing && onCycleCreated) {
+      if (!editingId && onCycleCreated) {
         onCycleCreated();
       }
     },
@@ -332,7 +334,7 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
                   <Input
                     id="name"
                     name="name"
-                    defaultValue={editing?.name}
+                    defaultValue={typeof editing === 'object' ? editing?.name : ''}
                     placeholder="e.g., January 2024 Newsletter"
                     required
                   />
@@ -340,7 +342,7 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="month">Month *</Label>
-                    <Select name="month" defaultValue={editing?.month?.toString() || '1'} required>
+                    <Select name="month" defaultValue={typeof editing === 'object' ? editing?.month?.toString() : '1'} required>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -359,7 +361,7 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
                       id="year"
                       name="year"
                       type="number"
-                      defaultValue={editing?.year || new Date().getFullYear()}
+                      defaultValue={typeof editing === 'object' ? editing?.year : new Date().getFullYear()}
                       required
                     />
                   </div>
@@ -370,13 +372,13 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
                     id="due_date"
                     name="due_date"
                     type="date"
-                    defaultValue={editing?.due_date}
+                    defaultValue={typeof editing === 'object' ? editing?.due_date : ''}
                     required
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="status">Status *</Label>
-                  <Select name="status" defaultValue={editing?.status || 'planning'} required>
+                  <Select name="status" defaultValue={typeof editing === 'object' ? editing?.status : 'planning'} required>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -394,7 +396,7 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
                   <Textarea
                     id="notes"
                     name="notes"
-                    defaultValue={editing?.notes}
+                    defaultValue={typeof editing === 'object' ? editing?.notes : ''}
                     rows={3}
                   />
                 </div>
