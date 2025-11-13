@@ -153,28 +153,82 @@ serve(async (req) => {
       );
     }
 
+    // Create a sync job record
+    const { data: syncJob, error: jobError } = await supabase
+      .from('office365_sync_jobs')
+      .insert({
+        company_id,
+        started_by: user.id,
+        status: 'pending',
+      })
+      .select()
+      .single();
+
+    if (jobError || !syncJob) {
+      console.error('Failed to create sync job:', jobError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to create sync job' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Start the sync in the background using Promise (no await)
+    performSync(syncJob.id, company_id, user.id, supabase).catch(err => {
+      console.error('Background sync failed:', err);
+    });
+
+    // Return immediately with the job ID
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        job_id: syncJob.id,
+        status: 'started',
+        message: 'Sync started in background. Poll the job status for updates.'
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.error('Sync initialization error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
+
+async function performSync(jobId: string, companyId: string, userId: string, supabase: any) {
+  try {
+    // Update job status to running
+    await supabase
+      .from('office365_sync_jobs')
+      .update({ status: 'running' })
+      .eq('id', jobId);
+
+    console.log('Starting sync for job:', jobId, 'company:', companyId);
+
     // Debug visibility into connections available
     try {
       const { count: totalConns } = await supabase
         .from('office365_connections')
         .select('id', { count: 'exact', head: true });
-      console.log('DEBUG office365_connections total:', totalConns, 'company_id:', company_id, 'user_id:', user.id);
+      console.log('DEBUG office365_connections total:', totalConns, 'company_id:', companyId, 'user_id:', userId);
     } catch (e) {
       console.error('DEBUG failed counting office365_connections:', e);
     }
 
     // Try multiple strategies to find a connection
-    console.log('Sync request received. Company_id:', company_id, 'user_id:', user.id);
+    console.log('Sync request received. Company_id:', companyId, 'user_id:', userId);
 
     let connection: any = null;
     let connError: any = null;
 
     // 1) If company_id provided, try tenant/company-level match
-    if (company_id) {
+    if (companyId) {
       const { data: companyConn, error } = await supabase
         .from('office365_connections')
         .select('*')
-        .eq('company_id', company_id)
+        .eq('company_id', companyId)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -186,7 +240,7 @@ serve(async (req) => {
       const { data: userConn, error } = await supabase
         .from('office365_connections')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -219,10 +273,15 @@ serve(async (req) => {
     console.log('Connection found:', !!connection, 'error:', connError?.message);
 
     if (!connection) {
-      return new Response(
-        JSON.stringify({ error: 'No active Office 365 connection found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      await supabase
+        .from('office365_sync_jobs')
+        .update({ 
+          status: 'failed',
+          error_message: 'No active Office 365 connection found',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', jobId);
+      throw new Error('No active Office 365 connection found');
     }
 
     let accessToken = connection.access_token;
@@ -230,10 +289,16 @@ serve(async (req) => {
     // If access token is missing, attempt immediate refresh using refresh_token
     if (!accessToken) {
       if (!connection.refresh_token) {
-        return new Response(
-          JSON.stringify({ error: 'Office 365 not connected. Please connect or reconnect in Settings > Integrations.' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        const errMsg = 'Office 365 not connected. Please connect or reconnect in Settings > Integrations.';
+        await supabase
+          .from('office365_sync_jobs')
+          .update({ 
+            status: 'failed',
+            error_message: errMsg,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', jobId);
+        throw new Error(errMsg);
       }
       const clientId = Deno.env.get('MICROSOFT_GRAPH_CLIENT_ID');
       const clientSecret = Deno.env.get('MICROSOFT_GRAPH_CLIENT_SECRET');
@@ -282,7 +347,7 @@ serve(async (req) => {
     }
 
     // Fetch users with phone numbers and groups
-    const effectiveCompanyId = company_id ?? connection.company_id;
+    const effectiveCompanyId = companyId ?? connection.company_id;
     let usersData;
     try {
       usersData = await fetchGraphData(
@@ -335,8 +400,6 @@ serve(async (req) => {
     }
 
     // Fetch mailboxes (shared mailboxes and groups)
-    // Note: Microsoft Graph doesn't have a direct filter for shared mailboxes via mailboxSettings
-    // We'll fetch groups with mail enabled as an alternative approach
     const mailboxesData = await fetchGraphData(
       accessToken,
       'groups?$filter=mailEnabled eq true&$select=displayName,mail,id'
@@ -371,7 +434,6 @@ serve(async (req) => {
     }
 
     // Auto-create auth users for synced O365 users (as inactive)
-    // Create admin client for user management
     const adminClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -437,25 +499,38 @@ serve(async (req) => {
       .update({ updated_at: new Date().toISOString() })
       .eq('id', connection.id);
 
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        total_users_found: totalUsers,
+    // Update job status to completed
+    await supabase
+      .from('office365_sync_jobs')
+      .update({ 
+        status: 'completed',
         users_synced: usersWithLicenses,
-        users_skipped: usersSkipped,
-        users_created: usersCreated,
-        users_existed: usersExisted,
         mailboxes_synced: mailboxesData.value?.length || 0,
-        sync_completed_at: new Date().toISOString(),
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+        users_created: usersCreated,
+        completed_at: new Date().toISOString(),
+        progress: {
+          total_users_found: totalUsers,
+          users_synced: usersWithLicenses,
+          users_skipped: usersSkipped,
+          users_created: usersCreated,
+          users_existed: usersExisted,
+        }
+      })
+      .eq('id', jobId);
+
+    console.log('Sync completed successfully for job:', jobId);
   } catch (error) {
-    console.error('Sync error:', error);
+    console.error('Sync error for job:', jobId, error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    
+    // Update job status to failed
+    await supabase
+      .from('office365_sync_jobs')
+      .update({ 
+        status: 'failed',
+        error_message: errorMessage,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', jobId);
   }
-});
+}

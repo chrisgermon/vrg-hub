@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +55,9 @@ export function Office365UserSync() {
   const [connection, setConnection] = useState<Office365Connection | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [syncJobId, setSyncJobId] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [syncProgress, setSyncProgress] = useState<any>(null);
   const [office365Users, setOffice365Users] = useState<Office365User[]>([]);
   const [selectedUser, setSelectedUser] = useState<Office365User | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>('requester');
@@ -64,6 +67,16 @@ export function Office365UserSync() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const usersPerPage = 20;
+  const syncPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (syncPollIntervalRef.current) {
+        clearInterval(syncPollIntervalRef.current);
+      }
+    };
+  }, []);
 
   const isAdmin = userRole === 'super_admin' || userRole === 'tenant_admin';
 
@@ -272,6 +285,90 @@ export function Office365UserSync() {
     }
   };
 
+  const pollSyncStatus = useCallback(async (jobId: string, companyId: string) => {
+    // Clear any existing interval
+    if (syncPollIntervalRef.current) {
+      clearInterval(syncPollIntervalRef.current);
+    }
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const { data: job, error } = await supabase
+          .from('office365_sync_jobs')
+          .select('*')
+          .eq('id', jobId)
+          .single();
+
+        if (error) {
+          console.error('Error polling sync job:', error);
+          if (syncPollIntervalRef.current) {
+            clearInterval(syncPollIntervalRef.current);
+            syncPollIntervalRef.current = null;
+          }
+          setSyncing(false);
+          toast.error('Failed to check sync status');
+          return;
+        }
+
+        setSyncStatus(job.status);
+        setSyncProgress(job.progress);
+
+        if (job.status === 'completed') {
+          if (syncPollIntervalRef.current) {
+            clearInterval(syncPollIntervalRef.current);
+            syncPollIntervalRef.current = null;
+          }
+          setSyncing(false);
+          setSyncJobId(null);
+          
+          // Refresh the list
+          await loadUsers(companyId);
+
+          const synced = job.users_synced ?? 0;
+          const created = job.users_created ?? 0;
+          toast.success(
+            `Sync complete: ${synced} users synced${created ? `, ${created} new accounts created` : ''}`
+          );
+
+          // Update last sync time
+          setConnection(prev => prev ? {
+            ...prev,
+            last_sync: new Date().toISOString()
+          } : null);
+        } else if (job.status === 'failed') {
+          if (syncPollIntervalRef.current) {
+            clearInterval(syncPollIntervalRef.current);
+            syncPollIntervalRef.current = null;
+          }
+          setSyncing(false);
+          setSyncJobId(null);
+          toast.error(`Sync failed: ${job.error_message || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('Error in polling:', error);
+        if (syncPollIntervalRef.current) {
+          clearInterval(syncPollIntervalRef.current);
+          syncPollIntervalRef.current = null;
+        }
+        setSyncing(false);
+      }
+    }, 2000); // Poll every 2 seconds
+
+    syncPollIntervalRef.current = pollInterval;
+
+    // Cleanup after 10 minutes maximum
+    setTimeout(() => {
+      if (syncPollIntervalRef.current) {
+        clearInterval(syncPollIntervalRef.current);
+        syncPollIntervalRef.current = null;
+      }
+      if (syncing) {
+        setSyncing(false);
+        toast.error('Sync timed out');
+      }
+    }, 600000);
+  }, [syncing, loadUsers]);
+
   const syncUsers = async () => {
     if (!connection?.connected) {
       toast.error('Please connect Office 365 first');
@@ -279,6 +376,9 @@ export function Office365UserSync() {
     }
 
     setSyncing(true);
+    setSyncStatus('starting');
+    setSyncProgress(null);
+    
     try {
       // Try to read the current user's connection for company_id (may be blocked by RLS)
       let companyId: string | null = null;
@@ -293,32 +393,32 @@ export function Office365UserSync() {
 
       if (!companyId) {
         toast.error('No Office 365 connection found for this tenant. A Super Admin must connect it in Integrations.');
+        setSyncing(false);
         return;
       }
 
-      // Call the sync function
+      // Call the sync function (it now returns immediately with a job ID)
       const { data, error } = await supabase.functions.invoke('office365-sync-data', {
         body: { company_id: companyId }
       });
 
       if (error) throw error;
 
-      // Refresh the list
-      await loadUsers(companyId);
+      const jobId = (data as any)?.job_id;
+      if (!jobId) {
+        throw new Error('No job ID returned from sync');
+      }
 
-      const synced = (data as any)?.users_synced ?? 0;
-      toast.success(`Sync complete${synced ? `: ${synced} users updated` : ''}`);
+      setSyncJobId(jobId);
+      toast.success('Sync started in background. This may take a few minutes for large organizations.');
 
-      // Update last sync time
-      setConnection({
-        ...connection,
-        last_sync: new Date().toISOString()
-      });
+      // Start polling for status
+      pollSyncStatus(jobId, companyId);
     } catch (error) {
       console.error('Error syncing users:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to sync Office 365 users');
-    } finally {
       setSyncing(false);
+      setSyncStatus(null);
     }
   };
 
@@ -566,6 +666,39 @@ export function Office365UserSync() {
               )}
             </div>
           </div>
+
+          {/* Sync Progress Display */}
+          {syncing && (
+            <div className="space-y-2 p-4 bg-muted rounded-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">
+                  Sync Status: {syncStatus === 'starting' ? 'Starting...' : syncStatus === 'running' ? 'Running...' : syncStatus}
+                </span>
+                {syncStatus === 'running' && syncProgress && (
+                  <span className="text-sm text-muted-foreground">
+                    {syncProgress.users_synced || 0} users processed
+                  </span>
+                )}
+              </div>
+              {syncStatus === 'running' && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm text-muted-foreground">
+                      Syncing users and mailboxes from Office 365...
+                    </span>
+                  </div>
+                  {syncProgress && (
+                    <div className="text-xs text-muted-foreground space-y-1 mt-2">
+                      <div>Users synced: {syncProgress.users_synced || 0}</div>
+                      <div>Users created: {syncProgress.users_created || 0}</div>
+                      <div>Users skipped: {syncProgress.users_skipped || 0}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

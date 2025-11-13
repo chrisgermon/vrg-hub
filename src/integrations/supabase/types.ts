@@ -2546,6 +2546,54 @@ export type Database = {
         }
         Relationships: []
       }
+      office365_sync_jobs: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          mailboxes_synced: number | null
+          progress: Json | null
+          started_at: string
+          started_by: string | null
+          status: string
+          updated_at: string
+          users_created: number | null
+          users_synced: number | null
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          mailboxes_synced?: number | null
+          progress?: Json | null
+          started_at?: string
+          started_by?: string | null
+          status?: string
+          updated_at?: string
+          users_created?: number | null
+          users_synced?: number | null
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          mailboxes_synced?: number | null
+          progress?: Json | null
+          started_at?: string
+          started_by?: string | null
+          status?: string
+          updated_at?: string
+          users_created?: number | null
+          users_synced?: number | null
+        }
+        Relationships: []
+      }
       print_brands: {
         Row: {
           contact_email: string | null
