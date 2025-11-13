@@ -171,16 +171,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Perform the sync synchronously and collect stats
-    const stats = await performSync(syncJob.id, company_id, user.id, supabase);
+    // Start background sync - don't await it
+    performSync(syncJob.id, company_id, user.id, supabase).catch(err => {
+      console.error('Background sync failed:', err);
+    });
 
+    // Return immediately with job ID for status polling
     return new Response(
       JSON.stringify({ 
         success: true,
         job_id: syncJob.id,
-        status: 'completed',
-        ...stats,
-        message: 'Sync completed successfully'
+        status: 'running',
+        message: 'Sync started. Poll job status for progress.'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -516,15 +518,6 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
       .eq('id', jobId);
 
     console.log('Sync completed successfully for job:', jobId);
-
-    return {
-      users_synced: usersWithLicenses,
-      users_created: usersCreated,
-      mailboxes_synced: mailboxesData.value?.length || 0,
-      total_users_found: totalUsers,
-      users_skipped: usersSkipped,
-      users_existed: usersExisted,
-    };
   } catch (error) {
     console.error('Sync error for job:', jobId, error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -538,7 +531,5 @@ async function performSync(jobId: string, companyId: string, userId: string, sup
         completed_at: new Date().toISOString()
       })
       .eq('id', jobId);
-
-    throw new Error(errorMessage);
   }
 }
