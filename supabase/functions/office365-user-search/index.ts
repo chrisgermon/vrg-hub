@@ -100,14 +100,29 @@ Deno.serve(async (req) => {
     // Try $search first (best relevance)
     let results: any[] = [];
     try {
-      const data = await fetchGraph(accessToken!, `users?$search="\"${q}\""&$select=userPrincipalName,displayName,mail,jobTitle,department,assignedLicenses`, { 'Consistency-Level': 'eventual' });
+      // Microsoft Graph $search syntax: property:value
+      const searchQuery = `"displayName:${q}" OR "mail:${q}" OR "userPrincipalName:${q}"`;
+      const data = await fetchGraph(accessToken!, `users?$search=${encodeURIComponent(searchQuery)}&$select=userPrincipalName,displayName,mail,jobTitle,department,assignedLicenses&$count=true`, { 'ConsistencyLevel': 'eventual' });
       results = data.value || [];
     } catch (e) {
-      // Fallback to $filter contains across key fields
+      // Fallback to $filter with startsWith (contains not supported for users)
       const escaped = q.replace(/'/g, "''");
-      const filter = `contains(displayName,'${escaped}') or contains(mail,'${escaped}') or contains(userPrincipalName,'${escaped}')`;
-      const data = await fetchGraph(accessToken!, `users?$select=userPrincipalName,displayName,mail,jobTitle,department,assignedLicenses&$filter=${encodeURIComponent(filter)}`);
-      results = data.value || [];
+      const filter = `startsWith(displayName,'${escaped}') or startsWith(mail,'${escaped}') or startsWith(userPrincipalName,'${escaped}')`;
+      try {
+        const data = await fetchGraph(accessToken!, `users?$select=userPrincipalName,displayName,mail,jobTitle,department,assignedLicenses&$filter=${encodeURIComponent(filter)}`);
+        results = data.value || [];
+      } catch (filterError) {
+        // Last resort: get all users and filter client-side (not ideal but works)
+        console.log('Both $search and $filter failed, fetching all users');
+        const data = await fetchGraph(accessToken!, `users?$select=userPrincipalName,displayName,mail,jobTitle,department,assignedLicenses&$top=999`);
+        const allUsers = data.value || [];
+        const lowerQ = q.toLowerCase();
+        results = allUsers.filter((u: any) => 
+          (u.displayName && u.displayName.toLowerCase().includes(lowerQ)) ||
+          (u.mail && u.mail.toLowerCase().includes(lowerQ)) ||
+          (u.userPrincipalName && u.userPrincipalName.toLowerCase().includes(lowerQ))
+        );
+      }
     }
 
     const mapped = results.slice(0, 50).map((u: any) => ({
