@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AlertCircle, Save, X } from 'lucide-react';
@@ -75,14 +74,12 @@ export function RBACUserPermissionsManager({ userId, onUpdate }: RBACUserPermiss
     try {
       for (const [permissionId, effect] of pendingChanges.entries()) {
         if (effect === null) {
-          // Remove override
           await supabase
             .from('rbac_user_permissions')
             .delete()
             .eq('user_id', userId)
             .eq('permission_id', permissionId);
         } else {
-          // Upsert override
           await supabase
             .from('rbac_user_permissions')
             .upsert({
@@ -113,84 +110,114 @@ export function RBACUserPermissionsManager({ userId, onUpdate }: RBACUserPermiss
     return overrides.get(permissionId) || 'none';
   };
 
+  // Group permissions by resource
+  const groupedPermissions = React.useMemo(() => {
+    const groups = new Map<string, Permission[]>();
+    permissions.forEach(perm => {
+      if (!groups.has(perm.resource)) {
+        groups.set(perm.resource, []);
+      }
+      groups.get(perm.resource)!.push(perm);
+    });
+    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [permissions]);
+
   const hasPendingChanges = pendingChanges.size > 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          User permission overrides have the highest priority and will override role-based permissions.
-          Use sparingly for exceptional cases.
+          User permission overrides take precedence over role-based permissions. 
+          Set to "Allow" or "Deny" to override, or "None" to use role permissions.
         </AlertDescription>
       </Alert>
 
-      <div className="border rounded-lg overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Resource</TableHead>
-              <TableHead>Action</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Override</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {permissions.map((permission) => {
-              const currentValue = getEffectiveValue(permission.id);
-              const hasOverride = currentValue !== 'none';
+      <div className="space-y-4">
+        {groupedPermissions.map(([resource, perms]) => (
+          <div key={resource} className="border rounded-lg overflow-hidden">
+            <div className="bg-muted px-4 py-3 border-b">
+              <h3 className="font-semibold text-sm capitalize">
+                {resource.replace(/_/g, ' ')}
+              </h3>
+            </div>
+            <div className="divide-y">
+              {perms.map((permission) => {
+                const currentValue = getEffectiveValue(permission.id);
+                const isPending = pendingChanges.has(permission.id);
+                const currentOverride = overrides.get(permission.id);
 
-              return (
-                <TableRow key={permission.id}>
-                  <TableCell className="font-mono text-sm">{permission.resource}</TableCell>
-                  <TableCell className="font-mono text-sm">{permission.action}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {permission.description || '-'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Select
-                        value={currentValue}
-                        onValueChange={(value) => handleOverrideChange(permission.id, value)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          <SelectItem value="allow">Allow</SelectItem>
-                          <SelectItem value="deny">Deny</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {hasOverride && (
-                        <Badge variant={currentValue === 'allow' ? 'default' : 'destructive'}>
-                          {currentValue}
-                        </Badge>
-                      )}
-                      {pendingChanges.has(permission.id) && (
-                        <Badge variant="outline">Pending</Badge>
+                return (
+                  <div 
+                    key={permission.id} 
+                    className="px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm capitalize">
+                          {permission.action.replace(/_/g, ' ')}
+                        </span>
+                        {isPending && (
+                          <Badge variant="secondary" className="text-xs">
+                            Pending
+                          </Badge>
+                        )}
+                        {!isPending && currentOverride && (
+                          <Badge 
+                            variant={currentOverride === 'allow' ? 'default' : 'destructive'}
+                            className="text-xs"
+                          >
+                            {currentOverride}
+                          </Badge>
+                        )}
+                      </div>
+                      {permission.description && (
+                        <p className="text-sm text-muted-foreground">
+                          {permission.description}
+                        </p>
                       )}
                     </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                    <Select
+                      value={currentValue}
+                      onValueChange={(value) => handleOverrideChange(permission.id, value)}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground">None (Role Default)</span>
+                        </SelectItem>
+                        <SelectItem value="allow">
+                          <span className="text-green-600">✓ Allow</span>
+                        </SelectItem>
+                        <SelectItem value="deny">
+                          <span className="text-destructive">✗ Deny</span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {hasPendingChanges && (
-        <div className="flex gap-2">
-          <Button onClick={handleSave} disabled={loading} className="flex-1">
-            <Save className="w-4 h-4 mr-2" />
-            {loading ? 'Saving...' : `Save ${pendingChanges.size} Changes`}
-          </Button>
+        <div className="flex items-center justify-end gap-2 p-4 border rounded-lg bg-muted/50 sticky bottom-4">
           <Button
-            onClick={() => setPendingChanges(new Map())}
             variant="outline"
+            onClick={() => setPendingChanges(new Map())}
+            disabled={loading}
           >
-            <X className="w-4 h-4 mr-2" />
+            <X className="h-4 w-4 mr-2" />
             Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={loading}>
+            <Save className="h-4 w-4 mr-2" />
+            Save {pendingChanges.size} Change{pendingChanges.size !== 1 ? 's' : ''}
           </Button>
         </div>
       )}
