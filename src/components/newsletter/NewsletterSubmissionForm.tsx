@@ -139,6 +139,10 @@ export function NewsletterSubmissionForm({
 
   const saveSubmission = useMutation({
     mutationFn: async ({ status }: { status: string }) => {
+      if (!user?.id) {
+        throw new Error('You must be signed in to submit');
+      }
+
       // Validate brand/location for Technical Partners if required
       if (departmentTemplate?.requires_brand_location && !brandId) {
         if (!selectedBrandId || !selectedLocationId) {
@@ -154,7 +158,7 @@ export function NewsletterSubmissionForm({
       const submissionData = {
         assignment_id: assignmentId,
         cycle_id: cycleId,
-        contributor_id: user?.id,
+        contributor_id: user.id,
         department,
         brand_id: brandId || selectedBrandId || null,
         location_id: locationId || selectedLocationId || null,
