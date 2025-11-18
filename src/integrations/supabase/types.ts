@@ -53,6 +53,65 @@ export type Database = {
         }
         Relationships: []
       }
+      assignment_history: {
+        Row: {
+          assigned_by: string
+          created_at: string | null
+          from_user_id: string | null
+          id: string
+          reason: string | null
+          ticket_id: string
+          to_user_id: string
+        }
+        Insert: {
+          assigned_by: string
+          created_at?: string | null
+          from_user_id?: string | null
+          id?: string
+          reason?: string | null
+          ticket_id: string
+          to_user_id: string
+        }
+        Update: {
+          assigned_by?: string
+          created_at?: string | null
+          from_user_id?: string | null
+          id?: string
+          reason?: string | null
+          ticket_id?: string
+          to_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_history_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_history_from_user_id_fkey"
+            columns: ["from_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_history_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_history_to_user_id_fkey"
+            columns: ["to_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -4453,6 +4512,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_ticket_to_team: { Args: { ticket_id: string }; Returns: string }
       clean_expired_sharepoint_cache: { Args: never; Returns: undefined }
       get_request_approver: {
         Args: {
