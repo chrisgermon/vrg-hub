@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,8 +9,16 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { toast } from 'sonner';
-import { CheckCircle, Send } from 'lucide-react';
+import { CheckCircle, Send, Loader2, Save, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useDepartmentTemplate } from '@/lib/newsletterDepartments';
+import { formatAUDateTime } from '@/lib/dateUtils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface SectionData {
   section: string;
@@ -46,6 +54,10 @@ export function NewsletterSubmissionForm({
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [selectedBrandId, setSelectedBrandId] = useState<string>(brandId || '');
   const [selectedLocationId, setSelectedLocationId] = useState<string>(locationId || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch department template sections from database
   const { data: departmentTemplate, isLoading: templateLoading } = useDepartmentTemplate(department);
@@ -227,6 +239,106 @@ export function NewsletterSubmissionForm({
     },
   });
 
+  // Auto-save functionality
+  const performAutoSave = useCallback(async () => {
+    if (!user?.id || noUpdateThisMonth) return;
+    
+    setIsSaving(true);
+    try {
+      const defaultTitle = `${department} - ${assignment?.cycle?.name || "Newsletter"}`;
+      const submissionData = {
+        assignment_id: assignmentId,
+        cycle_id: cycleId,
+        contributor_id: user.id,
+        department,
+        brand_id: brandId || selectedBrandId || null,
+        location_id: locationId || selectedLocationId || null,
+        title: defaultTitle,
+        content: '',
+        sections_data: sectionsData as any,
+        no_update_this_month: false,
+        status: existingSubmission?.status || 'draft',
+      };
+
+      // Save to localStorage as backup
+      localStorage.setItem(`newsletter_draft_${assignmentId}`, JSON.stringify({
+        sectionsData,
+        selectedBrandId,
+        selectedLocationId,
+        timestamp: new Date().toISOString()
+      }));
+
+      if (existingSubmission) {
+        await supabase
+          .from('newsletter_submissions')
+          .update(submissionData)
+          .eq('id', existingSubmission.id);
+      } else {
+        await supabase
+          .from('newsletter_submissions')
+          .insert(submissionData);
+      }
+
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
+      queryClient.invalidateQueries({ queryKey: ['newsletter-submission', assignmentId] });
+    } catch (error: any) {
+      console.error('Auto-save error:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [user?.id, assignmentId, cycleId, department, brandId, selectedBrandId, selectedLocationId, sectionsData, assignment?.cycle?.name, noUpdateThisMonth, existingSubmission, queryClient]);
+
+  // Debounced auto-save
+  useEffect(() => {
+    if (hasUnsavedChanges && !noUpdateThisMonth && sectionsData.length > 0) {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        performAutoSave();
+      }, 2500);
+    }
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [hasUnsavedChanges, noUpdateThisMonth, performAutoSave, sectionsData.length]);
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(`newsletter_draft_${assignmentId}`);
+    if (savedDraft && !existingSubmission && sectionsData.length > 0) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        if (draft.sectionsData && draft.sectionsData.length > 0) {
+          setSectionsData(draft.sectionsData);
+          setSelectedBrandId(draft.selectedBrandId || '');
+          setSelectedLocationId(draft.selectedLocationId || '');
+          toast.info('Restored unsaved draft from local storage');
+        }
+      } catch (error) {
+        console.error('Failed to load draft:', error);
+      }
+    }
+  }, [assignmentId, existingSubmission, sectionsData.length]);
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   const handleSectionChange = (sectionKey: string, content: string) => {
     setSectionsData(prev => 
       prev.map(section => 
@@ -235,6 +347,16 @@ export function NewsletterSubmissionForm({
           : section
       )
     );
+    setHasUnsavedChanges(true);
+    
+    // Clear validation error for this field
+    if (validationErrors[sectionKey]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[sectionKey];
+        return newErrors;
+      });
+    }
   };
 
   const handleSaveDraft = () => {
