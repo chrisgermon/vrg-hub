@@ -238,7 +238,8 @@ export function NewsletterSubmissionForm({
   };
 
   const handleSaveDraft = () => {
-    saveSubmission.mutate({ status: 'draft' });
+    performAutoSave();
+    toast.success("Draft saved successfully");
   };
 
   const handleSubmit = () => {
