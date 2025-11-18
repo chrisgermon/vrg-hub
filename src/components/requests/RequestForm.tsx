@@ -60,32 +60,24 @@ export function RequestForm() {
 
     try {
       const { data, error } = await supabase
-        .from('hardware_requests')
+        .from('tickets')
         .insert({
           user_id: user.id,
           title: formData.title,
           description: formData.description,
-          business_justification: formData.business_justification,
           priority: formData.priority,
           brand_id: formData.brandId || null,
           location_id: formData.locationId || null,
           status: 'open',
-          currency: 'USD',
+          source: 'web_portal',
+          metadata: {
+            business_justification: formData.business_justification,
+          },
         })
         .select()
         .single();
 
       if (error || !data) throw error;
-
-      // Send notification email in background (non-blocking)
-      supabase.functions.invoke('notify-ticket-event', {
-        body: {
-          requestId: data.id,
-          requestType: 'hardware',
-          eventType: 'created',
-          actorId: user.id,
-        },
-      }).catch(err => console.error('Email notification error:', err));
 
       toast({
         title: 'Success',

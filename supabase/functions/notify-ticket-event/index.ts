@@ -8,12 +8,84 @@ const corsHeaders = {
 
 interface NotifyTicketEventRequest {
   requestId: string;
-  requestType: string; // Can be request_type_id UUID or 'hardware' | 'department' for backwards compatibility
+  requestType: string;
   eventType: 'created' | 'assigned' | 'reassigned' | 'status_changed' | 'commented' | 'escalated' | 'resolved';
   actorId?: string;
   oldValue?: string;
   newValue?: string;
   commentText?: string;
+}
+
+async function sendEmailWithRetry(
+  mailgunApiKey: string,
+  mailgunDomain: string,
+  to: string,
+  subject: string,
+  html: string,
+  supabase: any,
+  ticketId: string,
+  recipientId: string,
+  eventType: string,
+  maxRetries = 3
+): Promise<boolean> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const formData = new FormData();
+      formData.append('from', `Requests Portal <noreply@${mailgunDomain}>`);
+      formData.append('to', to);
+      formData.append('subject', subject);
+      formData.append('html', html);
+
+      const response = await fetch(
+        `https://api.mailgun.net/v3/${mailgunDomain}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${btoa(`api:${mailgunApiKey}`)}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (response.ok) {
+        await supabase.from('email_notifications').insert({
+          ticket_id: ticketId,
+          recipient_user_id: recipientId,
+          event_type: eventType,
+          subject: subject,
+          sent_at: new Date().toISOString(),
+        });
+        
+        console.log(`✅ Email sent to ${to} on attempt ${attempt}`);
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error(`❌ Attempt ${attempt} failed:`, errorText);
+        
+        if (attempt === maxRetries) {
+          throw new Error(errorText);
+        }
+      }
+    } catch (error) {
+      console.error(`❌ Attempt ${attempt} error:`, error);
+      
+      if (attempt < maxRetries) {
+        const delay = 1000 * Math.pow(2, attempt - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        await supabase.from('email_notifications').insert({
+          ticket_id: ticketId,
+          recipient_user_id: recipientId,
+          event_type: eventType,
+          subject: subject,
+          error: `Failed after ${maxRetries} attempts: ${error instanceof Error ? error.message : String(error)}`,
+        });
+        return false;
+      }
+    }
+  }
+  
+  return false;
 }
 
 const handler = async (req: Request): Promise<Response> => {
