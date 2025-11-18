@@ -4473,6 +4473,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_cycle_deadline_passed: {
+        Args: { p_cycle_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
