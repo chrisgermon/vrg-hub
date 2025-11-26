@@ -8,6 +8,7 @@ import { ArrowLeft, Calendar, Clock, Mail, Phone, Bell, Edit, Trash2 } from "luc
 import { formatAUDateLong, formatAUDateTimeFull } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import { useState } from "react";
+import { ReminderAttachments } from "@/components/reminders/ReminderAttachments";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -290,11 +291,25 @@ export default function ReminderDetail() {
           <div>
             <h3 className="font-semibold mb-2">Advance Notice</h3>
             <p className="text-muted-foreground">
-              Notifications will be sent {reminder.advance_notice_days?.join(', ')} days before and on the day of the event
+              Notifications will be sent{' '}
+              {reminder.advance_notice_days && reminder.advance_notice_days.length > 0 ? (
+                <>
+                  {reminder.advance_notice_days.map((days: number) => 
+                    days === 365 ? '1 year' : 
+                    days === 1 ? '1 day' : 
+                    `${days} days`
+                  ).join(', ')} before the reminder date
+                </>
+              ) : (
+                'on the reminder date'
+              )}
             </p>
           </div>
         </CardContent>
       </Card>
+
+      {/* Attachments */}
+      {reminder && <ReminderAttachments reminderId={reminder.id} canEdit={false} />}
 
       {/* Notification History */}
       {notifications && notifications.length > 0 && (
