@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { ArrowLeft, Bell, Mail, Smartphone } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ReminderAttachments } from "@/components/reminders/ReminderAttachments";
 
 
 export default function NewReminder() {
@@ -21,6 +22,7 @@ export default function NewReminder() {
   const isSuperAdmin = userRole === 'super_admin';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sendNow, setSendNow] = useState(false);
+  const [createdReminderId, setCreatedReminderId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -35,7 +37,7 @@ export default function NewReminder() {
     in_app_enabled: true,
     phone_number: '',
     email: '',
-    advance_notice_days: [7, 3, 1],
+    advance_notice_days: [1],
   });
 
   const { data: categories } = useQuery({
@@ -90,6 +92,11 @@ export default function NewReminder() {
       }).select('*').single();
 
       if (error) throw error;
+
+      // Store the created reminder ID for attachments
+      if (inserted?.id) {
+        setCreatedReminderId(inserted.id);
+      }
 
       if (isSuperAdmin && sendNow && inserted?.id) {
         try {
@@ -342,7 +349,7 @@ export default function NewReminder() {
                 <CardDescription>When to send reminders before the date</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
-                {[30, 14, 7, 3, 1].map((day) => (
+                {[365, 90, 60, 30, 14, 7, 3, 1].map((day) => (
                   <div key={day} className="flex items-center space-x-2">
                     <Checkbox
                       id={`day-${day}`}
@@ -353,12 +360,16 @@ export default function NewReminder() {
                       htmlFor={`day-${day}`}
                       className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
-                      {day === 1 ? '1 day before' : `${day} days before`}
+                      {day === 1 ? '1 day before' : day === 365 ? '1 year before' : `${day} days before`}
                     </label>
                   </div>
                 ))}
               </CardContent>
             </Card>
+
+            {createdReminderId && (
+              <ReminderAttachments reminderId={createdReminderId} canEdit={true} />
+            )}
 
             {isSuperAdmin && (
               <Card>

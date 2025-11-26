@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { ArrowLeft, Bell, Mail, Smartphone } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ReminderAttachments } from "@/components/reminders/ReminderAttachments";
 
 export default function ReminderEdit() {
   const { id } = useParams<{ id: string }>();
@@ -35,7 +36,7 @@ export default function ReminderEdit() {
     in_app_enabled: true,
     phone_number: '',
     email: '',
-    advance_notice_days: [7, 3, 1],
+    advance_notice_days: [1],
   });
 
   const { data: reminder, isLoading: isLoadingReminder } = useQuery({
@@ -392,7 +393,7 @@ export default function ReminderEdit() {
                 <CardDescription>When to send reminders before the date</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
-                {[30, 14, 7, 3, 1].map((day) => (
+                {[365, 90, 60, 30, 14, 7, 3, 1].map((day) => (
                   <div key={day} className="flex items-center space-x-2">
                     <Checkbox
                       id={`day-${day}`}
@@ -403,12 +404,14 @@ export default function ReminderEdit() {
                       htmlFor={`day-${day}`}
                       className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
-                      {day === 1 ? '1 day before' : `${day} days before`}
+                      {day === 1 ? '1 day before' : day === 365 ? '1 year before' : `${day} days before`}
                     </label>
                   </div>
                 ))}
               </CardContent>
             </Card>
+
+            {id && <ReminderAttachments reminderId={id} canEdit={true} />}
 
             <div className="flex gap-2">
               <Button type="submit" className="flex-1" disabled={isSubmitting}>
