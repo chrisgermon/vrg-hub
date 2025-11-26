@@ -19,7 +19,9 @@ import {
 import { CriticalSystemsBar } from "./CriticalSystemsBar";
 import { Footer } from "./Footer";
 import { NotificationsDropdown } from "./NotificationsDropdown";
-import { useRoleImpersonation } from "@/hooks/useRoleImpersonation";
+import { useUserImpersonation } from "@/hooks/useUserImpersonation";
+import { UserImpersonationSelector } from "./UserImpersonationSelector";
+import { ImpersonationBanner } from "./ImpersonationBanner";
 import { RouteLoading } from "./RouteLoading";
 import { SystemBanners } from "./banners/SystemBanners";
 import { ProfileDialog } from "./ProfileDialog";
@@ -32,7 +34,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { userRole, user, signOut } = useAuth();
-  const { effectiveRole, isImpersonating } = useRoleImpersonation();
+  const { impersonatedUser, isImpersonating } = useUserImpersonation(userRole);
   const [logoUrl, setLogoUrl] = useState<string>(() => {
     // Initialize with cached logo if available
     return localStorage.getItem('company_logo_url') || crowdITLogo;
@@ -101,7 +103,8 @@ export function Layout({ children }: LayoutProps) {
   return (
     <>
       <FirstTimeSetupDialog />
-      <SidebarProvider>
+      <ImpersonationBanner />
+      <SidebarProvider className={isImpersonating ? "pt-12" : ""}>
         <div className="min-h-screen flex w-full bg-background">
           <AppSidebar userRole={userRole as any} />
         
@@ -165,7 +168,9 @@ export function Layout({ children }: LayoutProps) {
             </div>
 
             <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-              {/* Don't show company selector or role impersonation for super admin */}
+              {/* User impersonation for super admin */}
+              {userRole === 'super_admin' && <UserImpersonationSelector />}
+              
               {userRole !== 'super_admin' && (
                 <>
                   <div className="hidden lg:flex items-center gap-2 md:gap-3">
@@ -176,12 +181,15 @@ export function Layout({ children }: LayoutProps) {
               )}
               <div className="hidden sm:block text-right">
                 <p className="text-xs md:text-sm font-medium truncate max-w-[150px] md:max-w-none">
-                  {user?.user_metadata?.full_name || user?.email}
+                  {isImpersonating && impersonatedUser 
+                    ? impersonatedUser.full_name || impersonatedUser.email
+                    : user?.user_metadata?.full_name || user?.email
+                  }
                 </p>
-                {(effectiveRole || userRole) && !['requester', 'marketing'].includes(effectiveRole || userRole || '') && (
+                {((isImpersonating && impersonatedUser?.role) || userRole) && !['requester', 'marketing'].includes((impersonatedUser?.role || userRole) || '') && (
                   <p className="text-[10px] md:text-xs text-muted-foreground capitalize">
                     {isImpersonating && <span className="text-yellow-600 dark:text-yellow-400">Viewing as: </span>}
-                    {(effectiveRole || userRole || '').replace('_', ' ')}
+                    {((impersonatedUser?.role || userRole) || '').replace('_', ' ')}
                   </p>
                 )}
               </div>
