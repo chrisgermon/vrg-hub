@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { startOfDay, endOfDay } from "date-fns";
+import { format } from "date-fns";
 
 interface ReportFilters {
   startDate: Date;
@@ -14,11 +14,14 @@ export const useChecklistReports = (filters: ReportFilters) => {
   const { data: summaryStats, isLoading: summaryLoading } = useQuery({
     queryKey: ["checklist-summary", filters],
     queryFn: async () => {
+      const startDate = format(filters.startDate, "yyyy-MM-dd");
+      const endDate = format(filters.endDate, "yyyy-MM-dd");
+
       const { data: completions, error } = await supabase
         .from("checklist_completions")
         .select("*, locations(name), profiles!checklist_completions_completed_by_fkey(full_name, initials)")
-        .gte("checklist_date", startOfDay(filters.startDate).toISOString())
-        .lte("checklist_date", endOfDay(filters.endDate).toISOString())
+        .gte("checklist_date", startDate)
+        .lte("checklist_date", endDate)
         .order("checklist_date", { ascending: false });
 
       if (error) throw error;
@@ -50,6 +53,9 @@ export const useChecklistReports = (filters: ReportFilters) => {
   const { data: completionRecords, isLoading: recordsLoading } = useQuery({
     queryKey: ["checklist-completions", filters],
     queryFn: async () => {
+      const startDate = format(filters.startDate, "yyyy-MM-dd");
+      const endDate = format(filters.endDate, "yyyy-MM-dd");
+
       const { data, error } = await supabase
         .from("checklist_completions")
         .select(`
@@ -59,8 +65,8 @@ export const useChecklistReports = (filters: ReportFilters) => {
           profiles!checklist_completions_completed_by_fkey(id, full_name, initials),
           profiles!checklist_completions_started_by_fkey(id, full_name, initials)
         `)
-        .gte("checklist_date", startOfDay(filters.startDate).toISOString())
-        .lte("checklist_date", endOfDay(filters.endDate).toISOString())
+        .gte("checklist_date", startDate)
+        .lte("checklist_date", endDate)
         .order("checklist_date", { ascending: false })
         .order("created_at", { ascending: false });
 

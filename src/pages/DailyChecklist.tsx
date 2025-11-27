@@ -9,7 +9,7 @@ import { CheckCircle2, Circle, XCircle, Clock, AlertCircle } from "lucide-react"
 import { format } from "date-fns";
 
 export default function DailyChecklist() {
-  const { items, itemCompletions, completion, completeItem, completeAllInSlot, isLoading } = useChecklists();
+  const { items, itemCompletions, completion, completeItem, completeAllInSlot, submitChecklist, isLoading } = useChecklists();
   const [notes, setNotes] = useState<Record<string, string>>({});
 
   if (isLoading) {
@@ -101,11 +101,33 @@ export default function DailyChecklist() {
     return parseInt(timeA || "0") - parseInt(timeB || "0");
   });
 
+  const isFullyCompleted = completionPercentage === 100;
+  const isAlreadySubmitted = completion?.status === "completed";
+
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Daily Checklist</h1>
-        <p className="text-muted-foreground">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Daily Checklist</h1>
+          <p className="text-muted-foreground">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
+        </div>
+        {isFullyCompleted && !isAlreadySubmitted && (
+          <Button
+            size="lg"
+            onClick={() => submitChecklist.mutate()}
+            disabled={submitChecklist.isPending}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <CheckCircle2 className="h-5 w-5 mr-2" />
+            Submit Checklist
+          </Button>
+        )}
+        {isAlreadySubmitted && (
+          <Badge variant="default" className="py-2 px-4 text-base bg-green-600">
+            <CheckCircle2 className="h-5 w-5 mr-2" />
+            Submitted
+          </Badge>
+        )}
       </div>
 
       <Card className="mb-6">

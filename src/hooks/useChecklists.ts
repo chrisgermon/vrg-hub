@@ -191,6 +191,35 @@ export function useChecklists() {
     },
   });
 
+  // Submit/finish checklist
+  const submitChecklist = useMutation({
+    mutationFn: async () => {
+      if (!completion?.id || !profile?.id) throw new Error("Missing completion or profile");
+
+      const { data, error } = await supabase
+        .from("checklist_completions")
+        .update({
+          status: "completed",
+          completed_by: profile.id,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", completion.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["checklist-completion"] });
+      toast.success("Checklist submitted successfully!");
+    },
+    onError: (error) => {
+      toast.error("Failed to submit checklist");
+      console.error(error);
+    },
+  });
+
   return {
     template,
     items,
@@ -199,5 +228,6 @@ export function useChecklists() {
     isLoading: templateLoading || itemsLoading || completionLoading || itemCompletionsLoading,
     completeItem,
     completeAllInSlot,
+    submitChecklist,
   };
 }
