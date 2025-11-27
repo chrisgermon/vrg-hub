@@ -19,7 +19,7 @@ export const useChecklistReports = (filters: ReportFilters) => {
 
       const { data: completions, error } = await supabase
         .from("checklist_completions")
-        .select("*, locations(name), profiles!checklist_completions_completed_by_fkey(full_name, initials)")
+        .select("*, locations(name)")
         .gte("checklist_date", startDate)
         .lte("checklist_date", endDate)
         .order("checklist_date", { ascending: false });
@@ -61,9 +61,7 @@ export const useChecklistReports = (filters: ReportFilters) => {
         .select(`
           *,
           locations(id, name),
-          checklist_templates(id, name),
-          profiles!checklist_completions_completed_by_fkey(id, full_name, initials),
-          profiles!checklist_completions_started_by_fkey(id, full_name, initials)
+          checklist_templates(id, name)
         `)
         .gte("checklist_date", startDate)
         .lte("checklist_date", endDate)
@@ -92,8 +90,7 @@ export const useChecklistReports = (filters: ReportFilters) => {
           time_slot,
           allow_na,
           is_required
-        ),
-        profiles!checklist_item_completions_completed_by_fkey(id, full_name, initials)
+        )
       `)
       .eq("completion_id", completionId)
       .order("created_at", { ascending: true });
