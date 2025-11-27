@@ -498,6 +498,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                 ]
               : []),
             { title: "Checklist Templates", url: "/admin/checklist-templates", icon: CheckCircle2 },
+            { title: "Checklist Reports", url: "/admin/checklist-reports", icon: BarChart3 },
           ],
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
             ? { title: "Monthly Newsletter", url: "/newsletter", icon: Newspaper } 
@@ -532,6 +533,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             { title: "Marketing Campaigns", url: "/marketing-campaigns", icon: Mail },
             { title: "Marketing Calendar", url: "/marketing-calendar", icon: Calendar },
             { title: "Checklist Templates", url: "/admin/checklist-templates", icon: CheckCircle2 },
+            { title: "Checklist Reports", url: "/admin/checklist-reports", icon: BarChart3 },
           ],
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
             ? { title: "Monthly Newsletter", url: "/newsletter", icon: Newspaper } 

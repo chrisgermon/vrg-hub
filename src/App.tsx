@@ -80,6 +80,7 @@ const PageManager = lazy(() => import("./pages/PageManager"));
 const DailyChecklist = lazy(() => import("./pages/DailyChecklist"));
 const ChecklistTemplates = lazy(() => import("./pages/admin/ChecklistTemplates"));
 const ChecklistTemplateEditor = lazy(() => import("./pages/admin/ChecklistTemplateEditor"));
+const ChecklistReports = lazy(() => import("./pages/admin/ChecklistReports"));
 
 const protectedLayoutRoutes: Array<{
   path: string;
@@ -155,6 +156,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/checklists/daily", element: <DailyChecklist /> },
   { path: "/admin/checklist-templates", element: <ChecklistTemplates />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/admin/checklist-templates/:id", element: <ChecklistTemplateEditor />, requiredRole: ["super_admin", "tenant_admin"] },
+  { path: "/admin/checklist-reports", element: <ChecklistReports />, requiredRole: ["super_admin", "tenant_admin", "manager"] },
   ];
 
 const queryClient = new QueryClient();
