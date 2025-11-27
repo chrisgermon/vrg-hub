@@ -46,11 +46,21 @@ export default function DailyChecklist() {
     return acc;
   }, {} as Record<string, typeof items>);
 
-  // Calculate completion stats
-  const totalTasks = items.length;
+  const getCurrentDayOfWeek = () => {
+    return format(new Date(), "EEEE").toLowerCase();
+  };
+
+  const shouldShowItem = (item: typeof items[0]) => {
+    if (!item.day_restriction || item.day_restriction.length === 0) return true;
+    return item.day_restriction.includes(getCurrentDayOfWeek());
+  };
+
+  // Calculate completion stats - only count items visible today
+  const visibleItems = items.filter(shouldShowItem);
+  const totalTasks = visibleItems.length;
   const completedTasks = itemCompletions?.filter((ic) => ic.status === "completed").length || 0;
   const naTasks = itemCompletions?.filter((ic) => ic.status === "na").length || 0;
-  const completionPercentage = Math.round(((completedTasks + naTasks) / totalTasks) * 100);
+  const completionPercentage = totalTasks > 0 ? Math.round(((completedTasks + naTasks) / totalTasks) * 100) : 0;
 
   const getItemCompletion = (itemId: string) => {
     return itemCompletions?.find((ic) => ic.item_id === itemId);
@@ -83,15 +93,6 @@ export default function DailyChecklist() {
     if (ic.status === "completed") return <CheckCircle2 className="h-5 w-5 text-green-600" />;
     if (ic.status === "na") return <XCircle className="h-5 w-5 text-gray-400" />;
     return <AlertCircle className="h-5 w-5 text-yellow-600" />;
-  };
-
-  const getCurrentDayOfWeek = () => {
-    return format(new Date(), "EEEE").toLowerCase();
-  };
-
-  const shouldShowItem = (item: typeof items[0]) => {
-    if (!item.day_restriction || item.day_restriction.length === 0) return true;
-    return item.day_restriction.includes(getCurrentDayOfWeek());
   };
 
   const timeSlots = Object.keys(groupedItems).sort((a, b) => {
