@@ -283,6 +283,221 @@ export type Database = {
         }
         Relationships: []
       }
+      checklist_completions: {
+        Row: {
+          checklist_date: string
+          completed_at: string | null
+          completed_by: string | null
+          completion_percentage: number | null
+          created_at: string | null
+          id: string
+          location_id: string | null
+          started_at: string | null
+          started_by: string | null
+          status: string
+          template_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          checklist_date: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_percentage?: number | null
+          created_at?: string | null
+          id?: string
+          location_id?: string | null
+          started_at?: string | null
+          started_by?: string | null
+          status?: string
+          template_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          checklist_date?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_percentage?: number | null
+          created_at?: string | null
+          id?: string
+          location_id?: string | null
+          started_at?: string | null
+          started_by?: string | null
+          status?: string
+          template_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_completions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_completions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_item_completions: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          completion_id: string
+          created_at: string | null
+          id: string
+          initials: string | null
+          item_id: string
+          notes: string | null
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_id: string
+          created_at?: string | null
+          id?: string
+          initials?: string | null
+          item_id: string
+          notes?: string | null
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_id?: string
+          created_at?: string | null
+          id?: string
+          initials?: string | null
+          item_id?: string
+          notes?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_item_completions_completion_id_fkey"
+            columns: ["completion_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_completions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_item_completions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_items: {
+        Row: {
+          allow_na: boolean | null
+          created_at: string | null
+          day_restriction: string[] | null
+          id: string
+          instructions: string | null
+          is_required: boolean | null
+          sort_order: number
+          task_description: string
+          template_id: string
+          time_slot: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          allow_na?: boolean | null
+          created_at?: string | null
+          day_restriction?: string[] | null
+          id?: string
+          instructions?: string | null
+          is_required?: boolean | null
+          sort_order?: number
+          task_description: string
+          template_id: string
+          time_slot?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          allow_na?: boolean | null
+          created_at?: string | null
+          day_restriction?: string[] | null
+          id?: string
+          instructions?: string | null
+          is_required?: boolean | null
+          sort_order?: number
+          task_description?: string
+          template_id?: string
+          time_slot?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_templates: {
+        Row: {
+          brand_id: string | null
+          checklist_type: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          location_id: string | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          checklist_type: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          location_id?: string | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          checklist_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          location_id?: string | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_templates_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_templates_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           created_at: string
@@ -777,6 +992,53 @@ export type Database = {
           ticket_id?: string | null
         }
         Relationships: []
+      }
+      equipment_checks: {
+        Row: {
+          check_date: string
+          checked_by: string | null
+          created_at: string | null
+          equipment_name: string
+          id: string
+          initials: string | null
+          location_id: string
+          notes: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          check_date: string
+          checked_by?: string | null
+          created_at?: string | null
+          equipment_name: string
+          id?: string
+          initials?: string | null
+          location_id: string
+          notes?: string | null
+          status: string
+          updated_at?: string | null
+        }
+        Update: {
+          check_date?: string
+          checked_by?: string | null
+          created_at?: string | null
+          equipment_name?: string
+          id?: string
+          initials?: string | null
+          location_id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_checks_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       escalation_policies: {
         Row: {

@@ -77,6 +77,7 @@ const IncidentForm = lazy(() => import("./pages/IncidentForm"));
 const PageEditor = lazy(() => import("./pages/PageEditor"));
 const PageViewer = lazy(() => import("./pages/PageViewer"));
 const PageManager = lazy(() => import("./pages/PageManager"));
+const DailyChecklist = lazy(() => import("./pages/DailyChecklist"));
 
 const protectedLayoutRoutes: Array<{
   path: string;
@@ -149,6 +150,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/email-test", element: <EmailTest />, requiredRole: ["super_admin", "tenant_admin", "manager"] },
   { path: "/email-testing", element: <EmailTestingDashboard />, requiredRole: ["super_admin", "tenant_admin", "manager"] },
   { path: "/setup-verification", element: <SetupVerification />, requiredRole: ["super_admin", "tenant_admin"] },
+  { path: "/checklists/daily", element: <DailyChecklist /> },
   ];
 
 const queryClient = new QueryClient();
