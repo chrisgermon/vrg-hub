@@ -115,8 +115,8 @@ export default function NewReminder() {
         }
       }
 
-      toast.success('Reminder created successfully! You can now add attachments.');
-      navigate(`/reminders/${inserted.id}/edit`);
+      toast.success('Reminder created successfully! You can now add attachments below.');
+      // Don't navigate away - let user add attachments first
     } catch (error: any) {
       console.error('Error creating reminder:', error);
       toast.error('Failed to create reminder: ' + error.message);
@@ -432,10 +432,6 @@ export default function NewReminder() {
               </CardContent>
             </Card>
 
-            {createdReminderId && (
-              <ReminderAttachments reminderId={createdReminderId} canEdit={true} />
-            )}
-
             {isSuperAdmin && (
               <Card>
                 <CardHeader>
@@ -451,14 +447,28 @@ export default function NewReminder() {
               </Card>
             )}
 
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                {isSubmitting ? 'Creating...' : 'Create Reminder'}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => navigate('/reminders')}>
-                Cancel
-              </Button>
-            </div>
+            {!createdReminderId ? (
+              <div className="flex gap-2">
+                <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                  {isSubmitting ? 'Creating...' : 'Create Reminder'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => navigate('/reminders')}>
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <ReminderAttachments reminderId={createdReminderId} canEdit={true} />
+                <div className="flex gap-2">
+                  <Button type="button" className="flex-1" onClick={() => navigate('/reminders')}>
+                    Done
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => navigate(`/reminders/${createdReminderId}`)}>
+                    View Reminder
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </form>
