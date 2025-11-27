@@ -156,7 +156,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
 
     // Set up real-time subscription for menu configuration changes
     const channel = supabase
-      .channel('menu-configs-changes')
+      .channel(`menu-configs-${userRole}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -165,7 +165,8 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           table: 'menu_configurations',
           filter: `role=eq.${userRole}`,
         },
-        () => {
+        (payload) => {
+          console.log('Menu config changed:', payload);
           // Reload customizations when changes occur
           loadMenuCustomizations();
         }
@@ -177,15 +178,69 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           schema: 'public',
           table: 'menu_headings',
         },
-        () => {
+        (payload) => {
+          console.log('Menu headings changed:', payload);
           // Reload headings when changes occur
           loadGlobalHeadings();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Menu subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
+    };
+  }, [userRole]);
+
+  // Also refresh menu when returning to the app (visibility change)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && userRole) {
+        // Reload menu data when user returns to the tab
+        const loadData = async () => {
+          try {
+            const [configData, headingsData] = await Promise.all([
+              (supabase as any)
+                .from('menu_configurations')
+                .select('item_key, custom_label, custom_icon, is_visible, item_type, sort_order, custom_heading_label')
+                .eq('role', userRole)
+                .order('sort_order'),
+              supabase
+                .from('menu_headings')
+                .select('*')
+                .eq('is_active', true)
+                .order('sort_order')
+            ]);
+
+            if (!configData.error && configData.data) {
+              setMenuConfigs(configData.data || []);
+              const customizations: Record<string, { label?: string; icon?: string; visible?: boolean }> = {};
+              configData.data.forEach((item) => {
+                customizations[item.item_key] = {
+                  label: item.custom_label || undefined,
+                  icon: item.custom_icon || undefined,
+                  visible: item.is_visible,
+                };
+              });
+              setMenuCustomizations(customizations);
+            }
+
+            if (!headingsData.error && headingsData.data) {
+              setGlobalHeadings(headingsData.data || []);
+            }
+          } catch (error) {
+            console.error('Error refreshing menu data:', error);
+          }
+        };
+
+        loadData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [userRole]);
 
