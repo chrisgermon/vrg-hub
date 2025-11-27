@@ -78,6 +78,8 @@ const PageEditor = lazy(() => import("./pages/PageEditor"));
 const PageViewer = lazy(() => import("./pages/PageViewer"));
 const PageManager = lazy(() => import("./pages/PageManager"));
 const DailyChecklist = lazy(() => import("./pages/DailyChecklist"));
+const ChecklistTemplates = lazy(() => import("./pages/admin/ChecklistTemplates"));
+const ChecklistTemplateEditor = lazy(() => import("./pages/admin/ChecklistTemplateEditor"));
 
 const protectedLayoutRoutes: Array<{
   path: string;
@@ -151,6 +153,8 @@ const protectedLayoutRoutes: Array<{
   { path: "/email-testing", element: <EmailTestingDashboard />, requiredRole: ["super_admin", "tenant_admin", "manager"] },
   { path: "/setup-verification", element: <SetupVerification />, requiredRole: ["super_admin", "tenant_admin"] },
   { path: "/checklists/daily", element: <DailyChecklist /> },
+  { path: "/admin/checklist-templates", element: <ChecklistTemplates />, requiredRole: ["super_admin", "tenant_admin"] },
+  { path: "/admin/checklist-templates/:id", element: <ChecklistTemplateEditor />, requiredRole: ["super_admin", "tenant_admin"] },
   ];
 
 const queryClient = new QueryClient();
