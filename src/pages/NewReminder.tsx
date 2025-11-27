@@ -24,6 +24,7 @@ export default function NewReminder() {
   const [sendNow, setSendNow] = useState(false);
   const [createdReminderId, setCreatedReminderId] = useState<string | null>(null);
   const [customDays, setCustomDays] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -97,6 +98,40 @@ export default function NewReminder() {
       // Store the created reminder ID for attachments
       if (inserted?.id) {
         setCreatedReminderId(inserted.id);
+        
+        // Upload selected files if any
+        if (selectedFiles.length > 0) {
+          for (const file of selectedFiles) {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random()}.${fileExt}`;
+            const filePath = `${inserted.id}/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+              .from('reminder-attachments')
+              .upload(filePath, file);
+
+            if (uploadError) {
+              console.error('Error uploading file:', uploadError);
+              toast.error(`Failed to upload ${file.name}`);
+            } else {
+              // Create attachment record
+              const { error: dbError } = await supabase
+                .from('reminder_attachments')
+                .insert({
+                  reminder_id: inserted.id,
+                  file_name: file.name,
+                  file_path: filePath,
+                  file_size: file.size,
+                  content_type: file.type,
+                  uploaded_by: user.id,
+                });
+
+              if (dbError) {
+                console.error('Error creating attachment record:', dbError);
+              }
+            }
+          }
+        }
       }
 
       if (isSuperAdmin && sendNow && inserted?.id) {
@@ -115,8 +150,8 @@ export default function NewReminder() {
         }
       }
 
-      toast.success('Reminder created successfully! You can now add attachments below.');
-      // Don't navigate away - let user add attachments first
+      toast.success('Reminder created successfully!');
+      navigate('/reminders');
     } catch (error: any) {
       console.error('Error creating reminder:', error);
       toast.error('Failed to create reminder: ' + error.message);
@@ -432,6 +467,41 @@ export default function NewReminder() {
               </CardContent>
             </Card>
 
+            <Card>
+              <CardHeader>
+                <CardTitle>Attachments</CardTitle>
+                <CardDescription>Add files to this reminder (optional)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Input
+                  type="file"
+                  multiple
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      setSelectedFiles(Array.from(e.target.files));
+                    }
+                  }}
+                />
+                {selectedFiles.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {selectedFiles.map((file, idx) => (
+                      <div key={idx} className="text-sm text-muted-foreground flex items-center justify-between">
+                        <span>{file.name} ({(file.size / 1024).toFixed(1)} KB)</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedFiles(files => files.filter((_, i) => i !== idx))}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {isSuperAdmin && (
               <Card>
                 <CardHeader>
@@ -447,28 +517,14 @@ export default function NewReminder() {
               </Card>
             )}
 
-            {!createdReminderId ? (
-              <div className="flex gap-2">
-                <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                  {isSubmitting ? 'Creating...' : 'Create Reminder'}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => navigate('/reminders')}>
-                  Cancel
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <ReminderAttachments reminderId={createdReminderId} canEdit={true} />
-                <div className="flex gap-2">
-                  <Button type="button" className="flex-1" onClick={() => navigate('/reminders')}>
-                    Done
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => navigate(`/reminders/${createdReminderId}`)}>
-                    View Reminder
-                  </Button>
-                </div>
-              </div>
-            )}
+            <div className="flex gap-2">
+              <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                {isSubmitting ? 'Creating...' : 'Create Reminder'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => navigate('/reminders')}>
+                Cancel
+              </Button>
+            </div>
           </div>
         </div>
       </form>
