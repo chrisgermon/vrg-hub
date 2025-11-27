@@ -23,6 +23,7 @@ export default function NewReminder() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sendNow, setSendNow] = useState(false);
   const [createdReminderId, setCreatedReminderId] = useState<string | null>(null);
+  const [customDays, setCustomDays] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -132,6 +133,20 @@ export default function NewReminder() {
         : [...prev.advance_notice_days, day].sort((a, b) => b - a)
     }));
   };
+
+  const handleCustomDaysSubmit = () => {
+    const days = parseInt(customDays);
+    if (days > 0 && !formData.advance_notice_days.includes(days)) {
+      setFormData(prev => ({
+        ...prev,
+        advance_notice_days: [...prev.advance_notice_days, days].sort((a, b) => b - a)
+      }));
+      setCustomDays('');
+    }
+  };
+
+  const predefinedDays = [365, 90, 60, 30, 14, 7, 1];
+  const customSelectedDays = formData.advance_notice_days.filter(d => !predefinedDays.includes(d));
 
   // Auto-populate phone number when SMS is enabled
   useEffect(() => {
@@ -348,8 +363,8 @@ export default function NewReminder() {
                 <CardTitle>Advance Notices</CardTitle>
                 <CardDescription>When to send reminders before the date</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
-                {[365, 90, 60, 30, 14, 7, 3, 1].map((day) => (
+              <CardContent className="space-y-3">
+                {predefinedDays.map((day) => (
                   <div key={day} className="flex items-center space-x-2">
                     <Checkbox
                       id={`day-${day}`}
@@ -364,6 +379,56 @@ export default function NewReminder() {
                     </label>
                   </div>
                 ))}
+
+                {customSelectedDays.length > 0 && (
+                  <div className="pt-2 border-t space-y-2">
+                    <p className="text-xs text-muted-foreground">Custom advance notices:</p>
+                    {customSelectedDays.map((day) => (
+                      <div key={day} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`custom-${day}`}
+                          checked={true}
+                          onCheckedChange={() => toggleAdvanceDay(day)}
+                        />
+                        <label
+                          htmlFor={`custom-${day}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          {day} days before
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="pt-2 border-t">
+                  <Label htmlFor="custom-days" className="text-sm">Custom days before</Label>
+                  <div className="flex gap-2 mt-1.5">
+                    <Input
+                      id="custom-days"
+                      type="number"
+                      min="1"
+                      value={customDays}
+                      onChange={(e) => setCustomDays(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleCustomDaysSubmit();
+                        }
+                      }}
+                      placeholder="e.g., 45"
+                      className="text-sm"
+                    />
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      onClick={handleCustomDaysSubmit}
+                      disabled={!customDays || parseInt(customDays) <= 0}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
