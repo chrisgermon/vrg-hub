@@ -115,8 +115,8 @@ export default function NewReminder() {
         }
       }
 
-      toast.success('Reminder created successfully');
-      navigate('/reminders');
+      toast.success('Reminder created successfully! You can now add attachments.');
+      navigate(`/reminders/${inserted.id}/edit`);
     } catch (error: any) {
       console.error('Error creating reminder:', error);
       toast.error('Failed to create reminder: ' + error.message);
