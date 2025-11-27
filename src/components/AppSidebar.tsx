@@ -32,7 +32,8 @@ import {
   Plug,
   Mail,
   Calendar,
-  HeartHandshake
+  HeartHandshake,
+  CheckCircle2
 } from "lucide-react";
 import * as Icons from "lucide-react";
 import { NavLink, useLocation, Link } from "react-router-dom";
@@ -329,6 +330,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
       { title: "Home", url: "/home", icon: Home },
       { title: "Requests", url: "/requests", icon: ShoppingCart },
       { title: "Reminders", url: "/reminders", icon: Bell },
+      { title: "Daily Checklist", url: "/checklists/daily", icon: CheckCircle2 },
     ].filter(item => isMenuItemVisible(getMenuItemKey(item.title, item.url)));
 
     const helpItem = { title: "Help Guide", url: "/help", icon: HelpCircle, key: "help" };
