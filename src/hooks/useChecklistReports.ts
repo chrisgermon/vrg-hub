@@ -61,7 +61,8 @@ export const useChecklistReports = (filters: ReportFilters) => {
         .select(`
           *,
           locations(id, name),
-          checklist_templates(id, name)
+          checklist_templates(id, name),
+          profiles:completed_by(id, full_name, initials)
         `)
         .gte("checklist_date", startDate)
         .lte("checklist_date", endDate)
@@ -80,20 +81,21 @@ export const useChecklistReports = (filters: ReportFilters) => {
 
   // Fetch item completions for a specific completion
   const fetchItemCompletions = async (completionId: string) => {
-    const { data, error } = await supabase
-      .from("checklist_item_completions")
-      .select(`
-        *,
-        checklist_items(
-          id,
-          task_description,
-          time_slot,
-          allow_na,
-          is_required
-        )
-      `)
-      .eq("completion_id", completionId)
-      .order("created_at", { ascending: true });
+      const { data, error } = await supabase
+        .from("checklist_item_completions")
+        .select(`
+          *,
+          checklist_items(
+            id,
+            task_description,
+            time_slot,
+            allow_na,
+            is_required
+          ),
+          profiles:completed_by(id, full_name, initials)
+        `)
+        .eq("completion_id", completionId)
+        .order("created_at", { ascending: true });
 
     if (error) throw error;
     return data;
