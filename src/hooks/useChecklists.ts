@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
+import { formatInTimeZone } from "date-fns-tz";
+import { AU_TIMEZONE } from "@/lib/dateUtils";
 
 export function useChecklists() {
   const { profile } = useAuth();
@@ -51,7 +53,7 @@ export function useChecklists() {
     queryFn: async () => {
       if (!template?.id || !profile?.location_id) return null;
 
-      const today = new Date().toISOString().split("T")[0];
+      const today = formatInTimeZone(new Date(), AU_TIMEZONE, "yyyy-MM-dd");
 
       // Try to fetch existing
       let { data, error } = await supabase
