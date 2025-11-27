@@ -4816,6 +4816,10 @@ export type Database = {
     }
     Functions: {
       assign_ticket_to_team: { Args: { ticket_id: string }; Returns: string }
+      calculate_completion_percentage: {
+        Args: { p_completion_id: string }
+        Returns: undefined
+      }
       clean_expired_sharepoint_cache: { Args: never; Returns: undefined }
       get_request_approver: {
         Args: {
