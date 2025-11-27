@@ -152,6 +152,45 @@ export function useChecklists() {
     },
   });
 
+  // Complete all items in a time slot
+  const completeAllInSlot = useMutation({
+    mutationFn: async (itemIds: string[]) => {
+      if (!completion?.id || !profile?.id) throw new Error("Missing completion or profile");
+
+      const initials = profile.full_name
+        ?.split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase() || "??";
+
+      const completions = itemIds.map((itemId) => ({
+        completion_id: completion.id,
+        item_id: itemId,
+        status: "completed" as const,
+        initials,
+        completed_by: profile.id,
+        completed_at: new Date().toISOString(),
+      }));
+
+      const { data, error } = await supabase
+        .from("checklist_item_completions")
+        .upsert(completions, { onConflict: "completion_id,item_id" })
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["checklist-item-completions"] });
+      queryClient.invalidateQueries({ queryKey: ["checklist-completion"] });
+      toast.success("All tasks marked as complete");
+    },
+    onError: (error) => {
+      toast.error("Failed to complete all tasks");
+      console.error(error);
+    },
+  });
+
   return {
     template,
     items,
@@ -159,5 +198,6 @@ export function useChecklists() {
     itemCompletions,
     isLoading: templateLoading || itemsLoading || completionLoading || itemCompletionsLoading,
     completeItem,
+    completeAllInSlot,
   };
 }

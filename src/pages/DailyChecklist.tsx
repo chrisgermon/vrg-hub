@@ -9,7 +9,7 @@ import { CheckCircle2, Circle, XCircle, Clock, AlertCircle } from "lucide-react"
 import { format } from "date-fns";
 
 export default function DailyChecklist() {
-  const { items, itemCompletions, completion, completeItem, isLoading } = useChecklists();
+  const { items, itemCompletions, completion, completeItem, completeAllInSlot, isLoading } = useChecklists();
   const [notes, setNotes] = useState<Record<string, string>>({});
 
   if (isLoading) {
@@ -62,6 +62,19 @@ export default function DailyChecklist() {
       status,
       notes: notes[itemId],
     });
+  };
+
+  const handleCompleteAllInSlot = (slotItems: typeof items) => {
+    const incompleteItemIds = slotItems
+      .filter((item) => {
+        const ic = getItemCompletion(item.id);
+        return !ic || ic.status === "pending";
+      })
+      .map((item) => item.id);
+
+    if (incompleteItemIds.length > 0) {
+      completeAllInSlot.mutate(incompleteItemIds);
+    }
   };
 
   const getStatusIcon = (itemId: string) => {
@@ -136,6 +149,20 @@ export default function DailyChecklist() {
                       {slotCompletions}/{slotItems.length}
                     </Badge>
                   </div>
+                  {slotCompletions < slotItems.length && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCompleteAllInSlot(slotItems);
+                      }}
+                      disabled={completeAllInSlot.isPending}
+                      className="ml-auto mr-2"
+                    >
+                      Mark All Complete
+                    </Button>
+                  )}
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
