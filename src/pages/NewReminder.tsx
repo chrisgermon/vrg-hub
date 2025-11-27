@@ -206,11 +206,11 @@ export default function NewReminder() {
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="md:col-span-2 space-y-6">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Reminder Details</CardTitle>
+                <CardTitle>Basic Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -235,34 +235,111 @@ export default function NewReminder() {
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="reminder_type">Type *</Label>
+                    <Select
+                      value={formData.reminder_type}
+                      onValueChange={(value) => setFormData({ ...formData, reminder_type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        {categories?.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.name.toLowerCase().replace(' ', '_')}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="reminder_date">Date & Time *</Label>
+                    <Input
+                      id="reminder_date"
+                      type="datetime-local"
+                      value={formData.reminder_date}
+                      onChange={(e) => setFormData({ ...formData, reminder_date: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Advance Notices</CardTitle>
+                <CardDescription>Select when to send reminders before the date</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="reminder_type">Type *</Label>
-                  <Select
-                    value={formData.reminder_type}
-                    onValueChange={(value) => setFormData({ ...formData, reminder_type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories?.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.name.toLowerCase().replace(' ', '_')}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Quick Select</Label>
+                  <div className="grid grid-cols-4 gap-2 mt-2">
+                    {predefinedDays.map((day) => (
+                      <Button
+                        key={day}
+                        type="button"
+                        variant={formData.advance_notice_days.includes(day) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => toggleAdvanceDay(day)}
+                        className="w-full"
+                      >
+                        {day === 1 ? '1d' : day === 7 ? '1w' : day === 14 ? '2w' : day === 30 ? '1m' : day === 60 ? '2m' : day === 90 ? '3m' : '1y'}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
 
+                {formData.advance_notice_days.length > 0 && (
+                  <div>
+                    <Label>Selected ({formData.advance_notice_days.length})</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {formData.advance_notice_days.sort((a, b) => b - a).map((day) => (
+                        <div key={day} className="flex items-center gap-1 bg-secondary text-secondary-foreground px-3 py-1 rounded-md text-sm">
+                          <span>{day === 1 ? '1 day' : day === 365 ? '1 year' : `${day} days`} before</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleAdvanceDay(day)}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div>
-                  <Label htmlFor="reminder_date">Reminder Date *</Label>
-                  <Input
-                    id="reminder_date"
-                    type="datetime-local"
-                    value={formData.reminder_date}
-                    onChange={(e) => setFormData({ ...formData, reminder_date: e.target.value })}
-                    required
-                  />
+                  <Label htmlFor="custom-days">Custom Days</Label>
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      id="custom-days"
+                      type="number"
+                      min="1"
+                      value={customDays}
+                      onChange={(e) => setCustomDays(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleCustomDaysSubmit();
+                        }
+                      }}
+                      placeholder="Enter days"
+                      className="flex-1"
+                    />
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      onClick={handleCustomDaysSubmit}
+                      disabled={!customDays || parseInt(customDays) <= 0}
+                    >
+                      Add
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -282,7 +359,7 @@ export default function NewReminder() {
                 </div>
 
                 {formData.is_recurring && (
-                  <>
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="recurrence_pattern">Repeat</Label>
                       <Select
@@ -292,7 +369,7 @@ export default function NewReminder() {
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-popover z-50">
                           <SelectItem value="daily">Daily</SelectItem>
                           <SelectItem value="weekly">Weekly</SelectItem>
                           <SelectItem value="monthly">Monthly</SelectItem>
@@ -310,11 +387,8 @@ export default function NewReminder() {
                         value={formData.recurrence_interval}
                         onChange={(e) => setFormData({ ...formData, recurrence_interval: parseInt(e.target.value) })}
                       />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        e.g., Every 2 {formData.recurrence_pattern}
-                      </p>
                     </div>
-                  </>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -327,141 +401,78 @@ export default function NewReminder() {
                 <CardDescription>Choose how you want to be notified</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    <Label htmlFor="email_enabled">Email</Label>
-                  </div>
-                  <Switch
-                    id="email_enabled"
-                    checked={formData.email_enabled}
-                    onCheckedChange={(checked) => setFormData({ ...formData, email_enabled: checked })}
-                  />
-                </div>
-
-                {formData.email_enabled && (
-                  <div>
-                    <Label htmlFor="email" className="text-xs">Custom Email (optional)</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="Override default email"
-                      className="text-sm"
-                    />
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Smartphone className="h-4 w-4" />
-                    <Label htmlFor="sms_enabled">SMS</Label>
-                  </div>
-                  <Switch
-                    id="sms_enabled"
-                    checked={formData.sms_enabled}
-                    onCheckedChange={(checked) => setFormData({ ...formData, sms_enabled: checked })}
-                  />
-                </div>
-
-                {formData.sms_enabled && (
-                  <div>
-                    <Label htmlFor="phone_number">Phone Number *</Label>
-                    <Input
-                      id="phone_number"
-                      type="tel"
-                      value={formData.phone_number}
-                      onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                      placeholder="+61 400 000 000"
-                      required={formData.sms_enabled}
-                    />
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Bell className="h-4 w-4" />
-                    <Label htmlFor="in_app_enabled">In-App</Label>
-                  </div>
-                  <Switch
-                    id="in_app_enabled"
-                    checked={formData.in_app_enabled}
-                    onCheckedChange={(checked) => setFormData({ ...formData, in_app_enabled: checked })}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Advance Notices</CardTitle>
-                <CardDescription>When to send reminders before the date</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {predefinedDays.map((day) => (
-                  <div key={day} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`day-${day}`}
-                      checked={formData.advance_notice_days.includes(day)}
-                      onCheckedChange={() => toggleAdvanceDay(day)}
-                    />
-                    <label
-                      htmlFor={`day-${day}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      {day === 1 ? '1 day before' : day === 365 ? '1 year before' : `${day} days before`}
-                    </label>
-                  </div>
-                ))}
-
-                {customSelectedDays.length > 0 && (
-                  <div className="pt-2 border-t space-y-2">
-                    <p className="text-xs text-muted-foreground">Custom advance notices:</p>
-                    {customSelectedDays.map((day) => (
-                      <div key={day} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`custom-${day}`}
-                          checked={true}
-                          onCheckedChange={() => toggleAdvanceDay(day)}
-                        />
-                        <label
-                          htmlFor={`custom-${day}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                          {day} days before
-                        </label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <Label htmlFor="email_enabled" className="font-medium">Email</Label>
+                        {formData.email_enabled && formData.email && (
+                          <p className="text-xs text-muted-foreground">{formData.email}</p>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="pt-2 border-t">
-                  <Label htmlFor="custom-days" className="text-sm">Custom days before</Label>
-                  <div className="flex gap-2 mt-1.5">
-                    <Input
-                      id="custom-days"
-                      type="number"
-                      min="1"
-                      value={customDays}
-                      onChange={(e) => setCustomDays(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleCustomDaysSubmit();
-                        }
-                      }}
-                      placeholder="e.g., 45"
-                      className="text-sm"
+                    </div>
+                    <Switch
+                      id="email_enabled"
+                      checked={formData.email_enabled}
+                      onCheckedChange={(checked) => setFormData({ ...formData, email_enabled: checked })}
                     />
-                    <Button 
-                      type="button" 
-                      size="sm" 
-                      onClick={handleCustomDaysSubmit}
-                      disabled={!customDays || parseInt(customDays) <= 0}
-                    >
-                      Add
-                    </Button>
+                  </div>
+
+                  {formData.email_enabled && (
+                    <div className="ml-11 pl-3">
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        placeholder="Custom email (optional)"
+                        className="text-sm"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Smartphone className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <Label htmlFor="sms_enabled" className="font-medium">SMS</Label>
+                        {formData.sms_enabled && formData.phone_number && (
+                          <p className="text-xs text-muted-foreground">{formData.phone_number}</p>
+                        )}
+                      </div>
+                    </div>
+                    <Switch
+                      id="sms_enabled"
+                      checked={formData.sms_enabled}
+                      onCheckedChange={(checked) => setFormData({ ...formData, sms_enabled: checked })}
+                    />
+                  </div>
+
+                  {formData.sms_enabled && (
+                    <div className="ml-11 pl-3">
+                      <Input
+                        id="phone_number"
+                        type="tel"
+                        value={formData.phone_number}
+                        onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                        placeholder="+61 400 000 000"
+                        required={formData.sms_enabled}
+                        className="text-sm"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Bell className="h-5 w-5 text-muted-foreground" />
+                      <Label htmlFor="in_app_enabled" className="font-medium">In-App Notification</Label>
+                    </div>
+                    <Switch
+                      id="in_app_enabled"
+                      checked={formData.in_app_enabled}
+                      onCheckedChange={(checked) => setFormData({ ...formData, in_app_enabled: checked })}
+                    />
                   </div>
                 </div>
               </CardContent>
