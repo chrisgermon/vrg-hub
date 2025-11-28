@@ -3,21 +3,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { NewsFeedModule } from "@/components/home/NewsFeedModule";
 import { PendingApprovalsWidget } from "@/components/home/PendingApprovalsWidget";
 import { Button } from "@/components/ui/button";
-import { 
-  FileText, 
-  Calendar, 
-  Users, 
+import {
+  FileText,
+  Users,
   TrendingUp,
   Package,
-  Megaphone,
-  UserPlus,
-  Printer,
-  Bell
+  Megaphone
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCompanyFeatures } from "@/hooks/useCompanyFeatures";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,11 +20,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function Home() {
   const { user, company } = useAuth();
   const navigate = useNavigate();
-  const { isFeatureEnabled } = useCompanyFeatures();
   const { hasPermission } = usePermissions();
 
   // Dashboard stats
-  const { data: stats, isLoading: isLoadingStats } = useQuery({
+  const { data: stats, isLoading: isLoadingStats, isError: isStatsError } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
       const [hardwareReq, marketingReq, kbPages, profiles] = await Promise.all([
@@ -38,6 +32,12 @@ export default function Home() {
         supabase.from('kb_pages').select('id', { count: 'exact', head: true }),
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
       ]);
+
+      // Check for errors in any of the queries
+      if (hardwareReq.error) throw hardwareReq.error;
+      if (marketingReq.error) throw marketingReq.error;
+      if (kbPages.error) throw kbPages.error;
+      if (profiles.error) throw profiles.error;
 
       return {
         hardwareRequests: hardwareReq.count || 0,
@@ -62,15 +62,6 @@ export default function Home() {
       return data || [];
     },
   });
-
-  const quickActions = [
-    {
-      icon: FileText,
-      label: "New Request",
-      description: "Submit a new request",
-      href: "/requests/new",
-    },
-  ];
 
   return (
     <div className="flex-1 space-y-4 md:space-y-6 p-4 md:p-6 max-w-7xl mx-auto">
@@ -102,7 +93,7 @@ export default function Home() {
       {/* Stats Overview */}
       {isLoadingStats ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          {[...Array(4)].map((_, i) => (
+          {Array.from({ length: 4 }, (_, i) => (
             <Card key={i}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -116,6 +107,12 @@ export default function Home() {
             </Card>
           ))}
         </div>
+      ) : isStatsError ? (
+        <Card className="border-destructive">
+          <CardContent className="p-4">
+            <p className="text-sm text-destructive">Unable to load dashboard statistics. Please try refreshing the page.</p>
+          </CardContent>
+        </Card>
       ) : stats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Card className="hover:shadow-md transition-shadow">
@@ -236,10 +233,11 @@ export default function Home() {
           <CardContent>
             <div className="space-y-3">
               {recentActivity.map((request) => (
-                <div
+                <button
                   key={request.id}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
+                  className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors cursor-pointer w-full text-left"
                   onClick={() => navigate(`/requests/${request.id}`)}
+                  type="button"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{request.title}</p>
@@ -254,7 +252,7 @@ export default function Home() {
                   <Badge variant="outline" className="text-xs ml-2 capitalize">
                     {request.status.replace(/_/g, ' ')}
                   </Badge>
-                </div>
+                </button>
               ))}
             </div>
           </CardContent>
