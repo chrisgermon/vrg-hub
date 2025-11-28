@@ -351,8 +351,7 @@ const ExpandableRow = ({ record, expanded, onToggle, fetchItemCompletions, getSt
         <TableCell>{getStatusBadge(record.status)}</TableCell>
         <TableCell>{record.completion_percentage || 0}%</TableCell>
         <TableCell>
-          {record.profiles?.full_name || "N/A"}
-          {record.profiles?.initials && ` (${record.profiles.initials})`}
+          {record.completed_by || "N/A"}
         </TableCell>
         <TableCell>
           {record.completed_at ? format(new Date(record.completed_at), "MMM dd, h:mm a") : "N/A"}
@@ -390,8 +389,7 @@ const ExpandableRow = ({ record, expanded, onToggle, fetchItemCompletions, getSt
                           </div>
                           <div className="text-right space-y-1">
                             <div className="text-xs font-medium">
-                              {item.profiles?.full_name || item.initials || "N/A"}
-                              {item.profiles?.initials && ` (${item.profiles.initials})`}
+                              {item.initials || item.completed_by || "N/A"}
                             </div>
                             {item.completed_at && (
                               <div className="text-xs text-muted-foreground">
