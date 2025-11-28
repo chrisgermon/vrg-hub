@@ -390,8 +390,8 @@ const ExpandableRow = ({ record, expanded, onToggle, fetchItemCompletions, getSt
                           </div>
                           <div className="text-right space-y-1">
                             <div className="text-xs font-medium">
-                              {item.profiles?.full_name || "N/A"}
-                              {item.initials && ` (${item.initials})`}
+                              {item.profiles?.full_name || item.initials || "N/A"}
+                              {item.profiles?.initials && ` (${item.profiles.initials})`}
                             </div>
                             {item.completed_at && (
                               <div className="text-xs text-muted-foreground">
