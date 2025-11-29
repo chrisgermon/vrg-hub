@@ -518,6 +518,8 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
                   { title: "Marketing Calendar", url: "/marketing-calendar", icon: Calendar }
                 ]
               : []),
+            // Managers should be able to access checklist completion reports
+            { title: "Checklist Reports", url: "/admin/checklist-reports", icon: BarChart3 },
           ],
           newsletter: isFeatureEnabled('monthly_newsletter') && isNewsletterVisible() 
             ? { title: "Monthly Newsletter", url: "/newsletter", icon: Newspaper } 
