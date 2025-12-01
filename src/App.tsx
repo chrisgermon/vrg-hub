@@ -101,6 +101,7 @@ const protectedLayoutRoutes: Array<{
   { path: "/requests/new/:slug/:categorySlug", element: <NewDynamicRequest /> },
   { path: "/requests/tickets/new", element: <NewTicket /> },
   { path: "/documents", element: <Documents /> },
+  { path: "/company-documents", element: <Documentation /> },
   { path: "/hr-assistance", element: <HRAssistance /> },
   { path: "/incident-form", element: <IncidentForm /> },
   { path: "/pages/edit", element: <PageEditor />, requiredRole: ["super_admin"] },
