@@ -477,7 +477,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           news: newsMenuItem,
           categories: [
           ].filter(cat => cat.items.length > 0), // Remove empty categories
-          documents: { title: "Company Documents", url: "/company-documents", icon: FolderOpen },
+          documents: { title: "Company Documents", url: "/company-documents", icon: FolderOpen, key: "documents-documents" },
           hrAssistance: { title: "HR & Employee Assistance", url: "/hr-assistance", icon: HeartHandshake },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
@@ -506,7 +506,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           news: newsMenuItem,
           categories: [
           ].filter(cat => cat.items.length > 0),
-          documents: { title: "Company Documents", url: "/company-documents", icon: FolderOpen },
+          documents: { title: "Company Documents", url: "/company-documents", icon: FolderOpen, key: "documents-documents" },
           hrAssistance: { title: "HR & Employee Assistance", url: "/hr-assistance", icon: HeartHandshake },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
@@ -542,7 +542,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               paths: ["/requests", "/toner"]
             },
           ].filter(cat => cat.items.length > 0),
-          documents: { title: "Company Documents", url: "/company-documents", icon: FolderOpen },
+          documents: { title: "Company Documents", url: "/company-documents", icon: FolderOpen, key: "documents-documents" },
           hrAssistance: { title: "HR & Employee Assistance", url: "/hr-assistance", icon: HeartHandshake },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
@@ -579,7 +579,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               paths: ["/approvals", "/requests", "/toner"]
             },
           ].filter(cat => cat.items.length > 0),
-          documents: { title: "Company Documents", url: "/company-documents", icon: FolderOpen },
+          documents: { title: "Company Documents", url: "/company-documents", icon: FolderOpen, key: "documents-documents" },
           hrAssistance: { title: "HR & Employee Assistance", url: "/hr-assistance", icon: HeartHandshake },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
@@ -687,7 +687,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
 
               {/* 2. Documents - Second priority */}
               {menuConfig.documents && (() => {
-                const itemKey = getMenuItemKey(menuConfig.documents.title, menuConfig.documents.url);
+                const itemKey = (menuConfig.documents as any).key || getMenuItemKey(menuConfig.documents.title, menuConfig.documents.url);
                 const CustomIcon = getCustomIcon(itemKey, menuConfig.documents.icon);
                 const customLabel = getCustomLabel(itemKey, menuConfig.documents.title);
                 
