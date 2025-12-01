@@ -4127,6 +4127,72 @@ export type Database = {
         }
         Relationships: []
       }
+      sharepoint_favorites: {
+        Row: {
+          created_at: string | null
+          id: string
+          item_id: string
+          item_name: string
+          item_path: string
+          item_type: string
+          item_url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          item_id: string
+          item_name: string
+          item_path: string
+          item_type: string
+          item_url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          item_id?: string
+          item_name?: string
+          item_path?: string
+          item_type?: string
+          item_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sharepoint_recent_items: {
+        Row: {
+          id: string
+          item_id: string
+          item_name: string
+          item_path: string
+          item_type: string
+          item_url: string | null
+          last_accessed_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          item_name: string
+          item_path: string
+          item_type: string
+          item_url?: string | null
+          last_accessed_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          item_name?: string
+          item_path?: string
+          item_type?: string
+          item_url?: string | null
+          last_accessed_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       synced_office365_mailboxes: {
         Row: {
           company_id: string

@@ -29,6 +29,7 @@ import {
   FileArchive,
   File,
   Presentation,
+  Star,
 } from "lucide-react";
 import { formatAUDateTimeFull } from "@/lib/dateUtils";
 
@@ -59,6 +60,8 @@ export interface FileOperationCallbacks {
   onMove?: (item: SharePointFile | SharePointFolder, type: 'file' | 'folder') => void;
   onCopy?: (item: SharePointFile | SharePointFolder, type: 'file' | 'folder') => void;
   onPreview?: (file: SharePointFile) => void;
+  onToggleFavorite?: (item: SharePointFile | SharePointFolder, type: 'file' | 'folder') => void;
+  isFavorite?: (itemId: string) => boolean;
 }
 
 interface FolderRowProps {

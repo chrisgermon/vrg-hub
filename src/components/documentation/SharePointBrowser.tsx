@@ -2,12 +2,16 @@ import { useState, useEffect, Fragment, useCallback, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, AlertCircle, Home, ChevronRight, Search, ExternalLink, FolderPlus, Upload } from "lucide-react";
+import { Loader2, AlertCircle, Home, ChevronRight, Search, ExternalLink, FolderPlus, Upload, Star, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { ConnectOffice365Button } from "./ConnectOffice365Button";
 import { useSharePointCache } from "./useSharePointCache";
+import { useSharePointFavorites } from "./useSharePointFavorites";
+import { useSharePointRecent } from "./useSharePointRecent";
+import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 import { SharePointSkeleton } from "./SharePointSkeleton";
 import { VirtualizedTable } from "./VirtualizedTable";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -15,6 +19,10 @@ import { FolderRow, FileRow, SharePointFile, SharePointFolder, FileOperationCall
 import { FileUploadProgress } from "./FileUploadProgress";
 import { FilePreviewModal } from "./FilePreviewModal";
 import { DeleteDialog, RenameDialog, CreateFolderDialog, MoveCopyDialog } from "./FileOperationDialogs";
+import { SharePointFavorites } from "./SharePointFavorites";
+import { SharePointFilters, FileFilters } from "./SharePointFilters";
+import { BatchOperationsToolbar } from "./BatchOperationsToolbar";
+import { FileTypeIcon } from "./FileTypeIcon";
 
 interface Permission {
   id: string;
@@ -74,7 +82,30 @@ export function SharePointBrowser() {
   const [isDragging, setIsDragging] = useState(false);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
+  // Batch operations state
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [showFavorites, setShowFavorites] = useState(true);
+  const [showRecentFolders, setShowRecentFolders] = useState(true);
+
+  // Filters state
+  const [filters, setFilters] = useState<FileFilters>({
+    fileType: 'all',
+    sortBy: 'name',
+    sortOrder: 'asc',
+  });
+
   const cache = useSharePointCache();
+  const favorites = useSharePointFavorites();
+  const recentItems = useSharePointRecent();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onSearch: () => searchInputRef.current?.focus(),
+    onBack: () => pathHistory.length > 0 && navigateBack(),
+    onRefresh: () => loadItems(currentPath, { forceRefresh: true }),
+    enabled: !loading,
+  });
 
   // File operation callbacks
   const fileOperations: FileOperationCallbacks = {
@@ -83,6 +114,16 @@ export function SharePointBrowser() {
     onMove: (item, type) => setMoveCopyItem({ item, type, operation: 'move' }),
     onCopy: (item, type) => setMoveCopyItem({ item, type, operation: 'copy' }),
     onPreview: (file) => setPreviewFile(file),
+    onToggleFavorite: (item, type) => {
+      favorites.toggleFavorite({
+        item_type: type,
+        item_id: item.id,
+        item_name: item.name,
+        item_path: type === 'folder' ? (item as SharePointFolder).path || currentPath : currentPath,
+        item_url: item.webUrl,
+      });
+    },
+    isFavorite: (itemId) => favorites.isFavorite(itemId),
   };
 
   const autoConfigureSharePoint = async (companyId: string, userId: string) => {
@@ -719,11 +760,21 @@ export function SharePointBrowser() {
   const navigateToFolder = (folderName: string, folderPath?: string) => {
     if (loading) return;
 
+    // Track folder access
+    const targetPath = folderPath || (currentPath === '/' ? `/${folderName}` : `${currentPath}/${folderName}`);
+    recentItems.trackAccess({
+      item_type: 'folder',
+      item_id: targetPath,
+      item_name: folderName,
+      item_path: targetPath,
+    });
+
     if (folderPath) {
       setCurrentPath(folderPath);
       setSearchQuery('');
       setSearchResults(null);
       setPathHistory([]);
+      setSelectedItems(new Set());
       loadItems(folderPath).then(() => {
         const newPath = folderPath === '/' ? `/${folderName}` : `${folderPath}/${folderName}`;
         setPathHistory([folderPath]);
@@ -736,6 +787,7 @@ export function SharePointBrowser() {
       const newPath = currentPath === '/' ? `/${folderName}` : `${currentPath}/${folderName}`;
       setPathHistory([...pathHistory, currentPath]);
       setCurrentPath(newPath);
+      setSelectedItems(new Set());
     }
   };
 
@@ -752,6 +804,97 @@ export function SharePointBrowser() {
     setPathHistory([]);
     setSearchQuery('');
     setSearchResults(null);
+    setSelectedItems(new Set());
+  };
+
+  // Batch operations
+  const toggleItemSelection = (itemId: string) => {
+    const newSelection = new Set(selectedItems);
+    if (newSelection.has(itemId)) {
+      newSelection.delete(itemId);
+    } else {
+      newSelection.add(itemId);
+    }
+    setSelectedItems(newSelection);
+  };
+
+  const selectAllItems = () => {
+    const allIds = [...displayFolders.map(f => f.id), ...displayFiles.map(f => f.id)];
+    setSelectedItems(new Set(allIds));
+  };
+
+  const clearSelection = () => {
+    setSelectedItems(new Set());
+  };
+
+  const handleBulkDownload = async () => {
+    toast.info('Bulk download starting...');
+    const selectedFiles = displayFiles.filter(f => selectedItems.has(f.id));
+    for (const file of selectedFiles) {
+      if (file.downloadUrl) {
+        window.open(file.downloadUrl, '_blank');
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    clearSelection();
+  };
+
+  const handleBulkDelete = () => {
+    toast.warning('Bulk delete - select one item at a time for now');
+  };
+
+  const handleBulkMove = () => {
+    toast.warning('Bulk move - select one item at a time for now');
+  };
+
+  // Filtering and sorting
+  const applyFilters = (items: SharePointFile[]): SharePointFile[] => {
+    let filtered = [...items];
+
+    // File type filter
+    if (filters.fileType !== 'all') {
+      filtered = filtered.filter(file => {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        return ext === filters.fileType;
+      });
+    }
+
+    // Date range filter
+    if (filters.dateFrom) {
+      filtered = filtered.filter(file => {
+        const fileDate = new Date(file.lastModifiedDateTime);
+        return fileDate >= filters.dateFrom!;
+      });
+    }
+
+    if (filters.dateTo) {
+      filtered = filtered.filter(file => {
+        const fileDate = new Date(file.lastModifiedDateTime);
+        return fileDate <= filters.dateTo!;
+      });
+    }
+
+    // Sorting
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      if (filters.sortBy === 'name') {
+        comparison = a.name.localeCompare(b.name);
+      } else if (filters.sortBy === 'date') {
+        comparison = new Date(a.lastModifiedDateTime).getTime() - new Date(b.lastModifiedDateTime).getTime();
+      } else if (filters.sortBy === 'size') {
+        comparison = a.size - b.size;
+      }
+
+      return filters.sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return filtered;
+  };
+
+  const getUniqueFileTypes = (files: SharePointFile[]): string[] => {
+    const types = new Set(files.map(f => f.name.split('.').pop()?.toLowerCase()).filter(Boolean) as string[]);
+    return Array.from(types).sort();
   };
 
   const performGlobalSearch = async (query: string) => {
@@ -813,8 +956,10 @@ export function SharePointBrowser() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Apply filters to files
+  const filteredFiles = applyFilters(searchResults?.files || files);
   const displayFolders = searchResults?.folders || folders;
-  const displayFiles = searchResults?.files || files;
+  const displayFiles = filteredFiles;
 
   const totalItems = displayFolders.length + displayFiles.length;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
@@ -906,6 +1051,60 @@ export function SharePointBrowser() {
           </div>
         </div>
       )}
+
+      {/* Favorites and Recent */}
+      {showFavorites && favorites.favorites.length > 0 && (
+        <SharePointFavorites
+          onNavigate={(path, name) => navigateToFolder(name, path)}
+          onFileClick={(url, name) => {
+            recentItems.trackAccess({
+              item_type: 'file',
+              item_id: url,
+              item_name: name,
+              item_path: currentPath,
+              item_url: url,
+            });
+            window.open(url, '_blank');
+          }}
+        />
+      )}
+
+      {/* Recent Folders */}
+      {showRecentFolders && recentItems.recentItems.filter(i => i.item_type === 'folder').length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="h-4 w-4" />
+              <h3 className="font-medium text-sm">Recent Folders</h3>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {recentItems.recentItems
+                .filter(i => i.item_type === 'folder')
+                .slice(0, 5)
+                .map((item) => (
+                  <Button
+                    key={item.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigateToFolder(item.item_name, item.item_path)}
+                    className="gap-2"
+                  >
+                    {item.item_name}
+                  </Button>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Batch Operations Toolbar */}
+      <BatchOperationsToolbar
+        selectedCount={selectedItems.size}
+        onClearSelection={clearSelection}
+        onBulkDownload={handleBulkDownload}
+        onBulkDelete={handleBulkDelete}
+        onBulkMove={handleBulkMove}
+      />
 
       {/* Navigation */}
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1015,8 +1214,9 @@ export function SharePointBrowser() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
+            ref={searchInputRef}
             type="text"
-            placeholder="Search all SharePoint files and folders..."
+            placeholder="Search all SharePoint files and folders... (Ctrl+F)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -1045,6 +1245,21 @@ export function SharePointBrowser() {
         )}
       </div>
 
+      {/* Filters */}
+      <SharePointFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        fileTypes={getUniqueFileTypes(files)}
+      />
+
+      {/* Keyboard Shortcuts Help */}
+      <div className="text-xs text-muted-foreground">
+        <span>Shortcuts: </span>
+        <kbd className="px-1.5 py-0.5 bg-muted rounded">Ctrl+F</kbd> Search • 
+        <kbd className="px-1.5 py-0.5 bg-muted rounded mx-1">Backspace</kbd> Back • 
+        <kbd className="px-1.5 py-0.5 bg-muted rounded">Ctrl+R</kbd> Refresh
+      </div>
+
       {/* Table View */}
       {(displayFolders.length > 0 || displayFiles.length > 0) && (
         <Card>
@@ -1063,7 +1278,18 @@ export function SharePointBrowser() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12"></TableHead>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedItems.size > 0 && selectedItems.size === totalItems}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              selectAllItems();
+                            } else {
+                              clearSelection();
+                            }
+                          }}
+                        />
+                      </TableHead>
                       <TableHead>Name</TableHead>
                       {searchResults && <TableHead className="hidden lg:table-cell">Location</TableHead>}
                       <TableHead className="hidden md:table-cell">Modified</TableHead>
@@ -1081,6 +1307,8 @@ export function SharePointBrowser() {
                         isSearchResult={!!searchResults}
                         currentPath={currentPath}
                         loading={loading || isSearching}
+                        selected={selectedItems.has(folder.id)}
+                        onSelectChange={(id, checked) => toggleItemSelection(id)}
                         operations={fileOperations}
                       />
                     ))}
@@ -1091,6 +1319,8 @@ export function SharePointBrowser() {
                         file={file}
                         isSearchResult={!!searchResults}
                         currentPath={currentPath}
+                        selected={selectedItems.has(file.id)}
+                        onSelectChange={(id, checked) => toggleItemSelection(id)}
                         operations={fileOperations}
                       />
                     ))}
