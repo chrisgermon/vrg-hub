@@ -926,7 +926,36 @@ export function SharePointBrowser() {
       });
 
       if (error) {
-        toast.error('Search failed. Please try again.');
+        let status: number | undefined = (error as any)?.status;
+        let errorBody: any = null;
+        try {
+          const res = (error as any)?.context?.response as Response | undefined;
+          if (res) {
+            status = res.status || status;
+            errorBody = await res.clone().json().catch(async () => await res.text());
+          }
+        } catch {}
+
+        const needsO365 = typeof errorBody === 'object' && errorBody !== null ? errorBody.needsO365 : false;
+        const configuredValue = typeof errorBody === 'object' && errorBody !== null ? errorBody.configured : undefined;
+
+        if (typeof configuredValue === 'boolean') {
+          setConfigured(configuredValue);
+          if (!configuredValue) {
+            setCompanyId(null);
+            setSpConfig(null);
+          }
+        }
+
+        if (needsO365 || status === 401) {
+          setNeedsO365(true);
+          toast.error('Connect your Office 365 account to continue.');
+        } else if (status === 404) {
+          setConfigured(false);
+          toast.error('SharePoint not configured.');
+        } else {
+          toast.error('Search failed. Please try again.');
+        }
         return;
       }
 
