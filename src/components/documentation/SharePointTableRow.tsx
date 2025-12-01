@@ -1,10 +1,38 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { FileText, Download, ExternalLink, Folder, ChevronRight } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  FileText,
+  Download,
+  ExternalLink,
+  Folder,
+  ChevronRight,
+  MoreVertical,
+  Trash2,
+  Pencil,
+  Copy,
+  Move,
+  Eye,
+  FileSpreadsheet,
+  FileImage,
+  FileVideo,
+  FileAudio,
+  FileCode,
+  FileArchive,
+  File,
+  Presentation,
+} from "lucide-react";
 import { formatAUDateTimeFull } from "@/lib/dateUtils";
 
-interface SharePointFolder {
+export interface SharePointFolder {
   id: string;
   name: string;
   webUrl: string;
@@ -13,7 +41,7 @@ interface SharePointFolder {
   path?: string;
 }
 
-interface SharePointFile {
+export interface SharePointFile {
   id: string;
   name: string;
   webUrl: string;
@@ -25,21 +53,35 @@ interface SharePointFile {
   path?: string;
 }
 
+export interface FileOperationCallbacks {
+  onDelete?: (item: SharePointFile | SharePointFolder, type: 'file' | 'folder') => void;
+  onRename?: (item: SharePointFile | SharePointFolder, type: 'file' | 'folder') => void;
+  onMove?: (item: SharePointFile | SharePointFolder, type: 'file' | 'folder') => void;
+  onCopy?: (item: SharePointFile | SharePointFolder, type: 'file' | 'folder') => void;
+  onPreview?: (file: SharePointFile) => void;
+}
+
 interface FolderRowProps {
   folder: SharePointFolder;
   onNavigate: (name: string, path?: string) => void;
   isSearchResult: boolean;
   currentPath: string;
   loading: boolean;
+  selected?: boolean;
+  onSelectChange?: (id: string, selected: boolean) => void;
+  operations?: FileOperationCallbacks;
 }
 
 interface FileRowProps {
   file: SharePointFile;
   isSearchResult: boolean;
   currentPath: string;
+  selected?: boolean;
+  onSelectChange?: (id: string, selected: boolean) => void;
+  operations?: FileOperationCallbacks;
 }
 
-function formatFileSize(bytes: number): string {
+export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -47,13 +89,108 @@ function formatFileSize(bytes: number): string {
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
-export const FolderRow = memo<FolderRowProps>(({ folder, onNavigate, isSearchResult, currentPath, loading }) => {
+// Get appropriate icon based on file extension
+function getFileIcon(filename: string) {
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+
+  // Office documents
+  if (['doc', 'docx', 'odt', 'rtf'].includes(ext)) {
+    return <FileText className="h-5 w-5 text-blue-600" />;
+  }
+  if (['xls', 'xlsx', 'ods', 'csv'].includes(ext)) {
+    return <FileSpreadsheet className="h-5 w-5 text-green-600" />;
+  }
+  if (['ppt', 'pptx', 'odp'].includes(ext)) {
+    return <Presentation className="h-5 w-5 text-orange-600" />;
+  }
+  if (ext === 'pdf') {
+    return <FileText className="h-5 w-5 text-red-600" />;
+  }
+
+  // Images
+  if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff'].includes(ext)) {
+    return <FileImage className="h-5 w-5 text-purple-600" />;
+  }
+
+  // Video
+  if (['mp4', 'mov', 'avi', 'wmv', 'mkv', 'webm', 'flv'].includes(ext)) {
+    return <FileVideo className="h-5 w-5 text-pink-600" />;
+  }
+
+  // Audio
+  if (['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'].includes(ext)) {
+    return <FileAudio className="h-5 w-5 text-teal-600" />;
+  }
+
+  // Code
+  if (['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'c', 'cpp', 'h', 'cs', 'php', 'rb', 'go', 'rs', 'swift', 'kt', 'html', 'css', 'scss', 'json', 'xml', 'yaml', 'yml', 'md', 'sql'].includes(ext)) {
+    return <FileCode className="h-5 w-5 text-gray-600" />;
+  }
+
+  // Archives
+  if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2'].includes(ext)) {
+    return <FileArchive className="h-5 w-5 text-yellow-600" />;
+  }
+
+  // Default
+  return <File className="h-5 w-5 text-muted-foreground" />;
+}
+
+// Check if file supports preview
+function canPreview(filename: string): boolean {
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  const previewable = [
+    // Office
+    'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp',
+    // PDF
+    'pdf',
+    // Images
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg',
+    // Video
+    'mp4', 'mov', 'webm',
+    // Audio
+    'mp3', 'wav', 'ogg',
+    // Text
+    'txt', 'md', 'json', 'xml', 'csv',
+  ];
+  return previewable.includes(ext);
+}
+
+export const FolderRow = memo<FolderRowProps>(({
+  folder,
+  onNavigate,
+  isSearchResult,
+  currentPath,
+  loading,
+  selected,
+  onSelectChange,
+  operations,
+}) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const handleRowClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on checkbox or menu
+    if ((e.target as HTMLElement).closest('[data-no-navigate]')) {
+      return;
+    }
+    onNavigate(folder.name, folder.path);
+  };
+
   return (
-    <TableRow 
-      className={`cursor-pointer hover:bg-muted/50 ${loading ? 'opacity-50 pointer-events-none' : ''}`}
-      onClick={() => onNavigate(folder.name, folder.path)}
+    <TableRow
+      className={`cursor-pointer hover:bg-muted/50 ${loading ? 'opacity-50 pointer-events-none' : ''} ${selected ? 'bg-muted/30' : ''}`}
+      onClick={handleRowClick}
     >
-      <TableCell>
+      {onSelectChange && (
+        <TableCell className="w-10" data-no-navigate>
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(checked) => onSelectChange(folder.id, !!checked)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </TableCell>
+      )}
+      <TableCell className="w-10">
         <Folder className="h-5 w-5 text-primary" />
       </TableCell>
       <TableCell className="font-medium">
@@ -78,10 +215,60 @@ export const FolderRow = memo<FolderRowProps>(({ folder, onNavigate, isSearchRes
       <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
         —
       </TableCell>
-      <TableCell>
-        <Button variant="ghost" size="sm">
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+      <TableCell data-no-navigate>
+        <div className="flex gap-1 items-center">
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => window.open(folder.webUrl, '_blank')}>
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open in SharePoint
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {operations?.onRename && (
+                <DropdownMenuItem onClick={() => operations.onRename?.(folder, 'folder')}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Rename
+                </DropdownMenuItem>
+              )}
+              {operations?.onMove && (
+                <DropdownMenuItem onClick={() => operations.onMove?.(folder, 'folder')}>
+                  <Move className="h-4 w-4 mr-2" />
+                  Move to...
+                </DropdownMenuItem>
+              )}
+              {operations?.onCopy && (
+                <DropdownMenuItem onClick={() => operations.onCopy?.(folder, 'folder')}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy to...
+                </DropdownMenuItem>
+              )}
+              {operations?.onDelete && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => operations.onDelete?.(folder, 'folder')}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onNavigate(folder.name, folder.path); }}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   );
@@ -89,15 +276,38 @@ export const FolderRow = memo<FolderRowProps>(({ folder, onNavigate, isSearchRes
 
 FolderRow.displayName = 'FolderRow';
 
-export const FileRow = memo<FileRowProps>(({ file, isSearchResult, currentPath }) => {
+export const FileRow = memo<FileRowProps>(({
+  file,
+  isSearchResult,
+  currentPath,
+  selected,
+  onSelectChange,
+  operations,
+}) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const hasPreview = canPreview(file.name);
+
   return (
-    <TableRow className="hover:bg-muted/50">
-      <TableCell>
-        <FileText className="h-5 w-5 text-muted-foreground" />
+    <TableRow className={`hover:bg-muted/50 ${selected ? 'bg-muted/30' : ''}`}>
+      {onSelectChange && (
+        <TableCell className="w-10">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(checked) => onSelectChange(file.id, !!checked)}
+          />
+        </TableCell>
+      )}
+      <TableCell className="w-10">
+        {getFileIcon(file.name)}
       </TableCell>
       <TableCell className="font-medium">
         <div className="flex items-center gap-2">
-          <span className="truncate max-w-xs">{file.name}</span>
+          <span
+            className={`truncate max-w-xs ${hasPreview && operations?.onPreview ? 'cursor-pointer hover:text-primary hover:underline' : ''}`}
+            onClick={() => hasPreview && operations?.onPreview?.(file)}
+          >
+            {file.name}
+          </span>
           <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded flex-shrink-0">
             {file.fileType}
           </span>
@@ -118,15 +328,63 @@ export const FileRow = memo<FileRowProps>(({ file, isSearchResult, currentPath }
         {formatFileSize(file.size)}
       </TableCell>
       <TableCell>
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => window.open(file.webUrl, '_blank')}
-            title="Open in SharePoint"
-          >
-            <ExternalLink className="h-4 w-4" />
-          </Button>
+        <div className="flex gap-1 items-center">
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {hasPreview && operations?.onPreview && (
+                <DropdownMenuItem onClick={() => operations.onPreview?.(file)}>
+                  <Eye className="h-4 w-4 mr-2" />
+                  Preview
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => window.open(file.webUrl, '_blank')}>
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open in SharePoint
+              </DropdownMenuItem>
+              {file.downloadUrl && (
+                <DropdownMenuItem onClick={() => window.open(file.downloadUrl, '_blank')}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              {operations?.onRename && (
+                <DropdownMenuItem onClick={() => operations.onRename?.(file, 'file')}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Rename
+                </DropdownMenuItem>
+              )}
+              {operations?.onMove && (
+                <DropdownMenuItem onClick={() => operations.onMove?.(file, 'file')}>
+                  <Move className="h-4 w-4 mr-2" />
+                  Move to...
+                </DropdownMenuItem>
+              )}
+              {operations?.onCopy && (
+                <DropdownMenuItem onClick={() => operations.onCopy?.(file, 'file')}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy to...
+                </DropdownMenuItem>
+              )}
+              {operations?.onDelete && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => operations.onDelete?.(file, 'file')}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
           {file.downloadUrl && (
             <Button
               variant="ghost"
