@@ -73,7 +73,8 @@ serve(async (req) => {
 
     // Get SharePoint configuration
     console.log(`Looking for SharePoint config with company_id: ${companyId}`);
-    const { data: spConfig, error: configError } = await supabase
+    let spConfig: any = null;
+    const { data: spConfigData, error: configError } = await supabase
       .from('sharepoint_configurations')
       .select('*')
       .eq('company_id', companyId)
@@ -93,6 +94,8 @@ serve(async (req) => {
       );
     }
 
+    spConfig = spConfigData;
+
     if (!spConfig) {
       console.log('No SharePoint configuration found for company:', companyId);
       // Try fallback: get any active config
@@ -105,29 +108,19 @@ serve(async (req) => {
         .maybeSingle();
       
       if (fallbackConfig) {
-        console.log('Using fallback SharePoint config:', fallbackConfig.id);
+        console.log('Using fallback SharePoint config:', fallbackConfig.id, 'for user company:', companyId);
+        // Use the fallback config instead of erroring
+        spConfig = fallbackConfig;
+      } else {
         return new Response(
           JSON.stringify({ 
             error: 'SharePoint not configured',
             configured: false,
-            needsO365: false,
-            debug: {
-              userCompanyId: companyId,
-              availableConfigCompanyId: fallbackConfig.company_id
-            }
+            needsO365: false
           }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
-      return new Response(
-        JSON.stringify({ 
-          error: 'SharePoint not configured',
-          configured: false,
-          needsO365: false
-        }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
     // Require O365 connection
