@@ -167,20 +167,20 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
               console.error('Failed to create newsletter assignments:', assignError);
             } else {
               // Send individual assignment notifications for any new assignments
-              // Group by user to send one email per user with all their departments
-              const userDepartments = new Map<string, string[]>();
+              // Group by user to send one email per user with unique departments only
+              const userDepartments = new Map<string, Set<string>>();
               for (const assignment of newsletterAssignments) {
                 const userId = assignment.contributor_id;
                 const dept = assignment.department;
                 if (!userDepartments.has(userId)) {
-                  userDepartments.set(userId, []);
+                  userDepartments.set(userId, new Set());
                 }
-                userDepartments.get(userId)!.push(dept);
+                userDepartments.get(userId)!.add(dept);
               }
 
-              // Send notification for each user
-              for (const [userId, departments] of userDepartments.entries()) {
-                for (const department of departments) {
+              // Send notification for each user's unique departments
+              for (const [userId, departmentsSet] of userDepartments.entries()) {
+                for (const department of departmentsSet) {
                   try {
                     await supabase.functions.invoke('notify-newsletter-assignment', {
                       body: { userId, department }
@@ -192,20 +192,6 @@ export function CycleManagement({ onCycleCreated }: { onCycleCreated: () => void
               }
             }
           }
-        }
-
-        // Trigger notification edge function for new cycle
-        try {
-          const { error: notifyError } = await supabase.functions.invoke(
-            'notify-newsletter-cycle-created',
-            { body: { cycleId } }
-          );
-          
-          if (notifyError) {
-            console.error("Failed to send notifications:", notifyError);
-          }
-        } catch (err) {
-          console.error("Failed to invoke notification function:", err);
         }
       }
       
