@@ -477,7 +477,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           news: newsMenuItem,
           categories: [
           ].filter(cat => cat.items.length > 0), // Remove empty categories
-          documents: { title: "Documents", url: "/documents", icon: FolderOpen },
+          documents: { title: "Company Documents", url: "/company-documents", icon: FolderOpen },
           hrAssistance: { title: "HR & Employee Assistance", url: "/hr-assistance", icon: HeartHandshake },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
@@ -506,7 +506,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
           news: newsMenuItem,
           categories: [
           ].filter(cat => cat.items.length > 0),
-          documents: { title: "Documents", url: "/documents", icon: FolderOpen },
+          documents: { title: "Company Documents", url: "/company-documents", icon: FolderOpen },
           hrAssistance: { title: "HR & Employee Assistance", url: "/hr-assistance", icon: HeartHandshake },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
@@ -542,7 +542,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               paths: ["/requests", "/toner"]
             },
           ].filter(cat => cat.items.length > 0),
-          documents: { title: "Documents", url: "/documents", icon: FolderOpen },
+          documents: { title: "Company Documents", url: "/company-documents", icon: FolderOpen },
           hrAssistance: { title: "HR & Employee Assistance", url: "/hr-assistance", icon: HeartHandshake },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
@@ -579,7 +579,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
               paths: ["/approvals", "/requests", "/toner"]
             },
           ].filter(cat => cat.items.length > 0),
-          documents: { title: "Documents", url: "/documents", icon: FolderOpen },
+          documents: { title: "Company Documents", url: "/company-documents", icon: FolderOpen },
           hrAssistance: { title: "HR & Employee Assistance", url: "/hr-assistance", icon: HeartHandshake },
           modalityDetails: isFeatureEnabled('modality_management') && hasPermission('view_modality_details')
             ? { title: "Modality Details", url: "/modality-management", icon: Network }
