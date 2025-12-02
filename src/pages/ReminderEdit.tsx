@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdvanceNoticeOptions } from "@/hooks/useAdvanceNoticeOptions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -70,6 +71,9 @@ export default function ReminderEdit() {
       return data;
     },
   });
+
+  const { data: advanceNoticeOptions } = useAdvanceNoticeOptions();
+  const predefinedDays = advanceNoticeOptions?.map(opt => opt.days) || [365, 90, 60, 30, 14, 7, 1];
 
   useEffect(() => {
     if (reminder && !isLoaded) {
@@ -176,7 +180,6 @@ export default function ReminderEdit() {
     }
   };
 
-  const predefinedDays = [365, 90, 60, 30, 14, 7, 1];
   const customSelectedDays = formData.advance_notice_days.filter(d => !predefinedDays.includes(d));
 
   if (isLoadingReminder) {
@@ -433,18 +436,18 @@ export default function ReminderEdit() {
                 <CardDescription>When to send reminders before the date</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {predefinedDays.map((day) => (
-                  <div key={day} className="flex items-center space-x-2">
+                {advanceNoticeOptions?.map((opt) => (
+                  <div key={opt.id} className="flex items-center space-x-2">
                     <Checkbox
-                      id={`day-${day}`}
-                      checked={formData.advance_notice_days.includes(day)}
-                      onCheckedChange={() => toggleAdvanceDay(day)}
+                      id={`day-${opt.days}`}
+                      checked={formData.advance_notice_days.includes(opt.days)}
+                      onCheckedChange={() => toggleAdvanceDay(opt.days)}
                     />
                     <label
-                      htmlFor={`day-${day}`}
+                      htmlFor={`day-${opt.days}`}
                       className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
-                      {day === 1 ? '1 day before' : day === 365 ? '1 year before' : `${day} days before`}
+                      {opt.label} before
                     </label>
                   </div>
                 ))}
