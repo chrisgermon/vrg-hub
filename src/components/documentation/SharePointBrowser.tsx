@@ -703,7 +703,10 @@ export function SharePointBrowser() {
         }
         setNeedsO365(response.needsO365 ?? false);
 
-        if (response.warning) {
+        // Only show warning toasts when there's actually no content returned
+        const hasNoContent = (!response.folders || response.folders.length === 0) && (!response.files || response.files.length === 0);
+        
+        if (response.warning && hasNoContent) {
           if (response.warning === 'Folder not found') {
             toast.warning('This folder no longer exists or has been moved.');
           } else if (response.warning === 'Access denied') {
