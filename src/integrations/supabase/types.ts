@@ -3374,6 +3374,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_recurring: boolean | null
+          last_notification_sent: string | null
           metadata: Json | null
           notification_channels: Json
           phone_number: string | null
@@ -3381,6 +3382,7 @@ export type Database = {
           recurrence_pattern: string | null
           reminder_date: string
           reminder_type: string
+          repeat_until_complete: boolean | null
           status: string | null
           title: string
           updated_at: string | null
@@ -3395,6 +3397,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_recurring?: boolean | null
+          last_notification_sent?: string | null
           metadata?: Json | null
           notification_channels?: Json
           phone_number?: string | null
@@ -3402,6 +3405,7 @@ export type Database = {
           recurrence_pattern?: string | null
           reminder_date: string
           reminder_type: string
+          repeat_until_complete?: boolean | null
           status?: string | null
           title: string
           updated_at?: string | null
@@ -3416,6 +3420,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_recurring?: boolean | null
+          last_notification_sent?: string | null
           metadata?: Json | null
           notification_channels?: Json
           phone_number?: string | null
@@ -3423,6 +3428,7 @@ export type Database = {
           recurrence_pattern?: string | null
           reminder_date?: string
           reminder_type?: string
+          repeat_until_complete?: boolean | null
           status?: string | null
           title?: string
           updated_at?: string | null

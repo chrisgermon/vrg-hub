@@ -22,13 +22,12 @@ const handler = async (req: Request): Promise<Response> => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    // Get all active reminders
+    // Get all active reminders (including past-due for repeat_until_complete)
     const { data: reminders, error: remindersError } = await supabase
       .from('reminders')
       .select('*')
       .eq('is_active', true)
-      .eq('status', 'active')
-      .gte('reminder_date', today.toISOString());
+      .eq('status', 'active');
 
     if (remindersError) {
       throw remindersError;
@@ -48,7 +47,21 @@ const handler = async (req: Request): Promise<Response> => {
       // Check if we should send a notification based on advance_notice_days
       const advanceNoticeDays = reminder.advance_notice_days || [7, 3, 1];
       
-      if (!advanceNoticeDays.includes(daysUntil) && daysUntil !== 0) {
+      // For repeat_until_complete: send daily once past due date
+      const isPastDue = daysUntil < 0;
+      const shouldRepeatDaily = reminder.repeat_until_complete && isPastDue;
+      
+      // Check if already sent today for repeat reminders
+      if (shouldRepeatDaily) {
+        const lastSent = reminder.last_notification_sent ? new Date(reminder.last_notification_sent) : null;
+        if (lastSent) {
+          const lastSentDate = new Date(lastSent.getFullYear(), lastSent.getMonth(), lastSent.getDate());
+          if (lastSentDate.getTime() === today.getTime()) {
+            console.log(`Already sent repeat notification today for reminder ${reminder.id}`);
+            continue;
+          }
+        }
+      } else if (!advanceNoticeDays.includes(daysUntil) && daysUntil !== 0) {
         continue; // Not a notification day
       }
 
@@ -84,10 +97,13 @@ const handler = async (req: Request): Promise<Response> => {
       const daysMessage = daysUntil === 0 
         ? 'Today' 
         : daysUntil === 1 
-        ? 'Tomorrow' 
+        ? 'Tomorrow'
+        : daysUntil < 0
+        ? `${Math.abs(daysUntil)} days overdue`
         : `in ${daysUntil} days`;
 
-      const message = `Reminder: ${reminder.title}${reminder.description ? ' - ' + reminder.description : ''} is ${daysMessage}!`;
+      const overduePrefix = isPastDue ? '⚠️ OVERDUE: ' : '';
+      const message = `${overduePrefix}Reminder: ${reminder.title}${reminder.description ? ' - ' + reminder.description : ''} is ${daysMessage}!`;
 
       // Send Email
       if (channels.email) {
@@ -197,8 +213,16 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
 
-      // Mark reminder as completed if it's the actual date
-      if (daysUntil === 0 && !reminder.is_recurring) {
+      // Update last_notification_sent for repeat_until_complete reminders
+      if (reminder.repeat_until_complete) {
+        await supabase
+          .from('reminders')
+          .update({ last_notification_sent: now.toISOString() })
+          .eq('id', reminder.id);
+      }
+
+      // Mark reminder as completed if it's the actual date (only if NOT repeat_until_complete)
+      if (daysUntil === 0 && !reminder.is_recurring && !reminder.repeat_until_complete) {
         await supabase
           .from('reminders')
           .update({ 
