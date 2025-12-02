@@ -40,6 +40,7 @@ export default function NewReminder() {
     phone_number: '',
     email: '',
     advance_notice_days: [1],
+    repeat_until_complete: false,
   });
 
   const { data: categories } = useQuery({
@@ -91,6 +92,7 @@ export default function NewReminder() {
         phone_number: formData.phone_number || null,
         email: formData.email || null,
         advance_notice_days: formData.advance_notice_days,
+        repeat_until_complete: formData.repeat_until_complete,
       }).select('*').single();
 
       if (error) throw error;
@@ -390,6 +392,28 @@ export default function NewReminder() {
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Repeat Until Complete</CardTitle>
+                <CardDescription>Continue sending daily reminders after due date until task is marked complete</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="repeat_until_complete">Keep reminding until completed</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Sends daily reminders after the due date passes until you mark the task as done
+                    </p>
+                  </div>
+                  <Switch
+                    id="repeat_until_complete"
+                    checked={formData.repeat_until_complete}
+                    onCheckedChange={(checked) => setFormData({ ...formData, repeat_until_complete: checked })}
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>

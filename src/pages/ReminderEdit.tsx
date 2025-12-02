@@ -38,6 +38,7 @@ export default function ReminderEdit() {
     phone_number: '',
     email: '',
     advance_notice_days: [1],
+    repeat_until_complete: false,
   });
 
   const { data: reminder, isLoading: isLoadingReminder } = useQuery({
@@ -94,6 +95,7 @@ export default function ReminderEdit() {
         phone_number: reminder.phone_number || '',
         email: reminder.email || '',
         advance_notice_days: reminder.advance_notice_days || [7, 3, 1],
+        repeat_until_complete: (reminder as any).repeat_until_complete || false,
       });
       setIsLoaded(true);
     }
@@ -136,6 +138,7 @@ export default function ReminderEdit() {
           phone_number: formData.phone_number || null,
           email: formData.email || null,
           advance_notice_days: formData.advance_notice_days,
+          repeat_until_complete: formData.repeat_until_complete,
         })
         .eq('id', id);
 
@@ -325,6 +328,28 @@ export default function ReminderEdit() {
                     </div>
                   </>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Repeat Until Complete</CardTitle>
+                <CardDescription>Continue sending daily reminders after due date until task is marked complete</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="repeat_until_complete">Keep reminding until completed</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Sends daily reminders after the due date passes until you mark the task as done
+                    </p>
+                  </div>
+                  <Switch
+                    id="repeat_until_complete"
+                    checked={formData.repeat_until_complete}
+                    onCheckedChange={(checked) => setFormData({ ...formData, repeat_until_complete: checked })}
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>

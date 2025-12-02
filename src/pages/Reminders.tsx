@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Bell, Calendar, Clock, Mail, Phone, Smartphone, X, Check } from "lucide-react";
+import { Plus, Bell, Calendar, Clock, Mail, Phone, Smartphone, X, Check, Upload, FileSpreadsheet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatAUDate, formatAUDateLong, formatAUDateTimeFull } from "@/lib/dateUtils";
 import { toast } from "sonner";
@@ -13,12 +13,17 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ReminderDashboard } from "@/components/reminders/ReminderDashboard";
 import { ReminderCalendar } from "@/components/reminders/ReminderCalendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ReminderBulkImport } from "@/components/reminders/ReminderBulkImport";
+import { ReminderReportExport } from "@/components/reminders/ReminderReportExport";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 export default function Reminders() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('active');
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [showReportExport, setShowReportExport] = useState(false);
 
   // Fetch in-app notifications
   const { data: inAppNotifications } = useQuery({
@@ -144,15 +149,37 @@ export default function Reminders() {
 
   return (
     <div className="container-responsive py-6 space-y-6">
+      {/* Bulk Import Dialog */}
+      <Dialog open={showBulkImport} onOpenChange={setShowBulkImport}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto">
+          <ReminderBulkImport onClose={() => setShowBulkImport(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Report Export Dialog */}
+      <Dialog open={showReportExport} onOpenChange={setShowReportExport}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <ReminderReportExport onClose={() => setShowReportExport(false)} />
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold">Reminders</h1>
           <p className="text-muted-foreground">
             Manage your reminders for licenses, events, and more
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={() => setShowBulkImport(true)} variant="outline">
+            <Upload className="h-4 w-4 mr-2" />
+            Bulk Import
+          </Button>
+          <Button onClick={() => setShowReportExport(true)} variant="outline">
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Reports
+          </Button>
           <Button onClick={handleTestReminder} variant="outline">
             Test Reminder Check
           </Button>
