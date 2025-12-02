@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdvanceNoticeOptions } from "@/hooks/useAdvanceNoticeOptions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -56,6 +57,9 @@ export default function NewReminder() {
       return data;
     },
   });
+
+  const { data: advanceNoticeOptions } = useAdvanceNoticeOptions();
+  const predefinedDays = advanceNoticeOptions?.map(opt => opt.days) || [365, 90, 60, 30, 14, 7, 1];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,7 +186,6 @@ export default function NewReminder() {
     }
   };
 
-  const predefinedDays = [365, 90, 60, 30, 14, 7, 1];
   const customSelectedDays = formData.advance_notice_days.filter(d => !predefinedDays.includes(d));
 
   // Auto-populate phone number when SMS is enabled
@@ -279,17 +282,16 @@ export default function NewReminder() {
               <CardContent className="space-y-4">
                 <div>
                   <Label>Quick Select</Label>
-                  <div className="grid grid-cols-4 gap-2 mt-2">
-                    {predefinedDays.map((day) => (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {advanceNoticeOptions?.map((opt) => (
                       <Button
-                        key={day}
+                        key={opt.id}
                         type="button"
-                        variant={formData.advance_notice_days.includes(day) ? "default" : "outline"}
+                        variant={formData.advance_notice_days.includes(opt.days) ? "default" : "outline"}
                         size="sm"
-                        onClick={() => toggleAdvanceDay(day)}
-                        className="w-full"
+                        onClick={() => toggleAdvanceDay(opt.days)}
                       >
-                        {day === 1 ? '1d' : day === 7 ? '1w' : day === 14 ? '2w' : day === 30 ? '1m' : day === 60 ? '2m' : day === 90 ? '3m' : '1y'}
+                        {opt.label}
                       </Button>
                     ))}
                   </div>

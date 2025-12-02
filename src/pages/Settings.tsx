@@ -15,12 +15,12 @@ import { RequestNotificationAssignments } from '@/components/settings/RequestNot
 import { PrintBrandsManager } from '@/components/settings/PrintBrandsManager';
 import { CompanyDomainsManager } from '@/components/settings/CompanyDomainsManager';
 import { CompanyFeaturesManager } from '@/components/settings/CompanyFeaturesManager';
+import { ReminderSettingsManager } from '@/components/settings/ReminderSettingsManager';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Edit } from 'lucide-react';
 import { APP_VERSION, BUILD_DATE } from '@/lib/version';
 import { TestsTab } from '@/components/settings/TestsTab';
-
 
 export default function Settings() {
   const { userRole } = useAuth();
@@ -167,6 +167,12 @@ export default function Settings() {
       label: 'Menu',
       allowed: isAdmin,
       content: <MenuEditor />,
+    },
+    {
+      value: 'reminders',
+      label: 'Reminders',
+      allowed: isAdmin,
+      content: <ReminderSettingsManager />,
     },
     {
       value: 'system',

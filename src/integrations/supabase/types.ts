@@ -3246,6 +3246,36 @@ export type Database = {
           },
         ]
       }
+      reminder_advance_notice_options: {
+        Row: {
+          created_at: string | null
+          days: number
+          id: string
+          is_active: boolean | null
+          label: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          days: number
+          id?: string
+          is_active?: boolean | null
+          label: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          days?: number
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       reminder_attachments: {
         Row: {
           content_type: string
