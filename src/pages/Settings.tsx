@@ -17,6 +17,7 @@ import { CompanyDomainsManager } from '@/components/settings/CompanyDomainsManag
 import { CompanyFeaturesManager } from '@/components/settings/CompanyFeaturesManager';
 import { ReminderSettingsManager } from '@/components/settings/ReminderSettingsManager';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Edit } from 'lucide-react';
 import { APP_VERSION, BUILD_DATE } from '@/lib/version';
@@ -24,11 +25,13 @@ import { TestsTab } from '@/components/settings/TestsTab';
 
 export default function Settings() {
   const { userRole } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
 
   const isSuperAdmin = userRole === 'super_admin';
   const isTenantAdmin = userRole === 'tenant_admin';
   const isAdmin = isSuperAdmin || isTenantAdmin;
+  const canManageReminderSettings = hasPermission('manage_reminder_settings') || isAdmin;
 
   useEffect(() => {
     // Force light theme
@@ -171,7 +174,7 @@ export default function Settings() {
     {
       value: 'reminders',
       label: 'Reminders',
-      allowed: isAdmin,
+      allowed: canManageReminderSettings,
       content: <ReminderSettingsManager />,
     },
     {
