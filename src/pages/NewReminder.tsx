@@ -264,8 +264,8 @@ export default function NewReminder() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <div className="flex">
-        {/* Desktop Sidebar - Hidden on mobile */}
-        <aside className="hidden lg:flex lg:w-80 lg:flex-col lg:fixed lg:inset-y-0 bg-gradient-to-b from-slate-800 to-slate-900 text-white">
+        {/* Desktop Sidebar - Hidden on mobile, positioned on right below header */}
+        <aside className="hidden lg:flex lg:w-80 lg:flex-col lg:fixed lg:right-0 lg:top-16 lg:bottom-0 bg-gradient-to-b from-slate-800 to-slate-900 text-white z-40">
           {/* Logo/Branding */}
           <div className="p-6 border-b border-white/10">
             <div className="flex items-center gap-3">
@@ -341,7 +341,7 @@ export default function NewReminder() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 lg:ml-80">
+        <main className="flex-1 lg:mr-80">
           <div className="max-w-3xl mx-auto px-4 py-6 lg:py-10 lg:px-8">
             {/* Form Card */}
             <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 overflow-hidden">
