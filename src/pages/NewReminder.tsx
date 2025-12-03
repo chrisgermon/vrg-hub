@@ -342,7 +342,7 @@ export default function NewReminder() {
 
         {/* Main Content */}
         <main className="flex-1 lg:mr-80">
-          <div className="max-w-3xl mx-auto px-4 py-6 lg:py-10 lg:px-8">
+          <div className="max-w-4xl mx-auto px-4 py-6 lg:py-10 lg:px-8">
             {/* Form Card */}
             <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 overflow-hidden">
               {/* Header */}
