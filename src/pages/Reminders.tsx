@@ -4,13 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Bell, Calendar, Clock, Mail, Phone, Smartphone, X, Check, Upload, FileSpreadsheet } from "lucide-react";
+import { Plus, Bell, Calendar, Clock, Mail, Smartphone, Upload, FileSpreadsheet, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { formatAUDate, formatAUDateLong, formatAUDateTimeFull } from "@/lib/dateUtils";
+import { formatAUDateTimeFull } from "@/lib/dateUtils";
 import { toast } from "sonner";
 import { SmsLogsViewer } from "@/components/reminders/SmsLogsViewer";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ReminderDashboard } from "@/components/reminders/ReminderDashboard";
+import { ReminderDashboard, ReminderFilter } from "@/components/reminders/ReminderDashboard";
 import { ReminderCalendar } from "@/components/reminders/ReminderCalendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReminderBulkImport } from "@/components/reminders/ReminderBulkImport";
@@ -20,7 +19,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 export default function Reminders() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('active');
+  const [activeFilter, setActiveFilter] = useState<ReminderFilter>({ status: 'active' });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showReportExport, setShowReportExport] = useState(false);
@@ -43,24 +42,56 @@ export default function Reminders() {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 60000, // Refetch every minute
+    refetchInterval: 60000,
   });
 
   const { data: reminders, isLoading } = useQuery({
-    queryKey: ['reminders', filter],
+    queryKey: ['reminders', activeFilter],
     queryFn: async () => {
       let query = supabase
         .from('reminders')
         .select('*')
         .order('reminder_date', { ascending: true });
 
-      if (filter !== 'all') {
-        query = query.eq('status', filter);
+      // Apply status filter
+      if (activeFilter.status && activeFilter.status !== 'all') {
+        query = query.eq('status', activeFilter.status);
+      }
+
+      // Apply category filter
+      if (activeFilter.category) {
+        query = query.eq('reminder_type', activeFilter.category);
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
+
+      // Apply timeframe filter client-side
+      if (activeFilter.timeframe && data) {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const oneWeek = new Date(now);
+        oneWeek.setDate(oneWeek.getDate() + 7);
+        const oneMonth = new Date(now);
+        oneMonth.setMonth(oneMonth.getMonth() + 1);
+
+        return data.filter(r => {
+          const date = new Date(r.reminder_date);
+          date.setHours(0, 0, 0, 0);
+
+          switch (activeFilter.timeframe) {
+            case 'expired':
+              return date < now;
+            case 'week':
+              return date >= now && date <= oneWeek;
+            case 'month':
+              return date > oneWeek && date <= oneMonth;
+            default:
+              return true;
+          }
+        });
+      }
+
       return data;
     },
   });
@@ -89,9 +120,9 @@ export default function Reminders() {
 
   const getDaysUntil = (date: string) => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize to start of day
+    today.setHours(0, 0, 0, 0);
     const reminderDate = new Date(date);
-    reminderDate.setHours(0, 0, 0, 0); // Normalize to start of day
+    reminderDate.setHours(0, 0, 0, 0);
     const diffTime = reminderDate.getTime() - today.getTime();
     const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
@@ -119,33 +150,47 @@ export default function Reminders() {
     }
   };
 
-  const handleDismissNotification = async (notificationId: string) => {
-    try {
-      const { error } = await supabase
-        .from('reminder_notifications')
-        .update({ status: 'read' })
-        .eq('id', notificationId);
-      
-      if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ['in-app-notifications'] });
-      toast.success('Notification dismissed');
-    } catch (error: any) {
-      toast.error('Failed to dismiss notification: ' + error.message);
-    }
-  };
-
-  const getDaysMessage = (daysUntil: number) => {
-    if (daysUntil === 0) return 'Today';
-    if (daysUntil === 1) return 'Tomorrow';
-    if (daysUntil < 0) return `${Math.abs(daysUntil)} days ago`;
-    return `in ${daysUntil} days`;
-  };
-
-  const handleFilterClick = (filterType: 'all' | 'active' | 'completed') => {
-    setFilter(filterType);
+  const handleFilterClick = (filter: ReminderFilter) => {
+    setActiveFilter(filter);
     setActiveTab('list');
   };
+
+  const clearFilters = () => {
+    setActiveFilter({ status: 'active' });
+  };
+
+  const getFilterDescription = () => {
+    const parts: string[] = [];
+    
+    if (activeFilter.status && activeFilter.status !== 'all') {
+      parts.push(activeFilter.status.charAt(0).toUpperCase() + activeFilter.status.slice(1));
+    }
+    
+    if (activeFilter.category) {
+      const categoryLabels: Record<string, string> = {
+        license_expiration: 'License Expiration',
+        event: 'Events',
+        certification: 'Certifications',
+        contract: 'Contracts',
+        subscription: 'Subscriptions',
+        general: 'General',
+      };
+      parts.push(categoryLabels[activeFilter.category] || activeFilter.category);
+    }
+    
+    if (activeFilter.timeframe) {
+      const timeframeLabels: Record<string, string> = {
+        expired: 'Expired/Past Due',
+        week: 'Due in 1 Week',
+        month: 'Due in 1 Month',
+      };
+      parts.push(timeframeLabels[activeFilter.timeframe] || activeFilter.timeframe);
+    }
+    
+    return parts.length > 0 ? parts.join(' • ') : 'All Reminders';
+  };
+
+  const hasActiveFilters = activeFilter.category || activeFilter.timeframe || (activeFilter.status && activeFilter.status !== 'active');
 
   return (
     <div className="container-responsive py-6 space-y-6">
@@ -208,186 +253,217 @@ export default function Reminders() {
         </TabsContent>
 
         <TabsContent value="list" className="space-y-6">
-      {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming (7 days)</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{upcomingReminders?.length || 0}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Reminders</CardTitle>
-            <Bell className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {reminders?.filter(r => r.status === 'active').length || 0}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Month</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {reminders?.filter(r => {
-                const date = new Date(r.reminder_date);
-                const now = new Date();
-                return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-              }).length || 0}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Upcoming Reminders */}
-      {upcomingReminders && upcomingReminders.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming This Week</CardTitle>
-            <CardDescription>Reminders in the next 7 days</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {upcomingReminders.map((reminder) => {
-              const daysUntil = getDaysUntil(reminder.reminder_date);
-              const channels = reminder.notification_channels as { email?: boolean; sms?: boolean; in_app?: boolean };
-
-              return (
-                <div
-                  key={reminder.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-                  onClick={() => navigate(`/reminders/${reminder.id}`)}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-2 h-12 rounded ${getReminderTypeColor(reminder.reminder_type)}`} />
-                    <div>
-                      <h3 className="font-semibold">{reminder.title}</h3>
-                      <p className="text-sm text-muted-foreground">{reminder.description}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant={daysUntil === 0 ? 'destructive' : daysUntil <= 3 ? 'default' : 'secondary'}>
-                          {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil} days`}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {formatAUDateTimeFull(reminder.reminder_date)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+          {/* Active Filter Display */}
+          {hasActiveFilters && (
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="py-3">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {channels.email && <Mail className="h-4 w-4 text-muted-foreground" />}
-                    {channels.sms && <Smartphone className="h-4 w-4 text-muted-foreground" />}
-                    {channels.in_app && <Bell className="h-4 w-4 text-muted-foreground" />}
+                    <span className="text-sm font-medium">Filtered:</span>
+                    <Badge variant="secondary">{getFilterDescription()}</Badge>
                   </div>
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    <X className="h-4 w-4 mr-1" />
+                    Clear Filters
+                  </Button>
                 </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2">
-        <Button
-          variant={filter === 'all' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('all')}
-        >
-          All
-        </Button>
-        <Button
-          variant={filter === 'active' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('active')}
-        >
-          Active
-        </Button>
-        <Button
-          variant={filter === 'completed' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('completed')}
-        >
-          Completed
-        </Button>
-      </div>
+          {/* Quick Stats */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Upcoming (7 days)</CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{upcomingReminders?.length || 0}</div>
+              </CardContent>
+            </Card>
 
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Showing</CardTitle>
+                <Bell className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reminders?.length || 0}</div>
+              </CardContent>
+            </Card>
 
-      {/* All Reminders List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Reminders</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <p className="text-muted-foreground text-center py-8">Loading reminders...</p>
-          ) : !reminders || reminders.length === 0 ? (
-            <div className="text-center py-8">
-              <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground mb-4">No reminders found</p>
-              <Button onClick={() => navigate('/reminders/new')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Reminder
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {reminders.map((reminder) => {
-                const daysUntil = getDaysUntil(reminder.reminder_date);
-                const channels = reminder.notification_channels as { email?: boolean; sms?: boolean; in_app?: boolean };
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">This Month</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {reminders?.filter(r => {
+                    const date = new Date(r.reminder_date);
+                    const now = new Date();
+                    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+                  }).length || 0}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-                return (
-                  <div
-                    key={reminder.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/reminders/${reminder.id}`)}
-                  >
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className={`w-2 h-12 rounded ${getReminderTypeColor(reminder.reminder_type)}`} />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
+          {/* Upcoming Reminders */}
+          {!hasActiveFilters && upcomingReminders && upcomingReminders.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Upcoming This Week</CardTitle>
+                <CardDescription>Reminders in the next 7 days</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {upcomingReminders.map((reminder) => {
+                  const daysUntil = getDaysUntil(reminder.reminder_date);
+                  const channels = reminder.notification_channels as { email?: boolean; sms?: boolean; in_app?: boolean };
+
+                  return (
+                    <div
+                      key={reminder.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                      onClick={() => navigate(`/reminders/${reminder.id}`)}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`w-2 h-12 rounded ${getReminderTypeColor(reminder.reminder_type)}`} />
+                        <div>
                           <h3 className="font-semibold">{reminder.title}</h3>
-                          <Badge variant="outline" className="text-xs">
-                            {reminder.reminder_type.replace('_', ' ')}
-                          </Badge>
-                          {reminder.is_recurring && (
-                            <Badge variant="secondary" className="text-xs">
-                              Recurring
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">{reminder.description}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-sm text-muted-foreground">
-                            📅 {formatAUDateTimeFull(reminder.reminder_date)}
-                          </span>
-                          {reminder.status === 'active' && daysUntil >= 0 && (
+                          <p className="text-sm text-muted-foreground">{reminder.description}</p>
+                          <div className="flex items-center gap-2 mt-1">
                             <Badge variant={daysUntil === 0 ? 'destructive' : daysUntil <= 3 ? 'default' : 'secondary'}>
                               {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil} days`}
                             </Badge>
-                          )}
+                            <span className="text-xs text-muted-foreground">
+                              {formatAUDateTimeFull(reminder.reminder_date)}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        {channels.email && <Mail className="h-4 w-4 text-muted-foreground" />}
+                        {channels.sms && <Smartphone className="h-4 w-4 text-muted-foreground" />}
+                        {channels.in_app && <Bell className="h-4 w-4 text-muted-foreground" />}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {channels.email && <Mail className="h-4 w-4 text-muted-foreground" />}
-                      {channels.sms && <Smartphone className="h-4 w-4 text-muted-foreground" />}
-                      {channels.in_app && <Bell className="h-4 w-4 text-muted-foreground" />}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+
+          {/* Filter Tabs */}
+          <div className="flex gap-2">
+            <Button
+              variant={!activeFilter.status || activeFilter.status === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveFilter({ ...activeFilter, status: 'all' })}
+            >
+              All
+            </Button>
+            <Button
+              variant={activeFilter.status === 'active' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveFilter({ ...activeFilter, status: 'active' })}
+            >
+              Active
+            </Button>
+            <Button
+              variant={activeFilter.status === 'completed' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveFilter({ ...activeFilter, status: 'completed' })}
+            >
+              Completed
+            </Button>
+            <Button
+              variant={activeFilter.status === 'archived' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveFilter({ ...activeFilter, status: 'archived' })}
+            >
+              Archived
+            </Button>
+          </div>
+
+
+          {/* All Reminders List */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{getFilterDescription()}</CardTitle>
+              <CardDescription>{reminders?.length || 0} reminder(s) found</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <p className="text-muted-foreground text-center py-8">Loading reminders...</p>
+              ) : !reminders || reminders.length === 0 ? (
+                <div className="text-center py-8">
+                  <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground mb-4">No reminders found matching your filters</p>
+                  {hasActiveFilters && (
+                    <Button variant="outline" onClick={clearFilters}>
+                      Clear Filters
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {reminders.map((reminder) => {
+                    const daysUntil = getDaysUntil(reminder.reminder_date);
+                    const channels = reminder.notification_channels as { email?: boolean; sms?: boolean; in_app?: boolean };
+
+                    return (
+                      <div
+                        key={reminder.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                        onClick={() => navigate(`/reminders/${reminder.id}`)}
+                      >
+                        <div className="flex items-center gap-4 flex-1">
+                          <div className={`w-2 h-12 rounded ${getReminderTypeColor(reminder.reminder_type)}`} />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold">{reminder.title}</h3>
+                              <Badge variant="outline" className="text-xs">
+                                {reminder.reminder_type.replace('_', ' ')}
+                              </Badge>
+                              {reminder.is_recurring && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Recurring
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{reminder.description}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-sm text-muted-foreground">
+                                📅 {formatAUDateTimeFull(reminder.reminder_date)}
+                              </span>
+                              {reminder.status === 'active' && (
+                                <Badge variant={daysUntil < 0 ? 'destructive' : daysUntil === 0 ? 'destructive' : daysUntil <= 3 ? 'default' : 'secondary'}>
+                                  {daysUntil < 0 ? `${Math.abs(daysUntil)} days overdue` : daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil} days`}
+                                </Badge>
+                              )}
+                              {reminder.status === 'completed' && (
+                                <Badge variant="outline" className="text-green-600">Completed</Badge>
+                              )}
+                              {reminder.status === 'archived' && (
+                                <Badge variant="outline" className="text-muted-foreground">Archived</Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {channels.email && <Mail className="h-4 w-4 text-muted-foreground" />}
+                          {channels.sms && <Smartphone className="h-4 w-4 text-muted-foreground" />}
+                          {channels.in_app && <Bell className="h-4 w-4 text-muted-foreground" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="logs">
