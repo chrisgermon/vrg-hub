@@ -2,10 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, AlertTriangle, CheckCircle2, Bell, Archive, XCircle } from "lucide-react";
+import { Calendar, Clock, AlertTriangle, CheckCircle2, Bell, Archive } from "lucide-react";
+
+export interface ReminderFilter {
+  status?: 'all' | 'active' | 'completed' | 'archived';
+  category?: string;
+  timeframe?: 'expired' | 'week' | 'month' | 'all';
+}
 
 interface ReminderDashboardProps {
-  onFilterClick: (filterType: 'all' | 'active' | 'completed') => void;
+  onFilterClick: (filter: ReminderFilter) => void;
 }
 
 export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
@@ -56,7 +62,7 @@ export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
       const total = reminders?.filter(r => r.is_active).length || 0;
       const inactive = reminders?.filter(r => !r.is_active).length || 0;
       const archived = reminders?.filter(r => r.status === 'archived').length || 0;
-      const pendingAction = expired; // Expired items need action
+      const pendingAction = expired;
 
       const compliance = total > 0 ? Math.round(((total - expired) / total) * 100) : 100;
 
@@ -90,7 +96,7 @@ export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
         upcoming,
         compliance,
         pendingAction,
-        inProcess: 0, // Can be enhanced based on workflow states
+        inProcess: 0,
         inOneWeek,
         inOneMonth,
         total,
@@ -99,7 +105,7 @@ export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
         byCategory: byCategory || {},
       };
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
   const categoryIcons: Record<string, any> = {
@@ -120,13 +126,47 @@ export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
     general: 'General',
   };
 
+  const ClickableCell = ({ 
+    value, 
+    variant = 'default',
+    onClick 
+  }: { 
+    value: number; 
+    variant?: 'destructive' | 'default' | 'secondary' | 'muted';
+    onClick: () => void;
+  }) => {
+    if (value === 0) {
+      return <span className="text-muted-foreground">0</span>;
+    }
+    
+    const variantMap = {
+      destructive: 'destructive',
+      default: 'default',
+      secondary: 'secondary',
+      muted: 'outline',
+    } as const;
+
+    return (
+      <Badge 
+        variant={variantMap[variant]} 
+        className="cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+      >
+        {value}
+      </Badge>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Main Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card 
           className="border-l-4 border-l-destructive cursor-pointer hover:bg-accent/50 transition-colors"
-          onClick={() => onFilterClick('active')}
+          onClick={() => onFilterClick({ status: 'active', timeframe: 'expired' })}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Expired Items</CardTitle>
@@ -139,7 +179,7 @@ export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
 
         <Card 
           className="border-l-4 border-l-primary cursor-pointer hover:bg-accent/50 transition-colors"
-          onClick={() => onFilterClick('completed')}
+          onClick={() => onFilterClick({ status: 'completed' })}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completed</CardTitle>
@@ -152,7 +192,7 @@ export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
 
         <Card 
           className="border-l-4 border-l-muted-foreground cursor-pointer hover:bg-accent/50 transition-colors"
-          onClick={() => onFilterClick('active')}
+          onClick={() => onFilterClick({ status: 'active' })}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
@@ -178,7 +218,10 @@ export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
 
       {/* Secondary Stats */}
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <Card>
+        <Card 
+          className="cursor-pointer hover:bg-accent/50 transition-colors"
+          onClick={() => onFilterClick({ status: 'active', timeframe: 'expired' })}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Pending Action</CardTitle>
           </CardHeader>
@@ -196,7 +239,10 @@ export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="bg-warning/10">
+        <Card 
+          className="bg-warning/10 cursor-pointer hover:bg-warning/20 transition-colors"
+          onClick={() => onFilterClick({ status: 'active', timeframe: 'week' })}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">in 1 Week</CardTitle>
           </CardHeader>
@@ -205,7 +251,10 @@ export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="bg-accent/50">
+        <Card 
+          className="bg-accent/50 cursor-pointer hover:bg-accent/70 transition-colors"
+          onClick={() => onFilterClick({ status: 'active', timeframe: 'month' })}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">in 1 Month</CardTitle>
           </CardHeader>
@@ -214,7 +263,10 @@ export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="bg-primary/10">
+        <Card 
+          className="bg-primary/10 cursor-pointer hover:bg-primary/20 transition-colors"
+          onClick={() => onFilterClick({ status: 'all' })}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Items</CardTitle>
           </CardHeader>
@@ -223,7 +275,10 @@ export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card 
+          className="cursor-pointer hover:bg-accent/50 transition-colors"
+          onClick={() => onFilterClick({ status: 'archived' })}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Archived</CardTitle>
           </CardHeader>
@@ -237,6 +292,7 @@ export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
       <Card>
         <CardHeader>
           <CardTitle>Category Breakdown</CardTitle>
+          <p className="text-sm text-muted-foreground">Click any cell to view filtered reminders</p>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -256,51 +312,84 @@ export function ReminderDashboard({ onFilterClick }: ReminderDashboardProps) {
                   const Icon = categoryIcons[type] || Bell;
                   return (
                     <tr key={type} className="border-b hover:bg-accent/50">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
+                      <td 
+                        className="py-3 px-4 cursor-pointer"
+                        onClick={() => onFilterClick({ category: type })}
+                      >
+                        <div className="flex items-center gap-2 hover:text-primary transition-colors">
                           <Icon className="h-4 w-4" />
-                          <span>{categoryLabels[type] || type}</span>
+                          <span className="underline-offset-2 hover:underline">{categoryLabels[type] || type}</span>
                         </div>
                       </td>
                       <td className="text-center py-3 px-4">
-                        {counts.expired > 0 ? (
-                          <Badge variant="destructive">{counts.expired}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">{counts.expired}</span>
-                        )}
+                        <ClickableCell 
+                          value={counts.expired} 
+                          variant="destructive"
+                          onClick={() => onFilterClick({ category: type, timeframe: 'expired' })}
+                        />
                       </td>
                       <td className="text-center py-3 px-4">
-                        {counts.pastDue > 0 ? (
-                          <Badge variant="destructive">{counts.pastDue}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">{counts.pastDue}</span>
-                        )}
+                        <ClickableCell 
+                          value={counts.pastDue} 
+                          variant="destructive"
+                          onClick={() => onFilterClick({ category: type, timeframe: 'expired' })}
+                        />
                       </td>
                       <td className="text-center py-3 px-4">
-                        {counts.inWeek > 0 ? (
-                          <Badge variant="default">{counts.inWeek}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">{counts.inWeek}</span>
-                        )}
+                        <ClickableCell 
+                          value={counts.inWeek} 
+                          variant="default"
+                          onClick={() => onFilterClick({ category: type, timeframe: 'week' })}
+                        />
                       </td>
                       <td className="text-center py-3 px-4">
-                        {counts.inMonth > 0 ? (
-                          <Badge variant="secondary">{counts.inMonth}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">{counts.inMonth}</span>
-                        )}
+                        <ClickableCell 
+                          value={counts.inMonth} 
+                          variant="secondary"
+                          onClick={() => onFilterClick({ category: type, timeframe: 'month' })}
+                        />
                       </td>
-                      <td className="text-center py-3 px-4 font-medium">{counts.total}</td>
+                      <td 
+                        className="text-center py-3 px-4 font-medium cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => onFilterClick({ category: type })}
+                      >
+                        <span className="underline-offset-2 hover:underline">{counts.total}</span>
+                      </td>
                     </tr>
                   );
                 })}
                 <tr className="border-t-2 font-semibold">
                   <td className="py-3 px-4">Total</td>
-                  <td className="text-center py-3 px-4">{stats?.expired || 0}</td>
-                  <td className="text-center py-3 px-4">{stats?.expired || 0}</td>
-                  <td className="text-center py-3 px-4">{stats?.inOneWeek || 0}</td>
-                  <td className="text-center py-3 px-4">{stats?.inOneMonth || 0}</td>
-                  <td className="text-center py-3 px-4">{stats?.total || 0}</td>
+                  <td 
+                    className="text-center py-3 px-4 cursor-pointer hover:text-primary"
+                    onClick={() => onFilterClick({ timeframe: 'expired' })}
+                  >
+                    <span className="underline-offset-2 hover:underline">{stats?.expired || 0}</span>
+                  </td>
+                  <td 
+                    className="text-center py-3 px-4 cursor-pointer hover:text-primary"
+                    onClick={() => onFilterClick({ timeframe: 'expired' })}
+                  >
+                    <span className="underline-offset-2 hover:underline">{stats?.expired || 0}</span>
+                  </td>
+                  <td 
+                    className="text-center py-3 px-4 cursor-pointer hover:text-primary"
+                    onClick={() => onFilterClick({ timeframe: 'week' })}
+                  >
+                    <span className="underline-offset-2 hover:underline">{stats?.inOneWeek || 0}</span>
+                  </td>
+                  <td 
+                    className="text-center py-3 px-4 cursor-pointer hover:text-primary"
+                    onClick={() => onFilterClick({ timeframe: 'month' })}
+                  >
+                    <span className="underline-offset-2 hover:underline">{stats?.inOneMonth || 0}</span>
+                  </td>
+                  <td 
+                    className="text-center py-3 px-4 cursor-pointer hover:text-primary"
+                    onClick={() => onFilterClick({ status: 'all' })}
+                  >
+                    <span className="underline-offset-2 hover:underline">{stats?.total || 0}</span>
+                  </td>
                 </tr>
               </tbody>
             </table>
