@@ -263,57 +263,107 @@ export function CloneClinicDialog({
         
         return selectedModalityTypes.some(selectedType => {
           const selectedLower = selectedType.toLowerCase();
-          return modalityType.includes(selectedLower) || 
-                 modalityName.includes(selectedLower) ||
-                 (selectedType === 'Xray' && (modalityName.includes('x-ray') || modalityName.includes('xray') || modalityName.includes('cr')));
+          
+          // Handle special abbreviations/aliases
+          if (selectedType === 'Ultrasound') {
+            return modalityType === 'us' || modalityName.includes('ultrasound') || modalityName.includes(' us ') || modalityName.includes(' us') || modalityName.endsWith(' us');
+          }
+          if (selectedType === 'DEXA') {
+            return modalityType === 'dx' || modalityType === 'dexa' || modalityName.includes('dexa');
+          }
+          if (selectedType === 'Xray') {
+            return modalityType === 'cr' || modalityType === 'dx' && !modalityName.includes('dexa') || 
+                   modalityName.includes('x-ray') || modalityName.includes('xray') || 
+                   (modalityName.includes('cr') && !modalityName.includes('lumicare'));
+          }
+          if (selectedType === 'CT') {
+            return modalityType === 'ct' || modalityName.includes(' ct') || modalityName.endsWith(' ct');
+          }
+          if (selectedType === 'Film Printer') {
+            return modalityName.includes('film') || modalityName.includes('printer');
+          }
+          if (selectedType === 'Lumicare') {
+            return modalityName.includes('lumicare');
+          }
+          if (selectedType === 'OPG') {
+            return modalityName.includes('opg');
+          }
+          if (selectedType === 'MRI') {
+            return modalityType === 'mr' || modalityType === 'mri' || modalityName.includes('mri') || modalityName.includes(' mr ');
+          }
+          
+          return modalityType.includes(selectedLower) || modalityName.includes(selectedLower);
         });
       });
 
       if (modalitiesByType.length > 0) {
         const modalitiesToInsert: any[] = [];
+        let ultrasoundTemplateUsed = false;
 
         for (const modality of modalitiesByType) {
-          const isUltrasound = modality.modality_type?.toLowerCase().includes('ultrasound') ||
-                              modality.name.toLowerCase().includes('ultrasound') ||
-                              modality.name.toLowerCase().includes('us');
+          const modalityNameLower = modality.name.toLowerCase();
+          const isUltrasound = modality.modality_type?.toLowerCase() === 'us' ||
+                              modalityNameLower.includes('ultrasound') ||
+                              modalityNameLower.includes(' us ') ||
+                              modalityNameLower.includes(' us') ||
+                              modalityNameLower.endsWith(' us');
           
-          const quantity = isUltrasound ? ultrasoundQuantity : 1;
-          
-          for (let i = 0; i < quantity; i++) {
-            // For ultrasound with multiple, adjust the last octet
-            let ipAddress = updateIpAddress(modality.ip_address, subnet);
-            let worklistIp = modality.worklist_ip_address ? updateIpAddress(modality.worklist_ip_address, subnet) : null;
-            let name = updateName(modality.name, siteName);
-            let aeTitle = modality.ae_title ? generateAeTitle(modality.ae_title, siteCode) : null;
-            let worklistAeTitle = modality.worklist_ae_title ? generateAeTitle(modality.worklist_ae_title, siteCode) : null;
+          // For ultrasound, only use the first one as a template and create specified quantity
+          if (isUltrasound) {
+            if (ultrasoundTemplateUsed) continue;
+            ultrasoundTemplateUsed = true;
+            
+            for (let i = 0; i < ultrasoundQuantity; i++) {
+              let ipAddress = updateIpAddress(modality.ip_address, subnet);
+              let worklistIp = modality.worklist_ip_address ? updateIpAddress(modality.worklist_ip_address, subnet) : null;
+              let aeTitle = modality.ae_title ? generateAeTitle(modality.ae_title, siteCode) : null;
+              let worklistAeTitle = modality.worklist_ae_title ? generateAeTitle(modality.worklist_ae_title, siteCode) : null;
 
-            if (isUltrasound && quantity > 1) {
               // Adjust IP for multiple ultrasound units
               const ipParts = ipAddress.split('.');
               if (ipParts.length === 4) {
                 const lastOctet = parseInt(ipParts[3]) + i;
                 ipAddress = `${ipParts[0]}.${ipParts[1]}.${ipParts[2]}.${lastOctet}`;
               }
-              if (worklistIp) {
-                const wlIpParts = worklistIp.split('.');
-                if (wlIpParts.length === 4) {
-                  const lastOctet = parseInt(wlIpParts[3]) + i;
-                  worklistIp = `${wlIpParts[0]}.${wlIpParts[1]}.${wlIpParts[2]}.${lastOctet}`;
-                }
+              
+              // Generate name with room number
+              const baseName = updateName(modality.name, siteName).replace(/\s*\d+\s*$/, '').trim();
+              const name = `${baseName} ${i + 1}`;
+              
+              if (aeTitle) {
+                const baseAe = aeTitle.replace(/\d+$/, '');
+                aeTitle = `${baseAe}${i + 1}`;
               }
-              name = `${name} ${i + 1}`;
-              if (aeTitle) aeTitle = `${aeTitle}${i + 1}`;
-              if (worklistAeTitle) worklistAeTitle = `${worklistAeTitle}${i + 1}`;
-            }
+              if (worklistAeTitle) {
+                const baseWlAe = worklistAeTitle.replace(/\d+$/, '');
+                worklistAeTitle = `${baseWlAe}${i + 1}`;
+              }
 
+              modalitiesToInsert.push({
+                clinic_id: newClinic.id,
+                name,
+                ip_address: ipAddress,
+                ae_title: aeTitle,
+                port: modality.port,
+                worklist_ip_address: worklistIp,
+                worklist_ae_title: worklistAeTitle,
+                worklist_port: modality.worklist_port,
+                modality_type: modality.modality_type,
+                brand_id: selectedBrandId,
+                location_id: selectedLocationId,
+                notes: modality.notes,
+              });
+            }
+          } else {
+            // Non-ultrasound: just clone normally
             modalitiesToInsert.push({
               clinic_id: newClinic.id,
-              name,
-              ip_address: ipAddress,
-              ae_title: aeTitle,
+              name: updateName(modality.name, siteName),
+              ip_address: updateIpAddress(modality.ip_address, subnet),
+              ae_title: modality.ae_title ? generateAeTitle(modality.ae_title, siteCode) : null,
               port: modality.port,
-              worklist_ip_address: worklistIp,
-              worklist_ae_title: worklistAeTitle,
+              worklist_ip_address: modality.worklist_ip_address ? updateIpAddress(modality.worklist_ip_address, subnet) : null,
+              worklist_ae_title: modality.worklist_ae_title ? generateAeTitle(modality.worklist_ae_title, siteCode) : null,
               worklist_port: modality.worklist_port,
               modality_type: modality.modality_type,
               brand_id: selectedBrandId,
