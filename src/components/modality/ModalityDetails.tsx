@@ -127,6 +127,8 @@ export function ModalityDetails() {
   const [isCopied, setIsCopied] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [showCloneDialog, setShowCloneDialog] = useState(false);
+  const [showServerDialog, setShowServerDialog] = useState(false);
+  const [editingServer, setEditingServer] = useState<DicomServer | null>(null);
   
   const { toast } = useToast();
   const { userRole } = useAuth();
@@ -528,6 +530,94 @@ export function ModalityDetails() {
       toast({
         title: 'Error',
         description: 'Failed to delete modality',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSaveServer = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+
+    if (!selectedClinic) {
+      toast({
+        title: 'Error',
+        description: 'Please select a clinic first',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    try {
+      const serverData = {
+        clinic_id: selectedClinic,
+        name: formData.get('name') as string,
+        ip_address: formData.get('ip_address') as string,
+        ae_title: formData.get('ae_title') as string || null,
+        port: formData.get('port') ? parseInt(formData.get('port') as string) : null,
+        function: formData.get('function') as string || null,
+        notes: formData.get('notes') as string || null,
+      };
+
+      if (editingServer) {
+        const { error } = await supabase
+          .from('dicom_servers')
+          .update(serverData)
+          .eq('id', editingServer.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('dicom_servers')
+          .insert(serverData);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: 'Success',
+        description: `DICOM Server ${editingServer ? 'updated' : 'created'} successfully`,
+      });
+
+      setShowServerDialog(false);
+      setEditingServer(null);
+      loadClinicData(selectedClinic);
+    } catch (error) {
+      console.error('Error saving server:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save DICOM server',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteServer = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this DICOM server?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('dicom_servers')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'DICOM Server deleted successfully',
+      });
+
+      if (selectedClinic) {
+        loadClinicData(selectedClinic);
+      }
+    } catch (error) {
+      console.error('Error deleting server:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete DICOM server',
         variant: 'destructive',
       });
     }
@@ -1314,8 +1404,96 @@ export function ModalityDetails() {
 
               <TabsContent value="servers">
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>DICOM Servers</CardTitle>
+                    {isAdmin && (
+                      <Dialog open={showServerDialog} onOpenChange={setShowServerDialog}>
+                        <DialogTrigger asChild>
+                          <Button onClick={() => setEditingServer(null)} size="sm">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Server
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>{editingServer ? 'Edit' : 'Add'} DICOM Server</DialogTitle>
+                          </DialogHeader>
+                          <form onSubmit={handleSaveServer} className="space-y-4">
+                            <div>
+                              <Label htmlFor="server_name">Name *</Label>
+                              <Input
+                                id="server_name"
+                                name="name"
+                                defaultValue={editingServer?.name}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="server_ip_address">IP Address *</Label>
+                              <Input
+                                id="server_ip_address"
+                                name="ip_address"
+                                defaultValue={editingServer?.ip_address}
+                                placeholder="192.168.1.10"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="server_ae_title">AE Title</Label>
+                              <Input
+                                id="server_ae_title"
+                                name="ae_title"
+                                defaultValue={editingServer?.ae_title}
+                                placeholder="SERVER_AE"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="server_port">Port</Label>
+                              <Input
+                                id="server_port"
+                                name="port"
+                                type="number"
+                                defaultValue={editingServer?.port}
+                                placeholder="104"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="server_function">Function</Label>
+                              <Select name="function" defaultValue={editingServer?.function || undefined}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select function" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="PACS">PACS</SelectItem>
+                                  <SelectItem value="RIS">RIS</SelectItem>
+                                  <SelectItem value="Worklist">Worklist</SelectItem>
+                                  <SelectItem value="Archive">Archive</SelectItem>
+                                  <SelectItem value="Router">Router</SelectItem>
+                                  <SelectItem value="Printer">Printer</SelectItem>
+                                  <SelectItem value="Storage">Storage</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label htmlFor="server_notes">Notes</Label>
+                              <Textarea
+                                id="server_notes"
+                                name="notes"
+                                defaultValue={editingServer?.notes}
+                                rows={3}
+                              />
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                              <Button type="button" variant="outline" onClick={() => setShowServerDialog(false)}>
+                                Cancel
+                              </Button>
+                              <Button type="submit">Save</Button>
+                            </div>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                   </CardHeader>
                   <CardContent>
                     {servers.length === 0 ? (
@@ -1332,6 +1510,7 @@ export function ModalityDetails() {
                               <TableHead>AE Title</TableHead>
                               <TableHead>Port</TableHead>
                               <TableHead>Function</TableHead>
+                              {isAdmin && <TableHead>Actions</TableHead>}
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -1342,6 +1521,29 @@ export function ModalityDetails() {
                                 <TableCell>{server.ae_title || '-'}</TableCell>
                                 <TableCell>{server.port || '-'}</TableCell>
                                 <TableCell>{server.function || '-'}</TableCell>
+                                {isAdmin && (
+                                  <TableCell>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          setEditingServer(server);
+                                          setShowServerDialog(true);
+                                        }}
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDeleteServer(server.id)}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                )}
                               </TableRow>
                             ))}
                           </TableBody>
