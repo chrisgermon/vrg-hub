@@ -1518,7 +1518,13 @@ export function ModalityDetails() {
                               <TableRow key={server.id}>
                                 <TableCell className="font-medium">{server.name}</TableCell>
                                 <TableCell>{server.ip_address}</TableCell>
-                                <TableCell>{server.ae_title || '-'}</TableCell>
+                                <TableCell>
+                                  {server.ae_title ? (
+                                    <span className="inline-block px-2 py-1 bg-primary/10 text-primary font-mono text-sm font-semibold rounded">
+                                      {server.ae_title}
+                                    </span>
+                                  ) : '-'}
+                                </TableCell>
                                 <TableCell>{server.port || '-'}</TableCell>
                                 <TableCell>{server.function || '-'}</TableCell>
                                 {isAdmin && (
