@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
       .from('modalities')
       .select(`
         *,
-        brand:brands(id, name, display_name),
+        brand:brands(id, name, display_name, logo_url),
         location:locations(id, name)
       `)
       .eq('clinic_id', shareLink.clinic_id);
