@@ -47,6 +47,7 @@ import {
   Check,
   Download
 } from 'lucide-react';
+import { CloneClinicDialog } from './CloneClinicDialog';
 import { Badge } from '@/components/ui/badge';
 import { ExcelImporter } from './ExcelImporter';
 import * as XLSX from 'xlsx';
@@ -56,6 +57,7 @@ interface Clinic {
   location_name: string;
   ip_range?: string;
   gateway?: string;
+  site_code?: string;
   notes?: string;
   created_at: string;
 }
@@ -124,6 +126,7 @@ export function ModalityDetails() {
   const [recipientEmail, setRecipientEmail] = useState<string>('');
   const [isCopied, setIsCopied] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [showCloneDialog, setShowCloneDialog] = useState(false);
   
   const { toast } = useToast();
   const { userRole } = useAuth();
@@ -366,6 +369,7 @@ export function ModalityDetails() {
     try {
       const clinicData = {
         location_name: formData.get('location_name') as string,
+        site_code: (formData.get('site_code') as string)?.toUpperCase() || null,
         ip_range: formData.get('ip_range') as string,
         gateway: formData.get('gateway') as string,
         notes: formData.get('notes') as string,
@@ -916,6 +920,17 @@ export function ModalityDetails() {
                     />
                   </div>
                   <div>
+                    <Label htmlFor="site_code">Site Code (3 letters)</Label>
+                    <Input
+                      id="site_code"
+                      name="site_code"
+                      defaultValue={editingClinic?.site_code}
+                      maxLength={3}
+                      placeholder="e.g., VIC"
+                      className="uppercase"
+                    />
+                  </div>
+                  <div>
                     <Label htmlFor="ip_range">IP Range</Label>
                     <Input
                       id="ip_range"
@@ -993,6 +1008,9 @@ export function ModalityDetails() {
                   <div className="flex justify-between items-start">
                     <div className="space-y-1">
                       <p className="font-medium">{selectedClinicData.location_name}</p>
+                      {selectedClinicData.site_code && (
+                        <Badge variant="outline" className="text-xs">{selectedClinicData.site_code}</Badge>
+                      )}
                       {selectedClinicData.ip_range && (
                         <p className="text-sm text-muted-foreground">
                           IP Range: {selectedClinicData.ip_range}
@@ -1006,6 +1024,14 @@ export function ModalityDetails() {
                     </div>
                     {isAdmin && (
                       <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowCloneDialog(true)}
+                          title="Clone clinic"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1430,6 +1456,17 @@ export function ModalityDetails() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <CloneClinicDialog
+        open={showCloneDialog}
+        onOpenChange={setShowCloneDialog}
+        sourceClinic={selectedClinicData || null}
+        sourceModalities={modalities}
+        sourceServers={servers}
+        brands={brands}
+        locations={locations}
+        onSuccess={loadClinics}
+      />
     </div>
   );
 }

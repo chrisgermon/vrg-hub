@@ -507,6 +507,7 @@ export type Database = {
           ip_range: string | null
           location_name: string
           notes: string | null
+          site_code: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -518,6 +519,7 @@ export type Database = {
           ip_range?: string | null
           location_name: string
           notes?: string | null
+          site_code?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -529,6 +531,7 @@ export type Database = {
           ip_range?: string | null
           location_name?: string
           notes?: string | null
+          site_code?: string | null
           updated_at?: string
           updated_by?: string | null
         }
