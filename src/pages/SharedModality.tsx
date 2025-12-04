@@ -92,14 +92,31 @@ export default function SharedModality() {
 
   const { clinic, modalities, servers } = data;
 
+  // Get the brand logo from the first modality (all should have the same brand for a clinic)
+  const brandLogo = modalities?.[0]?.brand?.logo_url;
+  const brandName = modalities?.[0]?.brand?.display_name;
+
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          <Network className="w-8 h-8" />
-          <h1 className="text-3xl font-bold">Shared Clinic Configuration</h1>
+        <div className="flex items-center gap-4 mb-2">
+          {brandLogo ? (
+            <img 
+              src={brandLogo} 
+              alt={brandName || 'Company logo'} 
+              className="h-12 w-auto object-contain"
+            />
+          ) : (
+            <Network className="w-8 h-8" />
+          )}
+          <div>
+            <h1 className="text-3xl font-bold">{clinic.location_name}</h1>
+            {brandName && (
+              <p className="text-muted-foreground">{brandName}</p>
+            )}
+          </div>
         </div>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           View-only access to clinic modalities and DICOM configuration
         </p>
       </div>
