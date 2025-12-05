@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { FileText, Search, Bell } from "lucide-react";
+import { FileText, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { ModalityCardsRow } from "@/components/home/ModalityCardsRow";
@@ -47,16 +47,6 @@ export default function Home() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-white hover:bg-white/10 relative"
-              >
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-accent text-[10px] font-bold flex items-center justify-center">
-                  3
-                </span>
-              </Button>
               <Button
                 className="bg-white text-primary hover:bg-white/90 font-semibold shadow-lg"
                 onClick={() => navigate('/requests/new')}
