@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { FileText, Plus, Search, Bell } from "lucide-react";
+import { FileText, Search, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { ModalityCardsRow } from "@/components/home/ModalityCardsRow";
@@ -64,16 +64,6 @@ export default function Home() {
                 <FileText className="mr-2 h-4 w-4" />
                 New Request
               </Button>
-              {userRole === 'super_admin' && (
-                <Button
-                  variant="outline"
-                  className="border-white/30 text-white hover:bg-white/10"
-                  onClick={() => navigate('/pages/edit')}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Page
-                </Button>
-              )}
             </div>
           </div>
         </div>
