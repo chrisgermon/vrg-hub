@@ -1,8 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { FileText, Search } from "lucide-react";
+import { FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Input } from "@/components/ui/input";
 import { ModalityCardsRow } from "@/components/home/ModalityCardsRow";
 import { QuickActionsCard } from "@/components/home/QuickActionsCard";
 import { RecentActivityCard } from "@/components/home/RecentActivityCard";
@@ -38,23 +37,14 @@ export default function Home() {
             </p>
           </div>
           
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-            <div className="relative flex-1 lg:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
-              <Input
-                placeholder="Search..."
-                className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/60 focus:bg-white/20"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                className="bg-white text-primary hover:bg-white/90 font-semibold shadow-lg"
-                onClick={() => navigate('/requests/new')}
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                New Request
-              </Button>
-            </div>
+          <div className="flex items-center gap-2">
+            <Button
+              className="bg-white text-primary hover:bg-white/90 font-semibold shadow-lg"
+              onClick={() => navigate('/requests/new')}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              New Request
+            </Button>
           </div>
         </div>
         
