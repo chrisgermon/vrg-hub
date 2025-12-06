@@ -4,7 +4,6 @@ import { FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ModalityCardsRow } from "@/components/home/ModalityCardsRow";
 import { QuickActionsCard } from "@/components/home/QuickActionsCard";
-import { RecentActivityCard } from "@/components/home/RecentActivityCard";
 import { NewsUpdatesCard } from "@/components/home/NewsUpdatesCard";
 import { QuickLinksCard } from "@/components/home/QuickLinksCard";
 import { UpcomingEventsCard } from "@/components/home/UpcomingEventsCard";
@@ -58,14 +57,9 @@ export default function Home() {
         <ModalityCardsRow />
       </section>
 
-      {/* Row 2 - Quick Actions + Recent Activity */}
-      <section className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3">
-          <QuickActionsCard />
-        </div>
-        <div className="lg:col-span-2">
-          <RecentActivityCard />
-        </div>
+      {/* Row 2 - Quick Actions */}
+      <section>
+        <QuickActionsCard />
       </section>
 
       {/* Row 3 - News, Quick Links, Events */}
