@@ -10,20 +10,24 @@ const departments = [
 
 export function DepartmentLinksFooter() {
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-card rounded-xl border border-border/50 shadow-card">
-      <div className="flex flex-wrap items-center justify-center gap-2">
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {departments.map((dept) => (
           <a
             key={dept.name}
             href={dept.href}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 hover:bg-primary hover:text-primary-foreground text-sm font-medium transition-colors"
+            className="group flex flex-col items-center justify-center p-6 bg-card rounded-xl border border-border/50 shadow-card hover:shadow-elevated hover:-translate-y-1 transition-all duration-200"
           >
-            <dept.icon className="h-4 w-4" />
-            {dept.name}
+            <div className="p-3 rounded-full bg-primary/10 text-primary mb-3 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-200">
+              <dept.icon className="h-6 w-6" />
+            </div>
+            <span className="text-sm font-medium text-foreground text-center">
+              {dept.name}
+            </span>
           </a>
         ))}
       </div>
-      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+      <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-status-approved animate-pulse" />
           All Systems Operational
