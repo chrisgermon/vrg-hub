@@ -1,13 +1,13 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { FileText } from "lucide-react";
+import { FileText, HeadphonesIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ModalityCardsRow } from "@/components/home/ModalityCardsRow";
 import { QuickActionsCard } from "@/components/home/QuickActionsCard";
 import { NewsUpdatesCard } from "@/components/home/NewsUpdatesCard";
 import { QuickLinksCard } from "@/components/home/QuickLinksCard";
 import { UpcomingEventsCard } from "@/components/home/UpcomingEventsCard";
-import { DepartmentLinksFooter } from "@/components/home/DepartmentLinksFooter";
+import { DepartmentLinksSidebar } from "@/components/home/DepartmentLinksSidebar";
 import { format } from "date-fns";
 
 function getGreeting() {
@@ -23,56 +23,74 @@ export default function Home() {
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-6 max-w-[1600px] mx-auto">
-      {/* Hero Header */}
-      <div className="relative rounded-2xl overflow-hidden bg-gradient-hero p-6 md:p-8 text-white shadow-elevated">
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-          <div className="flex-1">
-            <h1 className="text-2xl md:text-3xl font-bold">
-              {getGreeting()}, {userName}
-            </h1>
-            <p className="text-white/80 mt-1">
-              {format(new Date(), "EEEE, MMMM d, yyyy")}
-            </p>
+    <div className="flex-1 flex gap-6 p-4 md:p-6 max-w-[1600px] mx-auto">
+      {/* Left Sidebar - Department Links */}
+      <aside className="hidden lg:block w-24 flex-shrink-0">
+        <DepartmentLinksSidebar />
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 space-y-6">
+        {/* Hero Header */}
+        <div className="relative rounded-2xl overflow-hidden bg-gradient-hero p-6 md:p-8 text-white shadow-elevated">
+          <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold">
+                {getGreeting()}, {userName}
+              </h1>
+              <p className="text-white/80 mt-1">
+                {format(new Date(), "EEEE, MMMM d, yyyy")}
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                className="bg-white text-primary hover:bg-white/90 font-semibold shadow-lg"
+                onClick={() => navigate('/requests/new')}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                New Request
+              </Button>
+            </div>
           </div>
           
-          <div className="flex items-center gap-2">
-            <Button
-              className="bg-white text-primary hover:bg-white/90 font-semibold shadow-lg"
-              onClick={() => navigate('/requests/new')}
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              New Request
-            </Button>
-          </div>
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full -ml-24 -mb-24 blur-3xl" />
         </div>
-        
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full -ml-24 -mb-24 blur-3xl" />
+
+        {/* Row 1 - Modality Cards */}
+        <section>
+          <ModalityCardsRow />
+        </section>
+
+        {/* Row 2 - Quick Actions */}
+        <section>
+          <QuickActionsCard />
+        </section>
+
+        {/* Row 3 - News, Quick Links, Events */}
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <NewsUpdatesCard />
+          <QuickLinksCard />
+          <UpcomingEventsCard />
+        </section>
+
+        {/* Footer Status */}
+        <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground py-2">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-status-approved animate-pulse" />
+            All Systems Operational
+          </div>
+          <a 
+            href="/support" 
+            className="flex items-center gap-1 hover:text-primary transition-colors"
+          >
+            <HeadphonesIcon className="h-4 w-4" />
+            IT Support
+          </a>
+        </div>
       </div>
-
-      {/* Row 1 - Modality Cards */}
-      <section>
-        <ModalityCardsRow />
-      </section>
-
-      {/* Row 2 - Quick Actions */}
-      <section>
-        <QuickActionsCard />
-      </section>
-
-      {/* Row 3 - News, Quick Links, Events */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <NewsUpdatesCard />
-        <QuickLinksCard />
-        <UpcomingEventsCard />
-      </section>
-
-      {/* Row 4 - Department Links Footer */}
-      <section>
-        <DepartmentLinksFooter />
-      </section>
     </div>
   );
 }
