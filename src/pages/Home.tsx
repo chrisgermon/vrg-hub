@@ -75,18 +75,18 @@ export default function Home() {
           <QuickActionsCard />
         </div>
 
-        {/* Modalities Row - spans 9 cols */}
-        <div className="col-span-12 lg:col-span-9 grid grid-cols-3 sm:grid-cols-6 gap-3">
+        {/* Modalities Row - compact inline */}
+        <div className="col-span-12 lg:col-span-9 flex flex-wrap gap-2">
           {modalities.map((modality) => (
             <a
               key={modality.name}
               href={modality.href}
-              className="group flex flex-col items-center justify-center p-4 bg-card rounded-xl border border-border/50 shadow-card hover:shadow-elevated hover:-translate-y-1 transition-all duration-200"
+              className="group flex items-center gap-2 px-4 py-2.5 bg-card rounded-lg border border-border/50 shadow-card hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200"
             >
-              <div className="p-2.5 rounded-full bg-primary/10 text-primary mb-2 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-200">
-                <modality.icon className="h-5 w-5" />
+              <div className="p-1.5 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-200">
+                <modality.icon className="h-4 w-4" />
               </div>
-              <span className="text-xs font-medium text-foreground text-center">
+              <span className="text-sm font-medium text-foreground whitespace-nowrap">
                 {modality.name}
               </span>
             </a>
