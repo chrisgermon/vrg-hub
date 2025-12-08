@@ -75,8 +75,8 @@ export default function Home() {
           <QuickActionsCard />
         </div>
 
-        {/* Modalities Row - spans full width */}
-        <div className="col-span-12 grid grid-cols-3 sm:grid-cols-6 gap-3">
+        {/* Modalities Row - spans 9 cols */}
+        <div className="col-span-12 lg:col-span-9 grid grid-cols-3 sm:grid-cols-6 gap-3">
           {modalities.map((modality) => (
             <a
               key={modality.name}
@@ -93,18 +93,8 @@ export default function Home() {
           ))}
         </div>
 
-        {/* News & Updates - spans 5 cols, 3 rows */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-5 row-span-3">
-          <NewsUpdatesCard />
-        </div>
-
-        {/* Upcoming Events - spans 4 cols, 3 rows */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-4 row-span-3">
-          <UpcomingEventsCard />
-        </div>
-
-        {/* Departments - spans 3 cols, 3 rows */}
-        <div className="col-span-12 lg:col-span-3 row-span-3 bg-card rounded-xl border border-border/50 shadow-card p-4">
+        {/* Departments - spans 3 cols, next to modalities */}
+        <div className="col-span-12 lg:col-span-3 bg-card rounded-xl border border-border/50 shadow-card p-4">
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <Building2 className="h-4 w-4 text-primary" />
             Departments
@@ -124,6 +114,16 @@ export default function Home() {
               </a>
             ))}
           </div>
+        </div>
+
+        {/* News & Updates - spans 5 cols, 3 rows */}
+        <div className="col-span-12 md:col-span-6 lg:col-span-5 row-span-3">
+          <NewsUpdatesCard />
+        </div>
+
+        {/* Upcoming Events - spans 4 cols, 3 rows */}
+        <div className="col-span-12 md:col-span-6 lg:col-span-4 row-span-3">
+          <UpcomingEventsCard />
         </div>
 
         {/* Quick Links - spans 6 cols */}
