@@ -76,7 +76,7 @@ export default function Home() {
         </div>
 
         {/* Modalities Row - compact inline */}
-        <div className="col-span-12 lg:col-span-9 flex flex-wrap gap-2">
+        <div className="col-span-12 flex flex-wrap gap-2">
           {modalities.map((modality) => (
             <a
               key={modality.name}
@@ -93,27 +93,22 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Departments - spans 3 cols, next to modalities */}
-        <div className="col-span-12 lg:col-span-3 bg-card rounded-xl border border-border/50 shadow-card p-4">
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-primary" />
-            Departments
-          </h3>
-          <div className="space-y-2">
-            {departments.map((dept) => (
-              <a
-                key={dept.name}
-                href={dept.href}
-                className="group flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="p-2 rounded-lg bg-secondary/50 text-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <dept.icon className="h-4 w-4" />
-                </div>
-                <span className="text-sm font-medium text-foreground flex-1">{dept.name}</span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-              </a>
-            ))}
-          </div>
+        {/* Departments Row - below modalities, different color */}
+        <div className="col-span-12 flex flex-wrap gap-2">
+          {departments.map((dept) => (
+            <a
+              key={dept.name}
+              href={dept.href}
+              className="group flex items-center gap-2 px-4 py-2.5 bg-secondary rounded-lg border border-secondary/50 shadow-card hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200"
+            >
+              <div className="p-1.5 rounded-full bg-accent text-accent-foreground group-hover:bg-foreground group-hover:text-background transition-colors duration-200">
+                <dept.icon className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-medium text-secondary-foreground whitespace-nowrap">
+                {dept.name}
+              </span>
+            </a>
+          ))}
         </div>
 
         {/* News & Updates - spans 5 cols, 3 rows */}
