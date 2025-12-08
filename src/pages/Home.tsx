@@ -75,13 +75,13 @@ export default function Home() {
           <QuickActionsCard />
         </div>
 
-        {/* Modalities Row - compact inline */}
-        <div className="col-span-12 flex flex-wrap gap-2">
+        {/* Modalities Row - full width grid */}
+        <div className="col-span-12 grid grid-cols-3 sm:grid-cols-6 gap-2">
           {modalities.map((modality) => (
             <a
               key={modality.name}
               href={modality.href}
-              className="group flex items-center gap-2 px-4 py-2.5 bg-card rounded-lg border border-border/50 shadow-card hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200"
+              className="group flex items-center justify-center gap-2 px-4 py-2.5 bg-card rounded-lg border border-border/50 shadow-card hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200"
             >
               <div className="p-1.5 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-200">
                 <modality.icon className="h-4 w-4" />
@@ -93,13 +93,13 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Departments Row - below modalities, different color */}
-        <div className="col-span-12 flex flex-wrap gap-2">
+        {/* Departments Row - full width grid, different color */}
+        <div className="col-span-12 grid grid-cols-2 sm:grid-cols-5 gap-2">
           {departments.map((dept) => (
             <a
               key={dept.name}
               href={dept.href}
-              className="group flex items-center gap-2 px-4 py-2.5 bg-secondary rounded-lg border border-secondary/50 shadow-card hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200"
+              className="group flex items-center justify-center gap-2 px-4 py-2.5 bg-secondary rounded-lg border border-secondary/50 shadow-card hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200"
             >
               <div className="p-1.5 rounded-full bg-accent text-accent-foreground group-hover:bg-foreground group-hover:text-background transition-colors duration-200">
                 <dept.icon className="h-4 w-4" />
