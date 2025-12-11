@@ -26,7 +26,7 @@ interface SharePointCacheDB extends DBSchema {
 
 const DB_NAME = 'sharepoint-cache';
 const DB_VERSION = 1;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for faster repeat navigation
 
 let dbInstance: IDBPDatabase<SharePointCacheDB> | null = null;
 
