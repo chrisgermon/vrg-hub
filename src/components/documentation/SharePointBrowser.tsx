@@ -1064,70 +1064,46 @@ export function SharePointBrowser() {
   const breadcrumbs = getBreadcrumbs();
   const useVirtualScrolling = totalItems > LARGE_LIST_THRESHOLD;
 
+  const recentFolders = recentItems.recentItems.filter(i => i.item_type === 'folder').slice(0, 8);
+
   return (
-    <div
-      ref={dropZoneRef}
-      className={`space-y-6 relative ${isDragging ? 'ring-2 ring-primary ring-offset-2 rounded-lg' : ''}`}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-    >
-      {/* Drag overlay */}
-      {isDragging && (
-        <div className="absolute inset-0 bg-primary/10 z-50 flex items-center justify-center rounded-lg pointer-events-none">
-          <div className="bg-background border-2 border-dashed border-primary rounded-lg p-8 text-center">
-            <Upload className="h-12 w-12 mx-auto mb-2 text-primary" />
-            <p className="text-lg font-medium">Drop files here to upload</p>
-            <p className="text-sm text-muted-foreground">Files will be uploaded to: {currentPath}</p>
+    <div className="flex gap-4">
+      {/* Main Content */}
+      <div
+        ref={dropZoneRef}
+        className={`flex-1 space-y-6 relative ${isDragging ? 'ring-2 ring-primary ring-offset-2 rounded-lg' : ''}`}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
+        {/* Drag overlay */}
+        {isDragging && (
+          <div className="absolute inset-0 bg-primary/10 z-50 flex items-center justify-center rounded-lg pointer-events-none">
+            <div className="bg-background border-2 border-dashed border-primary rounded-lg p-8 text-center">
+              <Upload className="h-12 w-12 mx-auto mb-2 text-primary" />
+              <p className="text-lg font-medium">Drop files here to upload</p>
+              <p className="text-sm text-muted-foreground">Files will be uploaded to: {currentPath}</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Favorites and Recent */}
-      {showFavorites && favorites.favorites.length > 0 && (
-        <SharePointFavorites
-          onNavigate={(path, name) => navigateToFolder(name, path)}
-          onFileClick={(url, name) => {
-            recentItems.trackAccess({
-              item_type: 'file',
-              item_id: url,
-              item_name: name,
-              item_path: currentPath,
-              item_url: url,
-            });
-            window.open(url, '_blank');
-          }}
-        />
-      )}
-
-      {/* Recent Folders */}
-      {showRecentFolders && recentItems.recentItems.filter(i => i.item_type === 'folder').length > 0 && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="h-4 w-4" />
-              <h3 className="font-medium text-sm">Recent Folders</h3>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {recentItems.recentItems
-                .filter(i => i.item_type === 'folder')
-                .slice(0, 5)
-                .map((item) => (
-                  <Button
-                    key={item.id}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigateToFolder(item.item_name, item.item_path)}
-                    className="gap-2"
-                  >
-                    {item.item_name}
-                  </Button>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        {/* Favorites */}
+        {showFavorites && favorites.favorites.length > 0 && (
+          <SharePointFavorites
+            onNavigate={(path, name) => navigateToFolder(name, path)}
+            onFileClick={(url, name) => {
+              recentItems.trackAccess({
+                item_type: 'file',
+                item_id: url,
+                item_name: name,
+                item_path: currentPath,
+                item_url: url,
+              });
+              window.open(url, '_blank');
+            }}
+          />
+        )}
 
       {/* Batch Operations Toolbar */}
       <BatchOperationsToolbar
@@ -1499,6 +1475,36 @@ export function SharePointBrowser() {
         currentPath={currentPath}
         onConfirm={handleCreateFolder}
       />
+      </div>
+
+      {/* Recent Folders Sidebar */}
+      {showRecentFolders && recentFolders.length > 0 && (
+        <div className="hidden lg:block w-48 shrink-0">
+          <div className="sticky top-4">
+            <Card>
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="font-medium text-xs text-muted-foreground uppercase tracking-wide">Recent</h3>
+                </div>
+                <div className="flex flex-col gap-1">
+                  {recentFolders.map((item) => (
+                    <Button
+                      key={item.id}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigateToFolder(item.item_name, item.item_path)}
+                      className="justify-start h-auto py-2 px-2 text-left"
+                    >
+                      <span className="truncate text-sm">{item.item_name}</span>
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
