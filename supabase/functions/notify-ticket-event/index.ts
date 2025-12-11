@@ -162,24 +162,55 @@ const handler = async (req: Request): Promise<Response> => {
       actorName = actorProfile?.full_name || actorProfile?.email || 'Unknown User';
     }
 
-    // Collect recipients
+    // Collect recipients - now tracking both email and user info for in-app notifications
     const recipients: Set<string> = new Set();
-    
+    const inAppRecipients: Map<string, { userId: string; companyId: string }> = new Map();
+
+    // Helper to add recipient with in-app info
+    const addRecipient = async (userId: string, email?: string) => {
+      if (email) {
+        recipients.add(email);
+      }
+      // Get company_id for in-app notification
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id, email')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profile?.company_id) {
+        inAppRecipients.set(userId, {
+          userId,
+          companyId: profile.company_id
+        });
+        if (!email && profile.email) {
+          recipients.add(profile.email);
+        }
+      }
+    };
+
     // Always notify the requester (unless they are the actor)
     const requesterEmail = request.profiles?.email;
     if (requesterEmail && actorId !== request.user_id) {
       recipients.add(requesterEmail);
+      await addRecipient(request.user_id, requesterEmail);
     }
 
     // Notify assigned user (unless they are the actor)
     if (request.assigned_to && actorId !== request.assigned_to) {
       const { data: assignedProfile } = await supabase
         .from('profiles')
-        .select('email')
+        .select('email, company_id')
         .eq('id', request.assigned_to)
         .single();
       if (assignedProfile?.email) {
         recipients.add(assignedProfile.email);
+        if (assignedProfile.company_id) {
+          inAppRecipients.set(request.assigned_to, {
+            userId: request.assigned_to,
+            companyId: assignedProfile.company_id
+          });
+        }
       }
     }
 
@@ -194,18 +225,24 @@ const handler = async (req: Request): Promise<Response> => {
         if (watcher.user_id !== actorId) {
           const { data: watcherProfile } = await supabase
             .from('profiles')
-            .select('email')
+            .select('email, company_id')
             .eq('id', watcher.user_id)
             .maybeSingle();
-          
+
           if (watcherProfile?.email) {
             recipients.add(watcherProfile.email);
+            if (watcherProfile.company_id) {
+              inAppRecipients.set(watcher.user_id, {
+                userId: watcher.user_id,
+                companyId: watcherProfile.company_id
+              });
+            }
           }
         }
       }
     }
-    
-    // Add CC emails to recipients
+
+    // Add CC emails to recipients (these are email-only, no in-app)
     if (ccEmails && ccEmails.length > 0) {
       ccEmails.forEach(email => {
         if (email && email.trim()) {
@@ -224,7 +261,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (notificationAssignments && notificationAssignments.length > 0) {
       for (const assignment of notificationAssignments) {
         // Check notification level
-        const shouldNotify = 
+        const shouldNotify =
           assignment.notification_level === 'all' ||
           (assignment.notification_level === 'new_only' && eventType === 'created') ||
           (assignment.notification_level === 'updates_only' && eventType !== 'created');
@@ -234,12 +271,18 @@ const handler = async (req: Request): Promise<Response> => {
             if (userId !== actorId) {
               const { data: assigneeProfile } = await supabase
                 .from('profiles')
-                .select('email')
+                .select('email, company_id')
                 .eq('id', userId)
                 .maybeSingle();
-              
+
               if (assigneeProfile?.email) {
                 recipients.add(assigneeProfile.email);
+                if (assigneeProfile.company_id) {
+                  inAppRecipients.set(userId, {
+                    userId,
+                    companyId: assigneeProfile.company_id
+                  });
+                }
               }
             }
           }
@@ -343,8 +386,80 @@ const handler = async (req: Request): Promise<Response> => {
 
     await Promise.all(notificationPromises);
 
+    // Create in-app notifications for all recipients with user IDs
+    const requestNumber = request.request_number
+      ? `VRG-${String(request.request_number).padStart(5, '0')}`
+      : (request.reference_code || requestId.substring(0, 8));
+
+    let inAppTitle = '';
+    let inAppMessage = '';
+
+    switch (eventType) {
+      case 'created':
+        inAppTitle = 'New Request Created';
+        inAppMessage = `New request ${requestNumber}: ${request.title || request.subject || 'Untitled'}`;
+        break;
+      case 'assigned':
+        inAppTitle = 'Request Assigned to You';
+        inAppMessage = `You have been assigned to ${requestNumber}`;
+        break;
+      case 'reassigned':
+        inAppTitle = 'Request Reassigned';
+        inAppMessage = `Request ${requestNumber} has been reassigned`;
+        break;
+      case 'status_changed':
+        inAppTitle = 'Request Status Updated';
+        inAppMessage = `Request ${requestNumber} is now ${newValue || 'updated'}`;
+        break;
+      case 'commented':
+        inAppTitle = 'New Comment';
+        inAppMessage = `${actorName} commented on ${requestNumber}`;
+        break;
+      case 'resolved':
+        inAppTitle = 'Request Completed';
+        inAppMessage = `Request ${requestNumber} has been completed`;
+        break;
+      case 'escalated':
+        inAppTitle = '⚠️ Request Escalated';
+        inAppMessage = `Request ${requestNumber} has been escalated`;
+        break;
+      default:
+        inAppTitle = 'Request Update';
+        inAppMessage = `Update on request ${requestNumber}`;
+    }
+
+    const inAppPromises = Array.from(inAppRecipients.values()).map(async (recipient) => {
+      try {
+        const { error: notifError } = await supabase.from('notifications').insert({
+          user_id: recipient.userId,
+          company_id: recipient.companyId,
+          type: 'ticket',
+          title: inAppTitle,
+          message: inAppMessage,
+          reference_id: requestId,
+          reference_url: `/request/${requestNumber}`,
+        });
+
+        if (notifError) {
+          console.error(`[notify-ticket-event] Error creating in-app notification for ${recipient.userId}:`, notifError);
+        } else {
+          console.log(`[notify-ticket-event] Created in-app notification for ${recipient.userId}`);
+        }
+      } catch (error) {
+        console.error(`[notify-ticket-event] Failed to create in-app notification for ${recipient.userId}:`, error);
+      }
+    });
+
+    await Promise.all(inAppPromises);
+
+    console.log(`[notify-ticket-event] Created ${inAppRecipients.size} in-app notifications`);
+
     return new Response(
-      JSON.stringify({ success: true, notified: recipients.size }),
+      JSON.stringify({
+        success: true,
+        notified: recipients.size,
+        inAppNotifications: inAppRecipients.size
+      }),
       {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },

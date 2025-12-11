@@ -82,12 +82,12 @@ const handler = async (req: Request): Promise<Response> => {
 
       const channels = reminder.notification_channels as { email?: boolean; sms?: boolean; in_app?: boolean };
       
-      // Fetch user profile if needed
+      // Fetch user profile if needed (including company_id for in-app notifications)
       let userProfile: any = null;
       if (reminder.user_id) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('email, phone, full_name')
+          .select('email, phone, full_name, company_id')
           .eq('id', reminder.user_id)
           .maybeSingle();
         userProfile = profile;
@@ -193,6 +193,7 @@ const handler = async (req: Request): Promise<Response> => {
       // Create in-app notification
       if (channels.in_app) {
         try {
+          // First, log to reminder_notifications for tracking
           await supabase
             .from('reminder_notifications')
             .insert({
@@ -206,6 +207,34 @@ const handler = async (req: Request): Promise<Response> => {
                 reminder_date: reminder.reminder_date,
               }
             });
+
+          // IMPORTANT: Also insert into the main notifications table so it shows in the UI
+          if (reminder.user_id && userProfile?.company_id) {
+            const notificationTitle = isPastDue
+              ? `⚠️ Overdue Reminder: ${reminder.title}`
+              : `Reminder: ${reminder.title}`;
+
+            const { error: notifError } = await supabase
+              .from('notifications')
+              .insert({
+                user_id: reminder.user_id,
+                company_id: userProfile.company_id,
+                type: 'reminder',
+                title: notificationTitle,
+                message: message,
+                reference_id: reminder.id,
+                reference_url: '/reminders',
+              });
+
+            if (notifError) {
+              console.error('Error inserting into notifications table:', notifError);
+            } else {
+              console.log('Created in-app notification in notifications table for reminder:', reminder.id);
+            }
+          } else {
+            console.log('Skipping notifications table insert - missing user_id or company_id for reminder:', reminder.id);
+          }
+
           console.log('Created in-app notification for reminder:', reminder.id);
           sentCount++;
         } catch (error) {

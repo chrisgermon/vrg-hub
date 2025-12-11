@@ -71,10 +71,10 @@ const handler = async (req: Request): Promise<Response> => {
       ccEmails = hwData.cc_emails || [];
     }
 
-    // Get requester profile
+    // Get requester profile (including company_id for in-app notifications)
     const { data: requesterProfile, error: requesterError } = await supabase
       .from('profiles')
-      .select('full_name, email')
+      .select('full_name, email, company_id')
       .eq('id', requestData.user_id)
       .single();
 
@@ -131,12 +131,37 @@ const handler = async (req: Request): Promise<Response> => {
 
     if ((emailResult as any).error) {
       console.error('[notify-comment] Email send failed:', (emailResult as any).error);
-      throw new Error(`Email send failed: ${(emailResult as any).error.message}`);
+      // Don't throw - continue to try in-app notification
+    } else {
+      console.log('[notify-comment] Email sent successfully');
     }
 
-    console.log('[notify-comment] Email sent successfully');
+    // Create in-app notification for the requester
+    let inAppNotificationCreated = false;
+    if (requesterProfile.company_id && requestData.user_id !== comment.user_id) {
+      const { error: notifError } = await supabase.from('notifications').insert({
+        user_id: requestData.user_id,
+        company_id: requesterProfile.company_id,
+        type: 'ticket',
+        title: 'New Comment on Your Request',
+        message: `${comment.author_name || 'Someone'} commented on ${requestNumber}`,
+        reference_id: requestId,
+        reference_url: `/request/${requestNumber}`,
+      });
 
-    return new Response(JSON.stringify({ success: true }), {
+      if (notifError) {
+        console.error('[notify-comment] Error creating in-app notification:', notifError);
+      } else {
+        console.log('[notify-comment] In-app notification created successfully');
+        inAppNotificationCreated = true;
+      }
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      emailSent: !(emailResult as any).error,
+      inAppNotificationCreated
+    }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",

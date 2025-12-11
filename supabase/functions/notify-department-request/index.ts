@@ -225,6 +225,25 @@ const handler = async (req: Request): Promise<Response> => {
             if (auditError) {
               console.error('[notify-department-request] Failed to insert audit_logs:', auditError);
             }
+
+            // Create in-app notification for this user
+            if (user.user_id && requestData.company_id) {
+              const { error: notifError } = await supabase.from('notifications').insert({
+                user_id: user.user_id,
+                company_id: requestData.company_id,
+                type: 'department_request',
+                title: `New ${deptLabel} Request`,
+                message: `New request ${requestNumber}: ${requestData.title}`,
+                reference_id: requestData.id,
+                reference_url: `/request/${requestNumber}`,
+              });
+
+              if (notifError) {
+                console.error('[notify-department-request] Error creating in-app notification:', notifError);
+              } else {
+                console.log('[notify-department-request] In-app notification created for:', user.user_id);
+              }
+            }
           }
         } else {
           console.log('[notify-department-request] No assigned users, falling back to admin roles...');
@@ -320,6 +339,25 @@ const handler = async (req: Request): Promise<Response> => {
                   });
                 if (auditError2) {
                   console.error('[notify-department-request] Failed to insert audit_logs (admin fallback):', auditError2);
+                }
+
+                // Create in-app notification for admin user
+                if (m.id && requestData.company_id) {
+                  const { error: notifError } = await supabase.from('notifications').insert({
+                    user_id: m.id,
+                    company_id: requestData.company_id,
+                    type: 'department_request',
+                    title: `New ${deptLabel} Request`,
+                    message: `New request ${requestNumber}: ${requestData.title}`,
+                    reference_id: requestData.id,
+                    reference_url: `/request/${requestNumber}`,
+                  });
+
+                  if (notifError) {
+                    console.error('[notify-department-request] Error creating in-app notification (admin):', notifError);
+                  } else {
+                    console.log('[notify-department-request] In-app notification created for admin:', m.id);
+                  }
                 }
               }
             }
