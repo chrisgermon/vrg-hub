@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { RBACProvider } from "@/contexts/RBACContext";
 import { InlineEditProvider } from "@/contexts/InlineEditContext";
 import { ProtectedLayoutRoute } from "@/components/ProtectedLayoutRoute";
 import { RouteLoading } from "@/components/RouteLoading";
@@ -167,11 +168,12 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <InlineEditProvider>
-            <ThemeApplier />
-            <TooltipProvider>
-              <Toaster />
-              <BrowserRouter>
+          <RBACProvider>
+            <InlineEditProvider>
+              <ThemeApplier />
+              <TooltipProvider>
+                <Toaster />
+                <BrowserRouter>
                 <Suspense fallback={<RouteLoading />}>
                   <Routes>
                     <Route path="/" element={<Navigate to="/home" replace />} />
@@ -197,8 +199,9 @@ function App() {
                   </Routes>
                 </Suspense>
               </BrowserRouter>
-            </TooltipProvider>
-          </InlineEditProvider>
+              </TooltipProvider>
+            </InlineEditProvider>
+          </RBACProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useAuth } from "./useAuth";
+import { useRBAC } from "@/contexts/RBACContext";
 import { PERMISSION_GROUPS } from "@/lib/access-control/constants";
 import type { UserRoleKey } from "@/lib/access-control/types";
 import { useCompanyFeatures } from "./useCompanyFeatures";
@@ -9,7 +10,7 @@ interface UsePermissionsOptions {
   userId?: string;
 }
 
-// Map roles to permission groups (sensible defaults for single-tenant)
+// Legacy fallback: Map roles to permission groups (used when RBAC context is not available)
 const ROLE_GROUPS_MAP: Record<UserRoleKey, string[]> = {
   requester: ["basic-access", "create-requests", "documentation"],
   marketing: ["basic-access", "create-requests", "marketing", "documentation"],
@@ -56,8 +57,16 @@ export function usePermissions(options: UsePermissionsOptions = {}) {
   const { userRole } = useAuth();
   const { isFeatureEnabled } = useCompanyFeatures();
 
-  // Build the effective permission set for the current role
-  const permissionSet = useMemo(() => {
+  // Try to use the new RBAC context
+  let rbacContext: ReturnType<typeof useRBAC> | null = null;
+  try {
+    rbacContext = useRBAC();
+  } catch {
+    // RBAC context not available - will use legacy fallback
+  }
+
+  // Build the effective permission set for the current role (legacy fallback)
+  const legacyPermissionSet = useMemo(() => {
     const roleKey = (userRole ?? "requester") as UserRoleKey;
     const groups = ROLE_GROUPS_MAP[roleKey] || [];
     const allowed = new Set<string>();
@@ -70,18 +79,49 @@ export function usePermissions(options: UsePermissionsOptions = {}) {
     return allowed;
   }, [userRole]);
 
+  /**
+   * Check if user has a specific permission
+   * Uses RBAC context if available, falls back to legacy role-based permissions
+   */
   const hasPermission = (permission: string): boolean => {
-    return permissionSet.has(permission) || (userRole === "super_admin");
+    // Use RBAC context if available and loaded
+    if (rbacContext && !rbacContext.loading) {
+      return rbacContext.hasLegacyPermission(permission);
+    }
+
+    // Legacy fallback: check against hardcoded role-permission mapping
+    return legacyPermissionSet.has(permission) || (userRole === "super_admin");
   };
 
+  /**
+   * Check if user has any of the specified permissions
+   */
   const hasAnyPermission = (permissions: string[]): boolean => {
+    // Use RBAC context if available and loaded
+    if (rbacContext && !rbacContext.loading) {
+      return rbacContext.hasAnyPermission(permissions);
+    }
+
+    // Legacy fallback
     return permissions.some((p) => hasPermission(p));
   };
 
+  /**
+   * Check if user has all of the specified permissions
+   */
   const hasAllPermissions = (permissions: string[]): boolean => {
+    // Use RBAC context if available and loaded
+    if (rbacContext && !rbacContext.loading) {
+      return rbacContext.hasAllPermissions(permissions);
+    }
+
+    // Legacy fallback
     return permissions.every((p) => hasPermission(p));
   };
 
+  /**
+   * Check if user can view a specific menu item
+   */
   const canViewMenuItem = (menuKey: string): boolean => {
     // Keep public menus visible to all users
     const publicMenus = ["home", "requests", "help", "settings", "hr-assistance"];
@@ -94,6 +134,9 @@ export function usePermissions(options: UsePermissionsOptions = {}) {
     return hasPermission(menuKey);
   };
 
+  /**
+   * Check if a feature is enabled
+   */
   const hasFeature = (featureKey: string): boolean => {
     return isFeatureEnabled(featureKey as any);
   };
@@ -103,7 +146,17 @@ export function usePermissions(options: UsePermissionsOptions = {}) {
     return [] as string[];
   };
 
-  const getUserPermissions = () => Array.from(permissionSet);
+  /**
+   * Get all permissions the user has
+   */
+  const getUserPermissions = () => {
+    // If RBAC context is available, we don't enumerate permissions
+    // as they're stored in the database
+    return Array.from(legacyPermissionSet);
+  };
+
+  // Determine loading state
+  const isLoading = rbacContext?.loading ?? false;
 
   return {
     hasPermission,
@@ -114,9 +167,9 @@ export function usePermissions(options: UsePermissionsOptions = {}) {
     hasFeature,
     getUserFeatures,
     getUserPermissions,
-    isLoading: false,
-    userPermissions: Array.from(permissionSet),
-    rolePermissions: Array.from(permissionSet),
+    isLoading,
+    userPermissions: Array.from(legacyPermissionSet),
+    rolePermissions: Array.from(legacyPermissionSet),
     platformPermissions: [],
   };
 }
