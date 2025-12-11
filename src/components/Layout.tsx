@@ -109,8 +109,8 @@ export function Layout({ children }: LayoutProps) {
           <AppSidebar userRole={userRole as any} />
         
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 md:h-16 border-b bg-card shadow-sm flex items-center px-3 md:px-4 lg:px-6 gap-2 md:gap-3">
-            <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+          <header className="h-14 md:h-16 border-b bg-card shadow-sm flex items-center px-3 md:px-4 lg:px-6 gap-2 md:gap-4">
+            <div className="flex items-center gap-2 md:gap-3 shrink-0">
               <SidebarTrigger />
               <img
                 src={logoUrl}
@@ -119,68 +119,69 @@ export function Layout({ children }: LayoutProps) {
                 loading="lazy"
                 decoding="async"
               />
-              
-              <NavigationMenu className="hidden lg:flex">
-                <NavigationMenuList>
-                  <NavigationMenuItem>
-                    <NavigationMenuLink asChild>
-                      <Link to="/mission-statement" className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50">
-                        Mission Statement
-                      </Link>
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
-                  
-                  <NavigationMenuItem>
-                    <NavigationMenuLink asChild>
-                      <Link to="/directory" className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50">
-                        Phone Directory
-                      </Link>
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
-                  
-                  <NavigationMenuItem>
-                    <NavigationMenuLink asChild>
-                      <Link to="/external-providers" className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50">
-                        External Providers
-                      </Link>
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
-
-                  <NavigationMenuItem>
-                    <NavigationMenuLink asChild>
-                      <a href="https://outlook.office.com" target="_blank" rel="noopener noreferrer" className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50">
-                        Outlook Web
-                      </a>
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
-                  
-                  <NavigationMenuItem>
-                    <NavigationMenuLink asChild>
-                      <a href="https://teams.microsoft.com" target="_blank" rel="noopener noreferrer" className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50">
-                        Microsoft Teams
-                      </a>
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
-                </NavigationMenuList>
-              </NavigationMenu>
-              
-              <NotificationsDropdown />
             </div>
+              
+            <NavigationMenu className="hidden xl:flex flex-1 justify-start">
+              <NavigationMenuList className="gap-1">
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild>
+                    <Link to="/mission-statement" className="group inline-flex h-9 items-center justify-center rounded-md bg-transparent px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none whitespace-nowrap">
+                      Mission Statement
+                    </Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+                
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild>
+                    <Link to="/directory" className="group inline-flex h-9 items-center justify-center rounded-md bg-transparent px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none whitespace-nowrap">
+                      Phone Directory
+                    </Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+                
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild>
+                    <Link to="/external-providers" className="group inline-flex h-9 items-center justify-center rounded-md bg-transparent px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none whitespace-nowrap">
+                      External Providers
+                    </Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
 
-            <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild>
+                    <a href="https://outlook.office.com" target="_blank" rel="noopener noreferrer" className="group inline-flex h-9 items-center justify-center rounded-md bg-transparent px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none whitespace-nowrap">
+                      Outlook Web
+                    </a>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+                
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild>
+                    <a href="https://teams.microsoft.com" target="_blank" rel="noopener noreferrer" className="group inline-flex h-9 items-center justify-center rounded-md bg-transparent px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none whitespace-nowrap">
+                      Microsoft Teams
+                    </a>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
+            
+            <div className="flex-1 xl:hidden" />
+
+            <div className="flex items-center gap-2 md:gap-3 shrink-0">
+              <NotificationsDropdown />
+              
               {/* User impersonation for super admin */}
               {userRole === 'super_admin' && <UserImpersonationSelector />}
               
               {userRole !== 'super_admin' && (
-                <>
-                  <div className="hidden lg:flex items-center gap-2 md:gap-3">
-                    <CriticalSystemsBar />
-                    <SystemStatusIndicator />
-                  </div>
-                </>
+                <div className="hidden lg:flex items-center gap-2">
+                  <CriticalSystemsBar />
+                  <SystemStatusIndicator />
+                </div>
               )}
+              
               <div className="hidden sm:block text-right">
-                <p className="text-xs md:text-sm font-medium truncate max-w-[150px] md:max-w-none">
+                <p className="text-xs md:text-sm font-medium truncate max-w-[120px] lg:max-w-[150px]">
                   {isImpersonating && impersonatedUser 
                     ? impersonatedUser.full_name || impersonatedUser.email
                     : user?.user_metadata?.full_name || user?.email
@@ -197,11 +198,11 @@ export function Layout({ children }: LayoutProps) {
                 variant="ghost"
                 size="icon"
                 onClick={() => setProfileOpen(true)}
-                className="w-8 h-8 rounded-full bg-primary/10 flex-shrink-0"
+                className="w-8 h-8 rounded-full bg-primary/10 shrink-0"
               >
                 <User className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={handleSignOut} className="flex-shrink-0">
+              <Button variant="ghost" size="sm" onClick={handleSignOut} className="shrink-0">
                 <LogOut className="w-4 h-4" />
               </Button>
             </div>
