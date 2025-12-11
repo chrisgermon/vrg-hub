@@ -39,7 +39,7 @@ import * as Icons from "lucide-react";
 import { NavLink, useLocation, Link } from "react-router-dom";
 import GlobalRequestsIcon from "@/assets/global-requests-icon.svg";
 import foxoLogo from "@/assets/foxo-logo.png";
-import entoLogo from "@/assets/ento-logo.png";
+import optiqLogo from "@/assets/optiq-logo.png";
 import {
   Sidebar,
   SidebarContent,
@@ -1280,7 +1280,7 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
         
         {/* Footer buttons - Always visible at bottom */}
         <div className="sticky bottom-0 p-3 border-t border-sidebar-border bg-sidebar-background space-y-2 overflow-hidden">
-          {/* Ento Link */}
+          {/* Optiq Link */}
           <Button
             asChild
             variant="outline"
@@ -1288,12 +1288,12 @@ export function AppSidebar({ userRole: propUserRole }: AppSidebarProps) {
             size={collapsed ? "icon" : "lg"}
           >
             <a 
-              href="https://au.ento.com/" 
+              href="https://vrg.optiq.app" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center justify-center w-full"
             >
-              <img src={entoLogo} alt="Ento" className={collapsed ? "h-6 w-6" : "h-8 w-auto object-contain"} />
+              <img src={optiqLogo} alt="Optiq" className={collapsed ? "h-6 w-6" : "h-8 w-auto object-contain"} />
             </a>
           </Button>
 
