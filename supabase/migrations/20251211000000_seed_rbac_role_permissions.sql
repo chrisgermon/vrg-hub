@@ -22,10 +22,11 @@ ON CONFLICT (name) DO UPDATE SET
 
 -- Basic access permissions
 INSERT INTO rbac_permissions (resource, action, description) VALUES
-  ('dashboard', 'read', 'View dashboard'),
+  ('home', 'read', 'View home page'),
   ('requests', 'read_own', 'View own requests'),
   ('requests', 'edit_own', 'Edit own draft requests'),
-  ('requests', 'read_all', 'View all company requests')
+  ('requests', 'read_all', 'View all company requests'),
+  ('file_directory', 'read', 'View file directory (SharePoint documents)')
 ON CONFLICT (resource, action) DO NOTHING;
 
 -- User management permissions
@@ -120,7 +121,7 @@ $$ LANGUAGE plpgsql;
 -- REQUESTER ROLE PERMISSIONS (Basic Access)
 -- =============================================
 
-SELECT assign_permission_to_role('requester', 'dashboard', 'read');
+SELECT assign_permission_to_role('requester', 'home', 'read');
 SELECT assign_permission_to_role('requester', 'requests', 'read_own');
 SELECT assign_permission_to_role('requester', 'requests', 'edit_own');
 
@@ -161,12 +162,15 @@ SELECT assign_permission_to_role('requester', 'reminders', 'delete');
 -- Files
 SELECT assign_permission_to_role('requester', 'files', 'read');
 
+-- File Directory (SharePoint)
+SELECT assign_permission_to_role('requester', 'file_directory', 'read');
+
 -- =============================================
 -- MARKETING ROLE PERMISSIONS (Requester + Marketing)
 -- =============================================
 
 -- Inherit requester permissions
-SELECT assign_permission_to_role('marketing', 'dashboard', 'read');
+SELECT assign_permission_to_role('marketing', 'home', 'read');
 SELECT assign_permission_to_role('marketing', 'requests', 'read_own');
 SELECT assign_permission_to_role('marketing', 'requests', 'edit_own');
 SELECT assign_permission_to_role('marketing', 'hardware', 'create');
@@ -198,6 +202,7 @@ SELECT assign_permission_to_role('marketing', 'reminders', 'read');
 SELECT assign_permission_to_role('marketing', 'reminders', 'update');
 SELECT assign_permission_to_role('marketing', 'reminders', 'delete');
 SELECT assign_permission_to_role('marketing', 'files', 'read');
+SELECT assign_permission_to_role('marketing', 'file_directory', 'read');
 
 -- Marketing-specific permissions
 SELECT assign_permission_to_role('marketing', 'marketing', 'read');
@@ -210,7 +215,7 @@ SELECT assign_permission_to_role('marketing', 'marketing', 'manage_campaigns');
 -- =============================================
 
 -- Inherit requester permissions
-SELECT assign_permission_to_role('manager', 'dashboard', 'read');
+SELECT assign_permission_to_role('manager', 'home', 'read');
 SELECT assign_permission_to_role('manager', 'requests', 'read_own');
 SELECT assign_permission_to_role('manager', 'requests', 'edit_own');
 SELECT assign_permission_to_role('manager', 'hardware', 'create');
@@ -242,6 +247,7 @@ SELECT assign_permission_to_role('manager', 'reminders', 'read');
 SELECT assign_permission_to_role('manager', 'reminders', 'update');
 SELECT assign_permission_to_role('manager', 'reminders', 'delete');
 SELECT assign_permission_to_role('manager', 'files', 'read');
+SELECT assign_permission_to_role('manager', 'file_directory', 'read');
 
 -- Approval permissions
 SELECT assign_permission_to_role('manager', 'hardware', 'approve');
@@ -274,7 +280,7 @@ SELECT assign_permission_to_role('manager', 'knowledge_base', 'delete');
 -- =============================================
 
 -- Inherit marketing permissions
-SELECT assign_permission_to_role('marketing_manager', 'dashboard', 'read');
+SELECT assign_permission_to_role('marketing_manager', 'home', 'read');
 SELECT assign_permission_to_role('marketing_manager', 'requests', 'read_own');
 SELECT assign_permission_to_role('marketing_manager', 'requests', 'edit_own');
 SELECT assign_permission_to_role('marketing_manager', 'hardware', 'create');
@@ -306,6 +312,7 @@ SELECT assign_permission_to_role('marketing_manager', 'reminders', 'read');
 SELECT assign_permission_to_role('marketing_manager', 'reminders', 'update');
 SELECT assign_permission_to_role('marketing_manager', 'reminders', 'delete');
 SELECT assign_permission_to_role('marketing_manager', 'files', 'read');
+SELECT assign_permission_to_role('marketing_manager', 'file_directory', 'read');
 SELECT assign_permission_to_role('marketing_manager', 'marketing', 'read');
 SELECT assign_permission_to_role('marketing_manager', 'fax_campaigns', 'read');
 SELECT assign_permission_to_role('marketing_manager', 'fax_campaigns', 'create');
@@ -337,7 +344,7 @@ SELECT assign_permission_to_role('marketing_manager', 'knowledge_base', 'delete'
 -- =============================================
 
 -- All basic access
-SELECT assign_permission_to_role('tenant_admin', 'dashboard', 'read');
+SELECT assign_permission_to_role('tenant_admin', 'home', 'read');
 SELECT assign_permission_to_role('tenant_admin', 'requests', 'read_own');
 SELECT assign_permission_to_role('tenant_admin', 'requests', 'edit_own');
 SELECT assign_permission_to_role('tenant_admin', 'requests', 'read_all');
@@ -433,6 +440,7 @@ SELECT assign_permission_to_role('tenant_admin', 'files', 'read');
 SELECT assign_permission_to_role('tenant_admin', 'files', 'update');
 SELECT assign_permission_to_role('tenant_admin', 'files', 'delete');
 SELECT assign_permission_to_role('tenant_admin', 'files', 'share');
+SELECT assign_permission_to_role('tenant_admin', 'file_directory', 'read');
 
 -- Custom pages
 SELECT assign_permission_to_role('tenant_admin', 'custom_pages', 'read');
@@ -484,7 +492,7 @@ SELECT assign_permission_to_role('tenant_admin', 'hardware', 'read');
 -- However, we still assign explicit permissions for consistency and audit purposes.
 
 -- All tenant admin permissions plus system admin permissions
-SELECT assign_permission_to_role('super_admin', 'dashboard', 'read');
+SELECT assign_permission_to_role('super_admin', 'home', 'read');
 SELECT assign_permission_to_role('super_admin', 'requests', 'read_own');
 SELECT assign_permission_to_role('super_admin', 'requests', 'edit_own');
 SELECT assign_permission_to_role('super_admin', 'requests', 'read_all');
@@ -573,6 +581,7 @@ SELECT assign_permission_to_role('super_admin', 'files', 'read');
 SELECT assign_permission_to_role('super_admin', 'files', 'update');
 SELECT assign_permission_to_role('super_admin', 'files', 'delete');
 SELECT assign_permission_to_role('super_admin', 'files', 'share');
+SELECT assign_permission_to_role('super_admin', 'file_directory', 'read');
 
 -- Custom pages
 SELECT assign_permission_to_role('super_admin', 'custom_pages', 'read');

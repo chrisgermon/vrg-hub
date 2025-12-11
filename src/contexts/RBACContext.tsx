@@ -108,9 +108,11 @@ const RBACContext = createContext<RBACContextState | undefined>(undefined);
  */
 const LEGACY_PERMISSION_MAP: Record<string, { resource: string; action: string }> = {
   // Basic access
-  'view_dashboard': { resource: 'dashboard', action: 'read' },
+  'view_dashboard': { resource: 'home', action: 'read' },  // Legacy - dashboard is now Home
+  'view_home': { resource: 'home', action: 'read' },
   'view_own_requests': { resource: 'requests', action: 'read_own' },
   'edit_own_drafts': { resource: 'requests', action: 'edit_own' },
+  'view_file_directory': { resource: 'file_directory', action: 'read' },
 
   // Create requests
   'create_hardware_request': { resource: 'hardware', action: 'create' },
