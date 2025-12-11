@@ -26,7 +26,12 @@ INSERT INTO rbac_permissions (resource, action, description) VALUES
   ('requests', 'read_own', 'View own requests'),
   ('requests', 'edit_own', 'Edit own draft requests'),
   ('requests', 'read_all', 'View all company requests'),
-  ('file_directory', 'read', 'View file directory (SharePoint documents)')
+  ('file_directory', 'read', 'View file directory (SharePoint documents)'),
+  ('files', 'read', 'View files'),
+  ('files', 'create', 'Create files'),
+  ('files', 'update', 'Update files'),
+  ('files', 'delete', 'Delete files'),
+  ('files', 'share', 'Share files')
 ON CONFLICT (resource, action) DO NOTHING;
 
 -- User management permissions
@@ -48,7 +53,23 @@ INSERT INTO rbac_permissions (resource, action, description) VALUES
   ('technology_training', 'create', 'Create technology training requests'),
   ('it_service_desk', 'create', 'Create IT service desk requests'),
   ('hr', 'create', 'Create HR requests'),
-  ('department', 'create', 'Create department requests')
+  ('department', 'create', 'Create department requests'),
+  ('hardware', 'create', 'Create hardware requests'),
+  ('hardware', 'read', 'View hardware requests'),
+  ('hardware', 'approve', 'Approve hardware requests'),
+  ('toner', 'create', 'Create toner requests'),
+  ('toner', 'read', 'View toner requests'),
+  ('toner', 'manage', 'Manage toner settings'),
+  ('marketing', 'create', 'Create marketing requests'),
+  ('marketing', 'read', 'View marketing requests'),
+  ('marketing', 'approve', 'Approve marketing requests'),
+  ('marketing', 'manage_campaigns', 'Manage marketing campaigns'),
+  ('tickets', 'create', 'Create tickets'),
+  ('tickets', 'read', 'View tickets'),
+  ('tickets', 'update', 'Update tickets'),
+  ('tickets', 'assign', 'Assign tickets'),
+  ('tickets', 'resolve', 'Resolve tickets'),
+  ('tickets', 'manage_watchers', 'Manage ticket watchers')
 ON CONFLICT (resource, action) DO NOTHING;
 
 -- Configuration permissions
@@ -66,7 +87,95 @@ INSERT INTO rbac_permissions (resource, action, description) VALUES
   ('audit_logs', 'read', 'View audit logs'),
   ('file_storage', 'manage', 'Manage file storage'),
   ('rbac', 'manage', 'Manage roles and permissions'),
-  ('metrics', 'read_system', 'View system-wide metrics')
+  ('metrics', 'read_system', 'View system-wide metrics'),
+  ('metrics', 'read', 'View request metrics')
+ON CONFLICT (resource, action) DO NOTHING;
+
+-- Documentation and content permissions
+INSERT INTO rbac_permissions (resource, action, description) VALUES
+  ('modalities', 'read', 'View modality details'),
+  ('modalities', 'create', 'Create modalities'),
+  ('modalities', 'update', 'Update modalities'),
+  ('modalities', 'delete', 'Delete modalities'),
+  ('modalities', 'share', 'Share modalities'),
+  ('newsletters', 'submit', 'Submit newsletter content'),
+  ('newsletters', 'read', 'View newsletters'),
+  ('newsletters', 'create', 'Create newsletters'),
+  ('newsletters', 'approve', 'Approve newsletters'),
+  ('newsletters', 'manage', 'Manage newsletter cycle'),
+  ('news', 'read', 'View news articles'),
+  ('news', 'create', 'Create news articles'),
+  ('news', 'update', 'Update news articles'),
+  ('news', 'delete', 'Delete news articles'),
+  ('news', 'publish', 'Publish news articles'),
+  ('knowledge_base', 'read', 'View knowledge base'),
+  ('knowledge_base', 'create', 'Create knowledge base articles'),
+  ('knowledge_base', 'update', 'Update knowledge base articles'),
+  ('knowledge_base', 'delete', 'Delete knowledge base articles'),
+  ('hr_documents', 'read', 'View HR documents'),
+  ('eap_program', 'read', 'Access EAP program resources'),
+  ('directory', 'read', 'View company directory'),
+  ('directory', 'update', 'Update directory entries'),
+  ('directory', 'manage', 'Manage company directory'),
+  ('external_providers', 'read', 'View external providers'),
+  ('external_providers', 'update', 'Update external providers')
+ON CONFLICT (resource, action) DO NOTHING;
+
+-- Reminder permissions
+INSERT INTO rbac_permissions (resource, action, description) VALUES
+  ('reminders', 'create', 'Create reminders'),
+  ('reminders', 'read', 'View reminders'),
+  ('reminders', 'update', 'Update reminders'),
+  ('reminders', 'delete', 'Delete reminders'),
+  ('reminders', 'manage_all', 'Manage all reminders')
+ON CONFLICT (resource, action) DO NOTHING;
+
+-- Fax campaign permissions
+INSERT INTO rbac_permissions (resource, action, description) VALUES
+  ('fax_campaigns', 'read', 'View fax campaigns'),
+  ('fax_campaigns', 'create', 'Create fax campaigns'),
+  ('fax_campaigns', 'send', 'Send fax campaigns')
+ON CONFLICT (resource, action) DO NOTHING;
+
+-- Custom pages permissions
+INSERT INTO rbac_permissions (resource, action, description) VALUES
+  ('custom_pages', 'read', 'View custom pages'),
+  ('custom_pages', 'create', 'Create custom pages'),
+  ('custom_pages', 'update', 'Update custom pages'),
+  ('custom_pages', 'delete', 'Delete custom pages'),
+  ('custom_pages', 'publish', 'Publish custom pages')
+ON CONFLICT (resource, action) DO NOTHING;
+
+-- Form template permissions
+INSERT INTO rbac_permissions (resource, action, description) VALUES
+  ('form_templates', 'read', 'View form templates'),
+  ('form_templates', 'create', 'Create form templates'),
+  ('form_templates', 'update', 'Update form templates'),
+  ('form_templates', 'delete', 'Delete form templates')
+ON CONFLICT (resource, action) DO NOTHING;
+
+-- Brand permissions
+INSERT INTO rbac_permissions (resource, action, description) VALUES
+  ('brands', 'read', 'View brands'),
+  ('brands', 'create', 'Create brands'),
+  ('brands', 'update', 'Update brands'),
+  ('brands', 'delete', 'Delete brands')
+ON CONFLICT (resource, action) DO NOTHING;
+
+-- Incident permissions
+INSERT INTO rbac_permissions (resource, action, description) VALUES
+  ('incidents', 'create', 'Create incidents'),
+  ('incidents', 'read', 'View incidents'),
+  ('incidents', 'update', 'Update incidents'),
+  ('incidents', 'assign', 'Assign incidents'),
+  ('incidents', 'manage', 'Manage incidents')
+ON CONFLICT (resource, action) DO NOTHING;
+
+-- Print ordering permissions
+INSERT INTO rbac_permissions (resource, action, description) VALUES
+  ('print_ordering', 'create', 'Create print orders'),
+  ('print_ordering', 'read', 'View print orders'),
+  ('print_ordering', 'manage', 'Manage print orders')
 ON CONFLICT (resource, action) DO NOTHING;
 
 -- Ticket management permissions
@@ -625,8 +734,8 @@ SELECT assign_permission_to_role('super_admin', 'rbac', 'manage');
 SELECT assign_permission_to_role('super_admin', 'metrics', 'read');
 SELECT assign_permission_to_role('super_admin', 'metrics', 'read_system');
 
--- Clean up helper function
-DROP FUNCTION IF EXISTS assign_permission_to_role;
+-- Clean up helper function (include full signature for PostgreSQL)
+DROP FUNCTION IF EXISTS assign_permission_to_role(TEXT, TEXT, TEXT, TEXT);
 
 -- =============================================
 -- 4. SUMMARY

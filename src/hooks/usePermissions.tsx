@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useContext } from "react";
 import { useAuth } from "./useAuth";
-import { useRBAC } from "@/contexts/RBACContext";
+import { RBACContext } from "@/contexts/RBACContext";
 import { PERMISSION_GROUPS } from "@/lib/access-control/constants";
 import type { UserRoleKey } from "@/lib/access-control/types";
 import { useCompanyFeatures } from "./useCompanyFeatures";
@@ -57,13 +57,9 @@ export function usePermissions(options: UsePermissionsOptions = {}) {
   const { userRole } = useAuth();
   const { isFeatureEnabled } = useCompanyFeatures();
 
-  // Try to use the new RBAC context
-  let rbacContext: ReturnType<typeof useRBAC> | null = null;
-  try {
-    rbacContext = useRBAC();
-  } catch {
-    // RBAC context not available - will use legacy fallback
-  }
+  // Safely access RBAC context using useContext directly (returns undefined if not available)
+  // This avoids the hook safety issue of using try/catch around a hook call
+  const rbacContext = useContext(RBACContext);
 
   // Build the effective permission set for the current role (legacy fallback)
   const legacyPermissionSet = useMemo(() => {
@@ -148,15 +144,69 @@ export function usePermissions(options: UsePermissionsOptions = {}) {
 
   /**
    * Get all permissions the user has
+   * Returns RBAC permissions when available, falls back to legacy permissions
    */
-  const getUserPermissions = () => {
-    // If RBAC context is available, we don't enumerate permissions
-    // as they're stored in the database
+  const getUserPermissions = (): string[] => {
+    // If RBAC context is available and loaded, derive permissions from it
+    if (rbacContext && !rbacContext.loading) {
+      const permissions: string[] = [];
+
+      // Add permissions from role permissions
+      rbacContext.rolePermissions.forEach((rolePerms, key) => {
+        const hasAllow = rolePerms.some(rp => rp.effect === 'allow');
+        const hasDeny = rolePerms.some(rp => rp.effect === 'deny');
+        // Only add if allowed and not denied
+        if (hasAllow && !hasDeny) {
+          permissions.push(key);
+        }
+      });
+
+      // Apply user overrides
+      rbacContext.userOverrides.forEach((effect, key) => {
+        if (effect === 'allow' && !permissions.includes(key)) {
+          permissions.push(key);
+        } else if (effect === 'deny') {
+          const index = permissions.indexOf(key);
+          if (index > -1) {
+            permissions.splice(index, 1);
+          }
+        }
+      });
+
+      // Super admin has all permissions
+      if (rbacContext.isSuperAdmin) {
+        rbacContext.allPermissions.forEach(p => {
+          const key = `${p.resource}:${p.action}`;
+          if (!permissions.includes(key)) {
+            permissions.push(key);
+          }
+        });
+      }
+
+      return permissions;
+    }
+
+    // Fall back to legacy permission set
     return Array.from(legacyPermissionSet);
   };
 
   // Determine loading state
   const isLoading = rbacContext?.loading ?? false;
+
+  // Compute user and role permissions for the return value
+  const computedPermissions = useMemo(() => {
+    if (rbacContext && !rbacContext.loading) {
+      const perms = getUserPermissions();
+      return {
+        userPermissions: perms,
+        rolePermissions: perms,
+      };
+    }
+    return {
+      userPermissions: Array.from(legacyPermissionSet),
+      rolePermissions: Array.from(legacyPermissionSet),
+    };
+  }, [rbacContext, rbacContext?.loading, rbacContext?.rolePermissions, rbacContext?.userOverrides, legacyPermissionSet]);
 
   return {
     hasPermission,
@@ -168,8 +218,8 @@ export function usePermissions(options: UsePermissionsOptions = {}) {
     getUserFeatures,
     getUserPermissions,
     isLoading,
-    userPermissions: Array.from(legacyPermissionSet),
-    rolePermissions: Array.from(legacyPermissionSet),
+    userPermissions: computedPermissions.userPermissions,
+    rolePermissions: computedPermissions.rolePermissions,
     platformPermissions: [],
   };
 }

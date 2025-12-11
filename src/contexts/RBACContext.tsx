@@ -100,7 +100,7 @@ interface RBACContextState {
   isTenantAdmin: boolean;
 }
 
-const RBACContext = createContext<RBACContextState | undefined>(undefined);
+export const RBACContext = createContext<RBACContextState | undefined>(undefined);
 
 /**
  * Map of legacy permission strings to new resource:action format
@@ -192,23 +192,36 @@ interface RBACProviderProps {
 }
 
 export function RBACProvider({ children }: RBACProviderProps) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [userOverrides, setUserOverrides] = useState<Map<string, PermissionEffect>>(new Map());
   const [rolePermissions, setRolePermissions] = useState<Map<string, RolePermission[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasFetched, setHasFetched] = useState(false);
 
   /**
    * Fetch all RBAC data for the current user
    */
   const fetchRBACData = useCallback(async () => {
+    // Wait for auth to finish loading before fetching RBAC data
+    if (authLoading) {
+      return;
+    }
+
     if (!user?.id) {
+      // No user - reset state and mark as not loading
       setUserRoles([]);
       setUserOverrides(new Map());
       setRolePermissions(new Map());
       setLoading(false);
+      setHasFetched(true);
+      return;
+    }
+
+    // Avoid redundant fetches if we already have data for this user
+    if (hasFetched && userRoles.length > 0) {
       return;
     }
 
@@ -316,13 +329,21 @@ export function RBACProvider({ children }: RBACProviderProps) {
       setError(err.message || 'Failed to load permissions');
     } finally {
       setLoading(false);
+      setHasFetched(true);
     }
+  }, [user?.id, authLoading, hasFetched, userRoles.length]);
+
+  // Reset hasFetched when user changes
+  useEffect(() => {
+    setHasFetched(false);
   }, [user?.id]);
 
-  // Fetch RBAC data when user changes
+  // Fetch RBAC data when auth is ready and user changes
   useEffect(() => {
-    fetchRBACData();
-  }, [fetchRBACData]);
+    if (!authLoading) {
+      fetchRBACData();
+    }
+  }, [fetchRBACData, authLoading]);
 
   /**
    * Get permission trace for debugging
@@ -460,12 +481,15 @@ export function RBACProvider({ children }: RBACProviderProps) {
   const isSuperAdmin = userRoles.includes('super_admin');
   const isTenantAdmin = userRoles.includes('tenant_admin');
 
+  // Combined loading state: true if auth is loading OR rbac data is loading
+  const isLoading = authLoading || loading;
+
   const contextValue: RBACContextState = {
     userRoles,
     allPermissions,
     userOverrides,
     rolePermissions,
-    loading,
+    loading: isLoading,
     error,
     refresh: fetchRBACData,
     hasPermission,

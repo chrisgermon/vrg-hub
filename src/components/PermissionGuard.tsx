@@ -1,6 +1,6 @@
-import { ReactNode } from "react";
+import { ReactNode, useContext } from "react";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useRBAC } from "@/contexts/RBACContext";
+import { RBACContext } from "@/contexts/RBACContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lock, Loader2 } from "lucide-react";
 
@@ -86,13 +86,8 @@ export function PermissionGuard({
 }: PermissionGuardProps) {
   const { hasPermission: hasLegacyPermission, hasFeature, isLoading: permissionsLoading } = usePermissions();
 
-  // Try to use the new RBAC context
-  let rbacContext: ReturnType<typeof useRBAC> | null = null;
-  try {
-    rbacContext = useRBAC();
-  } catch {
-    // RBAC context not available - will use legacy fallback
-  }
+  // Safely access RBAC context using useContext directly (returns undefined if not available)
+  const rbacContext = useContext(RBACContext);
 
   const isLoading = rbacContext?.loading ?? permissionsLoading;
 
@@ -196,12 +191,8 @@ export function withPermission<P extends object>(
 export function usePermissionCheck() {
   const { hasPermission: hasLegacyPermission, isLoading: permissionsLoading } = usePermissions();
 
-  let rbacContext: ReturnType<typeof useRBAC> | null = null;
-  try {
-    rbacContext = useRBAC();
-  } catch {
-    // RBAC context not available
-  }
+  // Safely access RBAC context using useContext directly (returns undefined if not available)
+  const rbacContext = useContext(RBACContext);
 
   const checkPermission = (perm: PermissionSpec): boolean => {
     if (typeof perm === 'string') {
