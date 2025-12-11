@@ -2,17 +2,18 @@ import { SharePointBrowser } from "@/components/documentation/SharePointBrowser"
 
 export default function Documentation() {
   return (
-    <div className="container mx-auto py-4 md:py-6 px-3 md:px-4 max-w-7xl">
-      <div className="space-y-4 md:space-y-6">
+    <div className="container-responsive py-6 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-4xl font-bold">File Directory</h1>
-          <p className="text-lg text-muted-foreground mt-1">
-            Browse your files from SharePoint
+          <h1 className="text-3xl font-bold">Company Documents</h1>
+          <p className="text-muted-foreground">
+            Browse your company documents from SharePoint
           </p>
         </div>
-
-        <SharePointBrowser />
       </div>
+
+      <SharePointBrowser />
     </div>
   );
 }

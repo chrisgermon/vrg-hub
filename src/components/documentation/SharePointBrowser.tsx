@@ -1071,7 +1071,7 @@ export function SharePointBrowser() {
       {/* Main Content */}
       <div
         ref={dropZoneRef}
-        className={`flex-1 space-y-6 relative ${isDragging ? 'ring-2 ring-primary ring-offset-2 rounded-lg' : ''}`}
+        className={`flex-1 space-y-3 relative ${isDragging ? 'ring-2 ring-primary ring-offset-2 rounded-lg' : ''}`}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
@@ -1080,47 +1080,22 @@ export function SharePointBrowser() {
         {/* Drag overlay */}
         {isDragging && (
           <div className="absolute inset-0 bg-primary/10 z-50 flex items-center justify-center rounded-lg pointer-events-none">
-            <div className="bg-background border-2 border-dashed border-primary rounded-lg p-8 text-center">
-              <Upload className="h-12 w-12 mx-auto mb-2 text-primary" />
-              <p className="text-lg font-medium">Drop files here to upload</p>
-              <p className="text-sm text-muted-foreground">Files will be uploaded to: {currentPath}</p>
+            <div className="bg-background border-2 border-dashed border-primary rounded-lg p-6 text-center">
+              <Upload className="h-10 w-10 mx-auto mb-2 text-primary" />
+              <p className="font-medium">Drop files here to upload</p>
+              <p className="text-sm text-muted-foreground">to: {currentPath}</p>
             </div>
           </div>
         )}
 
-        {/* Favorites */}
-        {showFavorites && favorites.favorites.length > 0 && (
-          <SharePointFavorites
-            onNavigate={(path, name) => navigateToFolder(name, path)}
-            onFileClick={(url, name) => {
-              recentItems.trackAccess({
-                item_type: 'file',
-                item_id: url,
-                item_name: name,
-                item_path: currentPath,
-                item_url: url,
-              });
-              window.open(url, '_blank');
-            }}
-          />
-        )}
-
-      {/* Batch Operations Toolbar */}
-      <BatchOperationsToolbar
-        selectedCount={selectedItems.size}
-        onClearSelection={clearSelection}
-        onBulkDownload={handleBulkDownload}
-        onBulkDelete={handleBulkDelete}
-        onBulkMove={handleBulkMove}
-      />
-
-      {/* Navigation */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <Breadcrumb>
+      {/* Compact Toolbar Row */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        {/* Navigation Breadcrumb */}
+        <Breadcrumb className="flex-1 min-w-0">
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
-                <Button variant="ghost" size="sm" onClick={navigateToRoot}>
+                <Button variant="ghost" size="sm" onClick={navigateToRoot} className="h-8 w-8 p-0">
                   <Home className="h-4 w-4" />
                 </Button>
               </BreadcrumbLink>
@@ -1136,13 +1111,13 @@ export function SharePointBrowser() {
                   </BreadcrumbSeparator>
                   <BreadcrumbItem>
                     {isLast ? (
-                      <BreadcrumbLink className="font-medium">{part}</BreadcrumbLink>
+                      <BreadcrumbLink className="font-medium truncate max-w-[150px]">{part}</BreadcrumbLink>
                     ) : (
                       <BreadcrumbLink asChild>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-auto p-0 hover:underline"
+                          className="h-auto p-0 hover:underline truncate max-w-[100px]"
                           onClick={() => {
                             setCurrentPath(pathToSegment);
                             loadItems(pathToSegment, { forceRefresh: true });
@@ -1159,22 +1134,17 @@ export function SharePointBrowser() {
           </BreadcrumbList>
         </Breadcrumb>
 
-        <div className="flex gap-2 flex-wrap">
-          {pathHistory.length > 0 && (
-            <Button variant="outline" size="sm" onClick={navigateBack}>
-              Back
-            </Button>
-          )}
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
           {sharePointSiteUrl && (
             <Button
               variant="outline"
               size="sm"
               onClick={() => window.open(sharePointSiteUrl, '_blank')}
               title="Open SharePoint site"
-              className="gap-2"
             >
               <ExternalLink className="h-4 w-4" />
-              <span className="hidden sm:inline">Open SharePoint</span>
+              <span className="hidden sm:inline ml-2">Open SharePoint</span>
             </Button>
           )}
           <Button
@@ -1210,16 +1180,16 @@ export function SharePointBrowser() {
             </Button>
           </label>
           {fromCache && cachedAt && (
-            <span className="text-xs text-muted-foreground flex items-center ml-2">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
               Cached {new Date(cachedAt).toLocaleTimeString()}
             </span>
           )}
         </div>
       </div>
 
-      {/* Search Input */}
-      <div className="space-y-2">
-        <div className="relative">
+      {/* Search and Filters Row */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             ref={searchInputRef}
@@ -1227,7 +1197,7 @@ export function SharePointBrowser() {
             placeholder="Search all SharePoint files and folders... (Ctrl+F)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-9"
             disabled={isSearching}
           />
           {isSearching && (
@@ -1235,38 +1205,35 @@ export function SharePointBrowser() {
           )}
         </div>
         {searchResults && (
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              Found {searchResults.folders.length + searchResults.files.length} results
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSearchQuery('');
-                setSearchResults(null);
-              }}
-            >
-              Clear search
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSearchQuery('');
+              setSearchResults(null);
+            }}
+            className="text-muted-foreground"
+          >
+            Clear ({searchResults.folders.length + searchResults.files.length})
+          </Button>
         )}
       </div>
 
-      {/* Filters */}
+      {/* Filters - Compact */}
       <SharePointFilters
         filters={filters}
         onFiltersChange={setFilters}
         fileTypes={getUniqueFileTypes(files)}
       />
 
-      {/* Keyboard Shortcuts Help */}
-      <div className="text-xs text-muted-foreground">
-        <span>Shortcuts: </span>
-        <kbd className="px-1.5 py-0.5 bg-muted rounded">Ctrl+F</kbd> Search • 
-        <kbd className="px-1.5 py-0.5 bg-muted rounded mx-1">Backspace</kbd> Back • 
-        <kbd className="px-1.5 py-0.5 bg-muted rounded">Ctrl+R</kbd> Refresh
-      </div>
+      {/* Batch Operations - Only show when items selected */}
+      <BatchOperationsToolbar
+        selectedCount={selectedItems.size}
+        onClearSelection={clearSelection}
+        onBulkDownload={handleBulkDownload}
+        onBulkDelete={handleBulkDelete}
+        onBulkMove={handleBulkMove}
+      />
 
       {/* Table View */}
       {(displayFolders.length > 0 || displayFiles.length > 0) && (
@@ -1379,23 +1346,23 @@ export function SharePointBrowser() {
       {/* Empty State */}
       {displayFolders.length === 0 && displayFiles.length === 0 && !loading && !isSearching && !loadingFiles && (
         <Card>
-          <CardContent className="py-12 text-center">
-            <AlertCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">
+          <CardContent className="py-8 text-center">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+            <h3 className="text-lg font-semibold mb-1">
               {searchQuery ? 'No results found' : 'This folder is empty'}
             </h3>
-            <p className="text-muted-foreground mb-4">
+            <p className="text-muted-foreground text-sm mb-4">
               {searchQuery
                 ? `No files or folders match "${searchQuery}"`
-                : 'There are no files or folders in this location. Drag and drop files here or use the Upload button.'}
+                : 'Drag and drop files or use the Upload button'}
             </p>
             {!searchQuery && (
-              <div className="flex gap-3 justify-center">
-                <Button onClick={() => setShowCreateFolder(true)}>
+              <div className="flex gap-2 justify-center">
+                <Button size="sm" onClick={() => setShowCreateFolder(true)}>
                   <FolderPlus className="h-4 w-4 mr-2" />
                   Create Folder
                 </Button>
-                <Button variant="outline" onClick={() => document.getElementById('sharepoint-upload')?.click()}>
+                <Button size="sm" variant="outline" onClick={() => document.getElementById('sharepoint-upload')?.click()}>
                   <Upload className="h-4 w-4 mr-2" />
                   Upload Files
                 </Button>
@@ -1479,29 +1446,25 @@ export function SharePointBrowser() {
 
       {/* Recent Folders Sidebar */}
       {showRecentFolders && recentFolders.length > 0 && (
-        <div className="hidden lg:block w-48 shrink-0">
+        <div className="hidden xl:block w-40 shrink-0">
           <div className="sticky top-4">
-            <Card>
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2 mb-3">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="font-medium text-xs text-muted-foreground uppercase tracking-wide">Recent</h3>
-                </div>
-                <div className="flex flex-col gap-1">
-                  {recentFolders.map((item) => (
-                    <Button
-                      key={item.id}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigateToFolder(item.item_name, item.item_path)}
-                      className="justify-start h-auto py-2 px-2 text-left"
-                    >
-                      <span className="truncate text-sm">{item.item_name}</span>
-                    </Button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex items-center gap-1.5 mb-2 px-1">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-medium text-xs text-muted-foreground uppercase tracking-wide">Recent</span>
+            </div>
+            <div className="flex flex-col">
+              {recentFolders.map((item) => (
+                <Button
+                  key={item.id}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigateToFolder(item.item_name, item.item_path)}
+                  className="justify-start h-auto py-1.5 px-2 text-left font-normal"
+                >
+                  <span className="truncate text-sm">{item.item_name}</span>
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
       )}
