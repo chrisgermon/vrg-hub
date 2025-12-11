@@ -55,10 +55,10 @@ serve(async (req) => {
 
     console.log('Notifying user of newsletter assignment:', { userId, department });
 
-    // Get user profile
+    // Get user profile (including company_id for in-app notifications)
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, email, full_name')
+      .select('id, email, full_name, company_id')
       .eq('id', userId)
       .single();
 
@@ -148,12 +148,33 @@ serve(async (req) => {
         console.error('Failed to log notification:', logError);
       }
 
+      // Create in-app notification
+      let inAppNotificationCreated = false;
+      if (profile.company_id) {
+        const { error: notifError } = await supabase.from('notifications').insert({
+          user_id: userId,
+          company_id: profile.company_id,
+          type: 'newsletter',
+          title: 'Newsletter Assignment',
+          message: `You have been assigned as a contributor for the ${department} department`,
+          reference_url: '/newsletter',
+        });
+
+        if (notifError) {
+          console.error('Error creating in-app notification:', notifError);
+        } else {
+          console.log('In-app notification created for:', userId);
+          inAppNotificationCreated = true;
+        }
+      }
+
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           success: true,
           message: 'Assignment notification sent successfully',
+          inAppNotificationCreated,
         }),
-        { 
+        {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
         }

@@ -56,12 +56,12 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('No notification recipients configured for user account requests');
     }
 
-    // Get user emails from profiles
+    // Get user emails and company_id from profiles for in-app notifications
     const userIds = userNotifications.map(n => n.user_id);
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('email, name')
-      .in('user_id', userIds);
+      .select('id, email, full_name, company_id')
+      .in('id', userIds);
 
     if (profilesError || !profiles || profiles.length === 0) {
       console.error('Failed to fetch recipient profiles');
@@ -116,10 +116,12 @@ const handler = async (req: Request): Promise<Response> => {
       };
 
       // Send to all configured recipients
-      for (const recipientEmail of recipientEmails) {
+      for (const profile of profiles) {
+        if (!profile.email) continue;
+
         const emailResult = await supabase.functions.invoke('send-notification-email', {
           body: {
-            to: recipientEmail,
+            to: profile.email,
             subject,
             template: 'user_account_notification',
             data: emailData
@@ -130,7 +132,7 @@ const handler = async (req: Request): Promise<Response> => {
         await supabase
           .from('email_logs')
           .insert({
-            recipient_email: recipientEmail,
+            recipient_email: profile.email,
             email_type: 'user_account_notification',
             subject: subject,
             status: emailResult.error ? 'failed' : 'sent',
@@ -142,6 +144,25 @@ const handler = async (req: Request): Promise<Response> => {
               user_name: `${requestData.first_name} ${requestData.last_name}`,
             }
           });
+
+        // Create in-app notification
+        if (profile.id && profile.company_id) {
+          const { error: notifError } = await supabase.from('notifications').insert({
+            user_id: profile.id,
+            company_id: profile.company_id,
+            type: 'user_account_request',
+            title: 'New User Account to Create',
+            message: `User account approved for ${requestData.first_name} ${requestData.last_name}`,
+            reference_id: requestData.id,
+            reference_url: '/admin/user-accounts',
+          });
+
+          if (notifError) {
+            console.error('Error creating in-app notification:', notifError);
+          } else {
+            console.log('In-app notification created for:', profile.id);
+          }
+        }
       }
 
       // Log to audit_logs
