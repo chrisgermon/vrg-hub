@@ -165,7 +165,7 @@ export function Layout({ children }: LayoutProps) {
               </NavigationMenuList>
             </NavigationMenu>
             
-            <div className="flex-1 xl:hidden" />
+            <div className="flex-1" />
 
             <div className="flex items-center gap-2 md:gap-3 shrink-0">
               <NotificationsDropdown />
